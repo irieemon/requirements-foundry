@@ -3,9 +3,10 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 // Prisma 7 requires a driver adapter for PostgreSQL
-const dbUrl = process.env.DATABASE_URL;
+// Support both DATABASE_URL (standard) and POSTGRES_URL (Vercel Postgres)
+const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 if (!dbUrl) {
-  throw new Error("DATABASE_URL environment variable is not set");
+  throw new Error("DATABASE_URL or POSTGRES_URL environment variable is not set");
 }
 
 console.log("Connecting to database...");

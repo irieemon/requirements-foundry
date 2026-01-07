@@ -8,10 +8,11 @@ const globalForPrisma = globalThis as unknown as {
 // Create the PostgreSQL adapter with connection string from environment
 // Vercel Postgres or any PostgreSQL database
 function createPrismaClient(): PrismaClient {
-  const connectionString = process.env.DATABASE_URL;
+  // Support both DATABASE_URL (standard) and POSTGRES_URL (Vercel Postgres)
+  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
   if (!connectionString) {
-    throw new Error("DATABASE_URL environment variable is required");
+    throw new Error("DATABASE_URL or POSTGRES_URL environment variable is required");
   }
 
   // Vercel Postgres uses SSL, configure accordingly
