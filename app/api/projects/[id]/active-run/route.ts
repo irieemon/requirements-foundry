@@ -6,6 +6,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getActiveRunForProject } from "@/server/actions/analysis";
 
+// Force Node.js runtime
+export const runtime = "nodejs";
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

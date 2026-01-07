@@ -1,17 +1,17 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-// Prisma 7 requires a driver adapter for SQLite
+// Prisma 7 requires a driver adapter for PostgreSQL
 const dbUrl = process.env.DATABASE_URL;
 if (!dbUrl) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
 
-console.log("Connecting to database:", dbUrl);
+console.log("Connecting to database...");
 
-// PrismaLibSql takes the URL directly, not a libsql client
-const adapter = new PrismaLibSql({ url: dbUrl });
+// PrismaPg adapter for PostgreSQL
+const adapter = new PrismaPg({ connectionString: dbUrl });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

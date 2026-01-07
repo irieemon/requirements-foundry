@@ -1,5 +1,5 @@
 // Requirements Foundry - Prisma Schema
-// Local-first with SQLite, designed for easy migration to Postgres
+// PostgreSQL for production (Vercel), SQLite-compatible for local dev via env
 
 generator client {
   provider = "prisma-client-js"
@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ============================================
@@ -37,10 +37,14 @@ model Upload {
   project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   filename         String?  // null if pasted text
   fileType         String   // MIME type: "text/plain", "application/pdf", etc.
-  rawContent       String   // extracted text content
-  filePath         String?  // path to original file on disk (optional)
+  rawContent       String   // extracted text content (use @db.Text for large content)
+  filePath         String?  // path to original file on disk (local mode only)
 
-  // NEW: Separate extraction and analysis status
+  // Vercel Blob storage fields (used when UPLOAD_STORAGE=blob)
+  blobUrl          String?  // Public URL from Vercel Blob
+  blobPathname     String?  // Pathname/key in Blob storage
+
+  // Extraction and analysis status
   extractionStatus String   @default("PENDING") // PENDING, EXTRACTING, EXTRACTED, FAILED
   analysisStatus   String   @default("PENDING") // PENDING, QUEUED, ANALYZING, COMPLETED, FAILED, SKIPPED
 
@@ -58,7 +62,7 @@ model Upload {
   hasImages        Boolean  @default(false)
   processingTimeMs Int?     // time to process
 
-  // NEW: Track which run last analyzed this upload
+  // Track which run last analyzed this upload
   lastAnalyzedRunId String?
   lastAnalyzedAt    DateTime?
 
@@ -76,7 +80,7 @@ model DocumentImage {
   id          String   @id @default(cuid())
   uploadId    String
   upload      Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
-  base64      String   // base64-encoded image data
+  base64      String   // base64-encoded image data (consider size limits)
   mimeType    String   // image/png, image/jpeg, etc.
   index       Int      // order within document
   pageNumber  Int?     // for PDFs
@@ -96,7 +100,7 @@ model Card {
   uploadId        String?
   upload          Upload?  @relation(fields: [uploadId], references: [id], onDelete: SetNull)
 
-  // NEW: Track which run created this card
+  // Track which run created this card
   runId           String?
 
   title           String
@@ -190,14 +194,14 @@ model Run {
   type        String    // ANALYZE_CARDS, GENERATE_EPICS, GENERATE_STORIES, EXPORT
   status      String    @default("QUEUED") // QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED
 
-  // NEW: Granular phase tracking
+  // Granular phase tracking
   phase       String    @default("INITIALIZING") // INITIALIZING, LOADING_CONTENT, ANALYZING, SAVING_RESULTS, FINALIZING, COMPLETED, FAILED
   phaseDetail String?   // Optional detail: "Processing document 3 of 7"
 
   // Configuration
   inputConfig String?   // JSON: e.g., {"uploadIds": ["..."], "replaceExisting": false}
 
-  // NEW: Progress counters
+  // Progress counters
   totalItems      Int   @default(0)  // Total uploads to process
   completedItems  Int   @default(0)  // Uploads completed
   failedItems     Int   @default(0)  // Uploads failed
@@ -226,7 +230,7 @@ model Run {
 }
 
 // ============================================
-// Run-Upload Junction (NEW)
+// Run-Upload Junction
 // Tracks per-upload progress within a run
 // ============================================
 
