@@ -1,0 +1,279 @@
+// Requirements Foundry - Prisma Schema
+// Local-first with SQLite, designed for easy migration to Postgres
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ============================================
+// Core Entities
+// ============================================
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String?  // Nullable for MVP; add auth later
+
+  uploads Upload[]
+  cards   Card[]
+  epics   Epic[]
+  runs    Run[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Upload {
+  id               String   @id @default(cuid())
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  filename         String?  // null if pasted text
+  fileType         String   // MIME type: "text/plain", "application/pdf", etc.
+  rawContent       String   // extracted text content
+  filePath         String?  // path to original file on disk (optional)
+
+  // NEW: Separate extraction and analysis status
+  extractionStatus String   @default("PENDING") // PENDING, EXTRACTING, EXTRACTED, FAILED
+  analysisStatus   String   @default("PENDING") // PENDING, QUEUED, ANALYZING, COMPLETED, FAILED, SKIPPED
+
+  errorMsg         String?
+  errorPhase       String?  // "extraction" | "analysis"
+  createdAt        DateTime @default(now())
+
+  // Extended fields for document processing
+  fileSize         Int?     // file size in bytes
+  processingMethod String?  // extractor used: "pdf-parse", "mammoth", etc.
+  pageCount        Int?     // for PDFs
+  slideCount       Int?     // for PPTX
+  sheetCount       Int?     // for XLSX
+  wordCount        Int?     // extracted word count
+  hasImages        Boolean  @default(false)
+  processingTimeMs Int?     // time to process
+
+  // NEW: Track which run last analyzed this upload
+  lastAnalyzedRunId String?
+  lastAnalyzedAt    DateTime?
+
+  cards      Card[]
+  images     DocumentImage[]
+  runUploads RunUpload[]
+
+  @@index([projectId])
+  @@index([extractionStatus])
+  @@index([analysisStatus])
+  @@index([projectId, analysisStatus])
+}
+
+model DocumentImage {
+  id          String   @id @default(cuid())
+  uploadId    String
+  upload      Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  base64      String   // base64-encoded image data
+  mimeType    String   // image/png, image/jpeg, etc.
+  index       Int      // order within document
+  pageNumber  Int?     // for PDFs
+  slideNumber Int?     // for PPTX
+  width       Int?
+  height      Int?
+  description String?  // optional alt text or caption
+  createdAt   DateTime @default(now())
+
+  @@index([uploadId])
+}
+
+model Card {
+  id              String   @id @default(cuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadId        String?
+  upload          Upload?  @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+
+  // NEW: Track which run created this card
+  runId           String?
+
+  title           String
+  problem         String?  // problem / opportunity
+  targetUsers     String?  // target users/stakeholders
+  currentState    String?
+  desiredOutcomes String?  // KPIs
+  constraints     String?
+  systems         String?  // systems involved
+  priority        String?  // high/medium/low or custom
+  impact          String?
+  rawText         String?  // original chunk if needed
+  createdAt       DateTime @default(now())
+
+  // Many-to-many with Epic stored as JSON references in Epic
+  @@index([projectId])
+  @@index([uploadId])
+  @@index([runId])
+}
+
+model Epic {
+  id                 String   @id @default(cuid())
+  projectId          String
+  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code               String   // E1, E2, etc.
+  title              String
+  theme              String?
+  description        String?
+  businessValue      String?
+  acceptanceCriteria String?  // JSON array stored as string
+  dependencies       String?  // JSON array of epic codes
+  effort             String?  // S/M/L or story points
+  impact             String?  // high/medium/low
+  priority           Int?     // numeric for sorting
+  cardIds            String?  // JSON array of card IDs that informed this epic
+  runId              String?  // which run generated this
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  stories Story[]
+
+  @@unique([projectId, code])
+  @@index([projectId])
+  @@index([runId])
+}
+
+model Story {
+  id                 String    @id @default(cuid())
+  epicId             String
+  epic               Epic      @relation(fields: [epicId], references: [id], onDelete: Cascade)
+  code               String    // S1, S2, etc. (within epic)
+  title              String
+  userStory          String    // "As a [persona], I want..."
+  persona            String?
+  acceptanceCriteria String?   // JSON array
+  technicalNotes     String?
+  priority           String?   // MoSCoW or numeric
+  effort             String?   // story points or T-shirt
+  runId              String?   // which run generated this
+  createdAt          DateTime  @default(now())
+
+  subtasks Subtask[]
+
+  @@unique([epicId, code])
+  @@index([epicId])
+  @@index([runId])
+}
+
+model Subtask {
+  id          String   @id @default(cuid())
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  code        String   // ST1, ST2, etc.
+  title       String
+  description String?
+  effort      String?
+  createdAt   DateTime @default(now())
+
+  @@unique([storyId, code])
+  @@index([storyId])
+}
+
+// ============================================
+// Run Tracking (AI Generation Jobs)
+// ============================================
+
+model Run {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type        String    // ANALYZE_CARDS, GENERATE_EPICS, GENERATE_STORIES, EXPORT
+  status      String    @default("QUEUED") // QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED
+
+  // NEW: Granular phase tracking
+  phase       String    @default("INITIALIZING") // INITIALIZING, LOADING_CONTENT, ANALYZING, SAVING_RESULTS, FINALIZING, COMPLETED, FAILED
+  phaseDetail String?   // Optional detail: "Processing document 3 of 7"
+
+  // Configuration
+  inputConfig String?   // JSON: e.g., {"uploadIds": ["..."], "replaceExisting": false}
+
+  // NEW: Progress counters
+  totalItems      Int   @default(0)  // Total uploads to process
+  completedItems  Int   @default(0)  // Uploads completed
+  failedItems     Int   @default(0)  // Uploads failed
+  totalCards      Int   @default(0)  // Cards created so far
+
+  // Results
+  outputData  String?   // JSON result
+  errorMsg    String?
+  logs        String?   // newline-separated log entries
+  tokensUsed  Int?
+  durationMs  Int?
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  // Relations
+  runUploads  RunUpload[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([projectId, status])
+}
+
+// ============================================
+// Run-Upload Junction (NEW)
+// Tracks per-upload progress within a run
+// ============================================
+
+model RunUpload {
+  id        String   @id @default(cuid())
+  runId     String
+  run       Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  uploadId  String
+  upload    Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  // Per-upload status within this run
+  status    String   @default("PENDING") // PENDING, LOADING, ANALYZING, SAVING, COMPLETED, FAILED, SKIPPED
+
+  // Processing metrics
+  startedAt    DateTime?
+  completedAt  DateTime?
+  durationMs   Int?
+  tokensUsed   Int?
+
+  // Results
+  cardsCreated Int      @default(0)
+  errorMsg     String?
+
+  // Ordering
+  order        Int      @default(0)  // Processing order
+
+  createdAt    DateTime @default(now())
+
+  @@unique([runId, uploadId])
+  @@index([runId])
+  @@index([uploadId])
+  @@index([runId, status])
+}
+
+// ============================================
+// Prompt Templates (Versioned)
+// ============================================
+
+model PromptTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "extract_cards", "generate_epics", "generate_stories"
+  version     Int      @default(1)
+  content     String   // the actual prompt template with {{placeholders}}
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name, isActive])
+}
