@@ -106,11 +106,16 @@ export async function analyzeProject(
       data: { analysisStatus: AnalysisStatus.QUEUED },
     });
 
-    // 7. Start async execution (fire-and-forget)
-    // This runs in-process but doesn't block the response
-    executeRun(run.id).catch((err) => {
-      console.error(`[Run ${run.id}] Unhandled error:`, err);
-    });
+    // 7. Start async execution
+    // On Vercel (serverless), we MUST await - fire-and-forget doesn't work
+    // because the function terminates when the response is sent.
+    // For long-running jobs, consider using Vercel Cron or a queue system.
+    try {
+      await executeRun(run.id);
+    } catch (err) {
+      console.error(`[Run ${run.id}] Execution error:`, err);
+      // Run already marked as failed by executor, just log
+    }
 
     revalidatePath(`/projects/${projectId}`);
 
