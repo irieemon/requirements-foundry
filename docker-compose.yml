@@ -1,0 +1,24 @@
+# Local Development Database
+# Usage: docker compose up -d
+# Then set DATABASE_URL in .env to: postgres://postgres:dev@localhost:5432/requirements_foundry
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: requirements-foundry-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: requirements_foundry
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
