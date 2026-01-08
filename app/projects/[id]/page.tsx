@@ -9,14 +9,11 @@ import { TextPasteDialog } from "@/components/uploads/text-paste-dialog";
 import { MultiFileUpload } from "@/components/uploads/multi-file-upload";
 import { UploadList } from "@/components/uploads/upload-list";
 import { AnalyzePanel } from "@/components/analysis/analyze-panel";
-import { EpicGrid } from "@/components/epics/epic-grid";
-import { GenerateEpicsButton } from "@/components/epics/generate-epics-button";
+import { EpicsSection } from "@/components/epics/epics-section";
 import { RunList } from "@/components/runs/run-list";
 import { ExportProjectButton } from "@/components/export/export-buttons";
 import { EmptyState } from "@/components/layout/empty-state";
-import { Layers, Download } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Layers } from "lucide-react";
 
 type Section = "uploads" | "cards" | "epics" | "runs";
 
@@ -177,34 +174,11 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
 
           {/* Epics Section */}
           {activeSection === "epics" && (
-            <>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">Generated Epics</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {project._count.epics > 0
-                      ? `${project._count.epics} epic${project._count.epics !== 1 ? "s" : ""} ready for export`
-                      : "Epics synthesized from your use case cards."}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <GenerateEpicsButton
-                    projectId={project.id}
-                    cardCount={project._count.cards}
-                    hasExistingEpics={project._count.epics > 0}
-                  />
-                  {project._count.epics > 0 && (
-                    <Button variant="outline" asChild>
-                      <Link href={`/projects/${project.id}/export`}>
-                        <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                        Export
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <EpicGrid projectId={project.id} epics={project.epics} />
-            </>
+            <EpicsSection
+              projectId={project.id}
+              epics={project.epics}
+              cardCount={project._count.cards}
+            />
           )}
 
           {/* Runs Section */}

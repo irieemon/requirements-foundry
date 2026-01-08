@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/layout/empty-state";
 import { BookOpen, ArrowRight, Sparkles } from "lucide-react";
 
-interface EpicGridProps {
+export interface EpicGridProps {
   projectId: string;
   epics: {
     id: string;
