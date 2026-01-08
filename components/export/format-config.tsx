@@ -28,8 +28,8 @@ import type {
   ExportConfig,
   ExportScope,
   JiraExportRow,
-} from "@/lib/export/jira";
-import { getAllPresets } from "@/lib/export/jira";
+} from "@/lib/export/jira/client";
+import { getAllPresets } from "@/lib/export/jira/client";
 
 interface FormatConfigProps {
   projectId: string;

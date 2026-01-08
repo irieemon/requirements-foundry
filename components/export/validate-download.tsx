@@ -19,7 +19,7 @@ import {
   Package,
 } from "lucide-react";
 import { generateExport } from "@/server/actions/jira-export";
-import type { ExportConfig, ValidationResult, ExportStats, ExportBundle } from "@/lib/export/jira";
+import type { ExportConfig, ValidationResult, ExportStats, ExportBundle } from "@/lib/export/jira/client";
 import { toast } from "sonner";
 import JSZip from "jszip";
 

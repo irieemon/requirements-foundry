@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Layers, BookOpen, FileText, History } from "lucide-react";
 import { getEpicsForSelection, getAvailableRuns } from "@/server/actions/jira-export";
-import type { ScopeMode, ExportScope, EpicOption, RunOption } from "@/lib/export/jira";
+import type { ScopeMode, ExportScope, EpicOption, RunOption } from "@/lib/export/jira/client";
 import { formatDistanceToNow } from "date-fns";
 
 interface ScopeSelectorProps {

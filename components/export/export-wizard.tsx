@@ -15,7 +15,7 @@ import type {
   ContentLevel,
   ValidationResult,
   ExportStats,
-} from "@/lib/export/jira";
+} from "@/lib/export/jira/client";
 
 const STEPS = ["Scope", "Format", "Validate & Download"];
 
