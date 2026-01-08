@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { executeBatchStoryRun, markBatchRunCancelled } from "@/lib/run-engine/batch-story-executor";
+import { triggerProcessNext } from "@/lib/run-engine/process-next-trigger";
 import {
   RunType,
   RunStatus,
@@ -105,14 +105,13 @@ export async function startGenerateAllStories(
       })),
     });
 
-    // 6. Start async execution (awaited for serverless)
-    try {
-      await executeBatchStoryRun(run.id);
-    } catch (err) {
-      console.error(`[BatchStoryRun ${run.id}] Execution error:`, err);
-      // Run already marked as failed by executor, just log
-    }
+    // 6. Fire-and-forget: trigger the first process-next call
+    // This pattern works within Vercel's serverless timeout limits
+    // Each epic is processed in its own function invocation
+    console.log(`[BatchStoryRun ${run.id}] Triggering process-next (fire-and-forget)`);
+    triggerProcessNext(run.id);
 
+    // Return immediately - don't wait for processing
     revalidatePath(`/projects/${projectId}`);
 
     return { success: true, runId: run.id, epicCount: epicsToProcess.length };
@@ -217,20 +216,15 @@ export async function cancelBatchStoryRun(
     return { success: false, error: "Run is not active" };
   }
 
-  // Mark run as cancelled in executor
-  const wasActive = markBatchRunCancelled(runId);
-
-  if (!wasActive) {
-    // Run is not actively being processed, update directly
-    await db.run.update({
-      where: { id: runId },
-      data: {
-        status: RunStatus.CANCELLED,
-        completedAt: new Date(),
-      },
-    });
-  }
-  // If wasActive, the executor will handle the cancellation
+  // With the continuation pattern, we just mark the run as cancelled
+  // The next process-next call will see this and stop
+  await db.run.update({
+    where: { id: runId },
+    data: {
+      status: RunStatus.CANCELLED,
+      completedAt: new Date(),
+    },
+  });
 
   revalidatePath(`/projects/${run.projectId}`);
 
