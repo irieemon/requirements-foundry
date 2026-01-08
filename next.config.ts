@@ -1,13 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Extend server action timeout for AI analysis (default is 30s)
-  // Vercel Pro: up to 300s, Hobby: up to 60s
+  // Vercel Pro: up to 300s timeout for server actions
   experimental: {
     serverActions: {
       bodySizeLimit: "4mb",
     },
   },
+  // Set max duration for all serverless functions (Vercel Pro: 300s max)
+  serverExternalPackages: ["@prisma/client"],
 };
 
 export default nextConfig;
