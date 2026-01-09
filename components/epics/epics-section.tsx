@@ -33,9 +33,9 @@ export function EpicsSection({ projectId, epics, cardCount }: EpicsSectionProps)
     previousRunId,
   } = useActiveBatchStoryRun(projectId);
 
-  // Sync fetched active run ID
+  // Sync fetched active run ID (including clearing when no active run)
   useEffect(() => {
-    if (!isChecking && fetchedRunId) {
+    if (!isChecking) {
       setActiveRunId(fetchedRunId);
     }
   }, [fetchedRunId, isChecking]);
