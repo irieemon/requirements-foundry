@@ -221,11 +221,23 @@ export function useRunProgress(
 }
 
 /**
+ * Response from active-run endpoint with stale recovery info.
+ */
+interface ActiveRunResponse {
+  runId: string | null;
+  recoveredFromStale: boolean;
+  previousRunId: string | null;
+}
+
+/**
  * Simplified hook for just checking if a project has an active run.
+ * Also detects and reports stale run recovery.
  */
 export function useActiveRun(projectId: string) {
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const [recoveredFromStale, setRecoveredFromStale] = useState(false);
+  const [previousRunId, setPreviousRunId] = useState<string | null>(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -236,8 +248,10 @@ export function useActiveRun(projectId: string) {
           cache: "no-store",
         });
         if (response.ok && !isCancelled) {
-          const data = await response.json();
+          const data: ActiveRunResponse = await response.json();
           setActiveRunId(data.runId || null);
+          setRecoveredFromStale(data.recoveredFromStale || false);
+          setPreviousRunId(data.previousRunId || null);
         }
       } catch {
         // Silently fail
@@ -259,5 +273,7 @@ export function useActiveRun(projectId: string) {
     activeRunId,
     isChecking,
     hasActiveRun: !!activeRunId,
+    recoveredFromStale,
+    previousRunId,
   };
 }

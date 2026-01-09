@@ -2,6 +2,7 @@
 // Active Run Check API Route
 // GET /api/projects/[id]/active-run - Check for active analysis run
 // ============================================
+// Enhanced with stale run detection for Vercel serverless recovery
 
 import { NextRequest, NextResponse } from "next/server";
 import { getActiveRunForProject } from "@/server/actions/analysis";
@@ -18,8 +19,11 @@ export async function GET(
 
     const result = await getActiveRunForProject(id);
 
+    // Return extended response including stale recovery info
     return NextResponse.json({
-      runId: result?.runId || null,
+      runId: result.runId,
+      recoveredFromStale: result.recoveredFromStale || false,
+      previousRunId: result.previousRunId || null,
     });
   } catch (error) {
     console.error("Get active run error:", error);

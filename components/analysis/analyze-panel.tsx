@@ -106,8 +106,8 @@ export function AnalyzePanel({ projectId, uploads }: AnalyzePanelProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
 
-  // Check for any existing active run
-  const { activeRunId, isChecking, hasActiveRun } = useActiveRun(projectId);
+  // Check for any existing active run (with stale recovery detection)
+  const { activeRunId, isChecking, recoveredFromStale, previousRunId } = useActiveRun(projectId);
 
   // Use active run if one exists
   useEffect(() => {
@@ -115,6 +115,15 @@ export function AnalyzePanel({ projectId, uploads }: AnalyzePanelProps) {
       setCurrentRunId(activeRunId);
     }
   }, [activeRunId]);
+
+  // Show toast if we recovered from a stale run
+  useEffect(() => {
+    if (recoveredFromStale && previousRunId) {
+      toast.info("Recovered from stale run", {
+        description: "A previous analysis was stuck and has been marked as failed. You can start a new analysis.",
+      });
+    }
+  }, [recoveredFromStale, previousRunId]);
 
   // Filter to only show extracted uploads
   const extractedUploads = uploads.filter(

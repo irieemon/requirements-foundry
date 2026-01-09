@@ -68,6 +68,38 @@ export function triggerProcessNext(runId: string): void {
 }
 
 /**
+ * Fire-and-forget trigger for processing the next upload in a card analysis run.
+ * Does NOT wait for the response - returns immediately.
+ *
+ * This mirrors triggerProcessNext() but for the card analysis flow.
+ *
+ * @param runId - The card analysis run ID
+ * @returns void (fire-and-forget)
+ */
+export function triggerProcessNextUpload(runId: string): void {
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}/api/runs/${runId}/process-next-upload`;
+  const secret = getBatchSecret();
+
+  console.log(`[CardAnalysis] Triggering process-next-upload for run ${runId}`);
+  console.log(`[CardAnalysis] URL: ${url}`);
+
+  // Fire and forget - do NOT await
+  fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-batch-secret": secret,
+    },
+  }).catch((error) => {
+    // Log but don't throw - this is fire-and-forget
+    console.error(`[CardAnalysis] Failed to trigger process-next-upload:`, error);
+  });
+
+  // Return immediately - don't wait for the fetch
+}
+
+/**
  * Validate the batch secret from incoming request headers.
  *
  * @param headerSecret - The secret from the request header

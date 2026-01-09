@@ -225,6 +225,9 @@ model Run {
   startedAt   DateTime?
   completedAt DateTime?
 
+  // Heartbeat for stale run detection (Vercel serverless recovery)
+  heartbeatAt DateTime?  // Last worker check-in time
+
   // Relations
   runUploads  RunUpload[]
   runEpics    RunEpic[]
