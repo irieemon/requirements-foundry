@@ -276,22 +276,68 @@ export async function retryFailedEpics(
 }
 
 // ============================================
-// Get Active Batch Story Run
+// Get Active Batch Story Run (with Stale Detection)
 // ============================================
+
+// Stale threshold: 2 minutes without heartbeat
+const STALE_THRESHOLD_MS = 2 * 60 * 1000;
+
+export interface ActiveBatchStoryRunResult {
+  runId: string | null;
+  recoveredFromStale?: boolean;
+  previousRunId?: string;
+}
 
 export async function getActiveBatchStoryRun(
   projectId: string
-): Promise<{ runId: string } | null> {
+): Promise<ActiveBatchStoryRunResult> {
   const activeRun = await db.run.findFirst({
     where: {
       projectId,
       type: RunType.GENERATE_ALL_STORIES,
       status: { in: [RunStatus.QUEUED, RunStatus.RUNNING] },
     },
-    select: { id: true },
+    select: { id: true, heartbeatAt: true, status: true, startedAt: true },
   });
 
-  return activeRun ? { runId: activeRun.id } : null;
+  if (!activeRun) {
+    return { runId: null };
+  }
+
+  // Check for stale run (heartbeat older than threshold)
+  // For QUEUED runs that never started, check startedAt instead
+  const lastActivity = activeRun.heartbeatAt || activeRun.startedAt;
+  const isStale = lastActivity &&
+    (Date.now() - lastActivity.getTime() > STALE_THRESHOLD_MS);
+
+  if (isStale) {
+    console.log(`[BatchStory StaleDetection] Run ${activeRun.id} is stale (last activity: ${lastActivity?.toISOString()})`);
+
+    // Mark as failed and allow restart
+    await db.run.update({
+      where: { id: activeRun.id },
+      data: {
+        status: RunStatus.FAILED,
+        phase: RunPhase.FAILED,
+        errorMsg: 'Run became stale (worker disconnected)',
+        completedAt: new Date(),
+      },
+    });
+
+    // Reset pending RunEpics (if any) so they can be retried
+    await db.runEpic.updateMany({
+      where: { runId: activeRun.id, status: RunEpicStatus.PENDING },
+      data: { status: RunEpicStatus.FAILED, errorMsg: 'Run became stale' },
+    });
+
+    return {
+      runId: null,
+      recoveredFromStale: true,
+      previousRunId: activeRun.id,
+    };
+  }
+
+  return { runId: activeRun.id };
 }
 
 // ============================================

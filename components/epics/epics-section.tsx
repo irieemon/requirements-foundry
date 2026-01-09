@@ -11,6 +11,7 @@ import {
 } from "@/components/batch-stories";
 import { useActiveBatchStoryRun } from "@/hooks/use-batch-story-progress";
 import { Download } from "lucide-react";
+import { toast } from "sonner";
 
 interface EpicsSectionProps {
   projectId: string;
@@ -25,7 +26,12 @@ interface EpicsSectionProps {
  */
 export function EpicsSection({ projectId, epics, cardCount }: EpicsSectionProps) {
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
-  const { activeRunId: fetchedRunId, isChecking } = useActiveBatchStoryRun(projectId);
+  const {
+    activeRunId: fetchedRunId,
+    isChecking,
+    recoveredFromStale,
+    previousRunId,
+  } = useActiveBatchStoryRun(projectId);
 
   // Sync fetched active run ID
   useEffect(() => {
@@ -33,6 +39,15 @@ export function EpicsSection({ projectId, epics, cardCount }: EpicsSectionProps)
       setActiveRunId(fetchedRunId);
     }
   }, [fetchedRunId, isChecking]);
+
+  // Show toast if we recovered from a stale run
+  useEffect(() => {
+    if (recoveredFromStale && previousRunId) {
+      toast.info("Recovered from stale run", {
+        description: "A previous story generation was stuck and has been marked as failed. You can start a new generation.",
+      });
+    }
+  }, [recoveredFromStale, previousRunId]);
 
   const epicCount = epics.length;
   const hasEpics = epicCount > 0;

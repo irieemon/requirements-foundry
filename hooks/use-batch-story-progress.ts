@@ -236,11 +236,23 @@ export function useBatchStoryProgress(
 }
 
 /**
- * Hook to check for active batch story run
+ * Response from active-batch-story-run endpoint with stale recovery info.
+ */
+interface ActiveBatchStoryRunResponse {
+  runId: string | null;
+  recoveredFromStale: boolean;
+  previousRunId: string | null;
+}
+
+/**
+ * Hook to check for active batch story run.
+ * Also detects and reports stale run recovery.
  */
 export function useActiveBatchStoryRun(projectId: string) {
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const [recoveredFromStale, setRecoveredFromStale] = useState(false);
+  const [previousRunId, setPreviousRunId] = useState<string | null>(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -251,8 +263,10 @@ export function useActiveBatchStoryRun(projectId: string) {
           cache: "no-store",
         });
         if (response.ok && !isCancelled) {
-          const data = await response.json();
+          const data: ActiveBatchStoryRunResponse = await response.json();
           setActiveRunId(data.runId || null);
+          setRecoveredFromStale(data.recoveredFromStale || false);
+          setPreviousRunId(data.previousRunId || null);
         }
       } catch {
         // Silently fail
@@ -274,5 +288,7 @@ export function useActiveBatchStoryRun(projectId: string) {
     activeRunId,
     isChecking,
     hasActiveRun: !!activeRunId,
+    recoveredFromStale,
+    previousRunId,
   };
 }

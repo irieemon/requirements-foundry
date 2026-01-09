@@ -70,6 +70,12 @@ export async function POST(
       return NextResponse.json({ success: true, message: "Run already completed" });
     }
 
+    // 2.5. Update heartbeat for stale detection (Vercel serverless recovery)
+    await db.run.update({
+      where: { id: runId },
+      data: { heartbeatAt: new Date() },
+    });
+
     // 3. Find the next PENDING epic
     const pendingEpic = await db.runEpic.findFirst({
       where: {
