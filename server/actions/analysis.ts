@@ -283,7 +283,7 @@ export async function getActiveRunForProject(
       type: RunType.ANALYZE_CARDS,
       status: { in: [RunStatus.QUEUED, RunStatus.RUNNING] },
     },
-    select: { id: true, heartbeatAt: true, status: true, startedAt: true },
+    select: { id: true, heartbeatAt: true, status: true, startedAt: true, createdAt: true },
   });
 
   if (!activeRun) {
@@ -291,10 +291,10 @@ export async function getActiveRunForProject(
   }
 
   // Check for stale run (heartbeat older than threshold)
-  // For QUEUED runs that never started, check startedAt instead
-  const lastActivity = activeRun.heartbeatAt || activeRun.startedAt;
-  const isStale = lastActivity &&
-    (Date.now() - lastActivity.getTime() > STALE_THRESHOLD_MS);
+  // Fallback chain: heartbeatAt -> startedAt -> createdAt
+  // This ensures QUEUED runs that never started are also checked
+  const lastActivity = activeRun.heartbeatAt || activeRun.startedAt || activeRun.createdAt;
+  const isStale = Date.now() - lastActivity.getTime() > STALE_THRESHOLD_MS;
 
   if (isStale) {
     console.log(`[StaleDetection] Run ${activeRun.id} is stale (last activity: ${lastActivity?.toISOString()})`);
