@@ -140,7 +140,8 @@ model Epic {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  stories Story[]
+  stories  Story[]
+  runEpics RunEpic[]
 
   @@unique([projectId, code])
   @@index([projectId])
@@ -191,21 +192,26 @@ model Run {
   id          String    @id @default(cuid())
   projectId   String
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  type        String    // ANALYZE_CARDS, GENERATE_EPICS, GENERATE_STORIES, EXPORT
-  status      String    @default("QUEUED") // QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED
+  type        String    // ANALYZE_CARDS, GENERATE_EPICS, GENERATE_STORIES, GENERATE_ALL_STORIES, EXPORT
+  status      String    @default("QUEUED") // QUEUED, RUNNING, SUCCEEDED, PARTIAL, FAILED, CANCELLED
 
   // Granular phase tracking
-  phase       String    @default("INITIALIZING") // INITIALIZING, LOADING_CONTENT, ANALYZING, SAVING_RESULTS, FINALIZING, COMPLETED, FAILED
+  phase       String    @default("INITIALIZING") // INITIALIZING, LOADING_CONTENT, ANALYZING, QUEUEING_EPICS, GENERATING_STORIES, SAVING_RESULTS, FINALIZING, COMPLETED, FAILED
   phaseDetail String?   // Optional detail: "Processing document 3 of 7"
 
   // Configuration
   inputConfig String?   // JSON: e.g., {"uploadIds": ["..."], "replaceExisting": false}
 
   // Progress counters
-  totalItems      Int   @default(0)  // Total uploads to process
-  completedItems  Int   @default(0)  // Uploads completed
-  failedItems     Int   @default(0)  // Uploads failed
-  totalCards      Int   @default(0)  // Cards created so far
+  totalItems      Int   @default(0)  // Total uploads/epics to process
+  completedItems  Int   @default(0)  // Items completed
+  failedItems     Int   @default(0)  // Items failed
+  skippedItems    Int   @default(0)  // Items skipped (batch stories: epic had stories + skip mode)
+  totalCards      Int   @default(0)  // Cards/stories created so far
+
+  // Current processing pointer (for batch operations)
+  currentItemId    String?  // Currently processing item ID (epicId or uploadId)
+  currentItemIndex Int?     // 1-based index for display
 
   // Results
   outputData  String?   // JSON result
@@ -219,14 +225,19 @@ model Run {
   startedAt   DateTime?
   completedAt DateTime?
 
+  // Heartbeat for stale run detection (Vercel serverless recovery)
+  heartbeatAt DateTime?  // Last worker check-in time
+
   // Relations
   runUploads  RunUpload[]
+  runEpics    RunEpic[]
 
   @@index([projectId])
   @@index([status])
   @@index([type])
   @@index([createdAt])
   @@index([projectId, status])
+  @@index([projectId, type, status])
 }
 
 // ============================================
@@ -262,6 +273,50 @@ model RunUpload {
   @@unique([runId, uploadId])
   @@index([runId])
   @@index([uploadId])
+  @@index([runId, status])
+}
+
+// ============================================
+// Run-Epic Junction
+// Tracks per-epic progress within a batch story generation run
+// ============================================
+
+model RunEpic {
+  id        String   @id @default(cuid())
+  runId     String
+  run       Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  epicId    String
+  epic      Epic     @relation(fields: [epicId], references: [id], onDelete: Cascade)
+
+  // Status tracking
+  status    String   @default("PENDING") // PENDING, GENERATING, SAVING, COMPLETED, FAILED, SKIPPED
+
+  // Ordering for sequential processing
+  order     Int      @default(0)
+
+  // Timing
+  startedAt    DateTime?
+  completedAt  DateTime?
+  durationMs   Int?
+
+  // Token tracking (for cost estimation)
+  tokensUsed   Int?
+
+  // Results
+  storiesCreated   Int      @default(0)
+  storiesDeleted   Int      @default(0)  // When mode=replace
+  errorMsg         String?
+  retryCount       Int      @default(0)
+
+  // Configuration snapshot (for audit/retry)
+  mode             String?  // compact/standard/detailed
+  personaSet       String?  // lightweight/core/full
+
+  createdAt        DateTime @default(now())
+
+  @@unique([runId, epicId])
+  @@index([runId])
+  @@index([epicId])
   @@index([runId, status])
 }
 

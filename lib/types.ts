@@ -35,6 +35,7 @@ export const RunType = {
   ANALYZE_CARDS: "ANALYZE_CARDS",
   GENERATE_EPICS: "GENERATE_EPICS",
   GENERATE_STORIES: "GENERATE_STORIES",
+  GENERATE_ALL_STORIES: "GENERATE_ALL_STORIES",
   EXPORT: "EXPORT",
 } as const;
 export type RunType = (typeof RunType)[keyof typeof RunType];
@@ -43,6 +44,7 @@ export const RunStatus = {
   QUEUED: "QUEUED",
   RUNNING: "RUNNING",
   SUCCEEDED: "SUCCEEDED",
+  PARTIAL: "PARTIAL",  // Some items succeeded, some failed
   FAILED: "FAILED",
   CANCELLED: "CANCELLED",
 } as const;
@@ -53,6 +55,8 @@ export const RunPhase = {
   INITIALIZING: "INITIALIZING",
   LOADING_CONTENT: "LOADING_CONTENT",
   ANALYZING: "ANALYZING",
+  QUEUEING_EPICS: "QUEUEING_EPICS",        // For batch story generation
+  GENERATING_STORIES: "GENERATING_STORIES", // For batch story generation
   SAVING_RESULTS: "SAVING_RESULTS",
   FINALIZING: "FINALIZING",
   COMPLETED: "COMPLETED",
@@ -71,6 +75,51 @@ export const RunUploadStatus = {
   SKIPPED: "SKIPPED",
 } as const;
 export type RunUploadStatus = (typeof RunUploadStatus)[keyof typeof RunUploadStatus];
+
+// Per-epic status within a batch story generation run
+export const RunEpicStatus = {
+  PENDING: "PENDING",
+  GENERATING: "GENERATING",
+  SAVING: "SAVING",
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+  SKIPPED: "SKIPPED",
+} as const;
+export type RunEpicStatus = (typeof RunEpicStatus)[keyof typeof RunEpicStatus];
+
+// Batch story generation: how to handle epics that already have stories
+export const ExistingStoriesBehavior = {
+  REPLACE: "replace",  // Delete existing stories and regenerate
+  SKIP: "skip",        // Skip epics that have stories
+} as const;
+export type ExistingStoriesBehavior = (typeof ExistingStoriesBehavior)[keyof typeof ExistingStoriesBehavior];
+
+// Batch story generation: processing pacing
+export const ProcessingPacing = {
+  SAFE: "safe",     // 2s delay, best for large batches
+  NORMAL: "normal", // 1s delay, balanced
+  FAST: "fast",     // 0.5s delay, may hit rate limits
+} as const;
+export type ProcessingPacing = (typeof ProcessingPacing)[keyof typeof ProcessingPacing];
+
+// Pacing configuration
+export const PACING_CONFIG = {
+  safe: {
+    delayBetweenEpicsMs: 2000,
+    maxRetries: 3,
+    retryBackoffMs: [5000, 10000, 20000],
+  },
+  normal: {
+    delayBetweenEpicsMs: 1000,
+    maxRetries: 3,
+    retryBackoffMs: [3000, 6000, 12000],
+  },
+  fast: {
+    delayBetweenEpicsMs: 500,
+    maxRetries: 2,
+    retryBackoffMs: [2000, 4000],
+  },
+} as const;
 
 // ============================================
 // Generation Modes & Personas
@@ -259,6 +308,69 @@ export interface RunProgress {
   estimatedRemainingMs?: number;
 
   // Errors
+  error?: string;
+}
+
+// ============================================
+// Batch Story Generation Types
+// ============================================
+
+export interface GenerateAllStoriesInput {
+  projectId: string;
+  options: {
+    mode: GenerationMode;
+    personaSet: PersonaSet;
+    existingStoriesBehavior: ExistingStoriesBehavior;
+    epicIds?: string[];  // Optional: specific epics only (for retry)
+    pacing: ProcessingPacing;
+  };
+}
+
+export interface GenerateAllStoriesResult {
+  success: boolean;
+  runId?: string;
+  error?: string;
+  epicCount?: number;
+}
+
+export interface RunEpicProgress {
+  epicId: string;
+  epicCode: string;
+  epicTitle: string;
+  status: RunEpicStatus;
+  storiesCreated: number;
+  storiesDeleted: number;
+  error?: string;
+  durationMs?: number;
+}
+
+export interface BatchStoryProgress {
+  runId: string;
+  status: RunStatus;
+  phase: RunPhase;
+  phaseDetail?: string;
+
+  // Counters
+  totalEpics: number;
+  completedEpics: number;
+  failedEpics: number;
+  skippedEpics: number;
+  totalStoriesCreated: number;
+
+  // Current processing
+  currentEpicIndex?: number;  // 1-based
+  currentEpicId?: string;
+  currentEpicTitle?: string;
+
+  // Epic details
+  epics: RunEpicProgress[];
+
+  // Timing
+  startedAt?: Date;
+  elapsedMs?: number;
+  estimatedRemainingMs?: number;
+
+  // Error
   error?: string;
 }
 

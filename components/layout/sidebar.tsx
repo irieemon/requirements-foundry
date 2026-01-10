@@ -36,7 +36,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300",
+          // Hidden on mobile (< md), visible on tablet/desktop
+          "hidden md:flex fixed left-0 top-0 z-40 h-screen flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300",
           collapsed ? "w-16" : "w-56"
         )}
         aria-label="Main navigation"
@@ -104,23 +105,23 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           })}
         </nav>
 
-        {/* Collapse toggle */}
+        {/* Collapse toggle - larger touch target for tablets */}
         <div className="border-t border-sidebar-border p-3">
           <Button
             variant="ghost"
-            size="sm"
+            size="default"
             onClick={onToggle}
             className={cn(
-              "w-full text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent",
+              "w-full min-h-[44px] text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent",
               collapsed ? "justify-center px-0" : "justify-start"
             )}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" />
             ) : (
               <>
-                <ChevronLeft className="h-4 w-4 mr-2" />
+                <ChevronLeft className="h-5 w-5 mr-2" />
                 <span>Collapse</span>
               </>
             )}

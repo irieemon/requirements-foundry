@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "./sidebar";
+import { MobileNav } from "./mobile-nav";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -33,18 +34,29 @@ export function AppShell({ children }: AppShellProps) {
   if (!mounted) {
     return (
       <div className="min-h-screen bg-canvas">
-        <div className="pl-56">{children}</div>
+        {/* Mobile: no padding, show mobile nav */}
+        {/* Desktop: left padding for sidebar */}
+        <div className="md:pl-56">{children}</div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-canvas">
+      {/* Mobile navigation - visible on screens < md */}
+      <MobileNav />
+
+      {/* Desktop sidebar - visible on screens >= md */}
       <Sidebar collapsed={collapsed} onToggle={handleToggle} />
+
+      {/* Main content area */}
+      {/* Mobile: no left padding (full width) */}
+      {/* Desktop: left padding matches sidebar width */}
       <div
         className={cn(
           "transition-all duration-300",
-          collapsed ? "pl-16" : "pl-56"
+          // No padding on mobile, sidebar padding on desktop
+          collapsed ? "md:pl-16" : "md:pl-56"
         )}
       >
         {children}

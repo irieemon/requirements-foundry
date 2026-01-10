@@ -2,29 +2,32 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import type { RunProgress, RunStatus as RunStatusType } from "@/lib/types";
+import type { BatchStoryProgress, RunStatus as RunStatusType } from "@/lib/types";
 import { RunStatus } from "@/lib/types";
 
-interface UseRunProgressOptions {
+interface UseBatchStoryProgressOptions {
   /** Polling interval in milliseconds (default: 1000) */
   pollInterval?: number;
   /** Callback when run completes successfully */
-  onComplete?: (progress: RunProgress) => void;
+  onComplete?: (progress: BatchStoryProgress) => void;
   /** Callback when run fails */
-  onError?: (progress: RunProgress) => void;
+  onError?: (progress: BatchStoryProgress) => void;
   /** Callback when run is cancelled */
-  onCancel?: (progress: RunProgress) => void;
+  onCancel?: (progress: BatchStoryProgress) => void;
   /** Auto-refresh page when complete */
   autoRefresh?: boolean;
 }
 
-interface UseRunProgressReturn {
-  progress: RunProgress | null;
+interface UseBatchStoryProgressReturn {
+  progress: BatchStoryProgress | null;
   isLoading: boolean;
   error: string | null;
   isPolling: boolean;
   isActive: boolean;
   isComplete: boolean;
+  hasFailed: boolean;
+  hasPartialSuccess: boolean;
+  currentEpic: BatchStoryProgress["epics"][0] | null;
   startPolling: (runId: string) => void;
   stopPolling: () => void;
   refresh: () => Promise<void>;
@@ -32,14 +35,15 @@ interface UseRunProgressReturn {
 
 const TERMINAL_STATUSES: RunStatusType[] = [
   RunStatus.SUCCEEDED,
+  RunStatus.PARTIAL,
   RunStatus.FAILED,
   RunStatus.CANCELLED,
 ];
 
-export function useRunProgress(
+export function useBatchStoryProgress(
   initialRunId?: string | null,
-  options: UseRunProgressOptions = {}
-): UseRunProgressReturn {
+  options: UseBatchStoryProgressOptions = {}
+): UseBatchStoryProgressReturn {
   const {
     pollInterval = 1000,
     onComplete,
@@ -50,7 +54,7 @@ export function useRunProgress(
 
   const router = useRouter();
   const [runId, setRunId] = useState<string | null>(initialRunId || null);
-  const [progress, setProgress] = useState<RunProgress | null>(null);
+  const [progress, setProgress] = useState<BatchStoryProgress | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
@@ -58,9 +62,9 @@ export function useRunProgress(
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
 
-  const fetchProgress = useCallback(async (id: string): Promise<RunProgress | null> => {
+  const fetchProgress = useCallback(async (id: string): Promise<BatchStoryProgress | null> => {
     try {
-      const response = await fetch(`/api/runs/${id}`, {
+      const response = await fetch(`/api/runs/${id}/batch-story`, {
         cache: "no-store",
       });
 
@@ -86,11 +90,12 @@ export function useRunProgress(
   }, []);
 
   const handleTerminalState = useCallback(
-    (prog: RunProgress) => {
+    (prog: BatchStoryProgress) => {
       stopPolling();
 
       switch (prog.status) {
         case RunStatus.SUCCEEDED:
+        case RunStatus.PARTIAL:
           onComplete?.(prog);
           if (autoRefresh) {
             router.refresh();
@@ -206,6 +211,13 @@ export function useRunProgress(
   const isComplete = progress
     ? TERMINAL_STATUSES.includes(progress.status)
     : false;
+  const hasFailed = progress?.status === RunStatus.FAILED;
+  const hasPartialSuccess = progress?.status === RunStatus.PARTIAL;
+
+  // Find current epic being processed
+  const currentEpic = progress?.epics?.find(
+    (e) => e.status === "GENERATING" || e.status === "SAVING"
+  ) || null;
 
   return {
     progress,
@@ -214,6 +226,9 @@ export function useRunProgress(
     isPolling,
     isActive,
     isComplete,
+    hasFailed,
+    hasPartialSuccess,
+    currentEpic,
     startPolling,
     stopPolling,
     refresh,
@@ -221,19 +236,19 @@ export function useRunProgress(
 }
 
 /**
- * Response from active-run endpoint with stale recovery info.
+ * Response from active-batch-story-run endpoint with stale recovery info.
  */
-interface ActiveRunResponse {
+interface ActiveBatchStoryRunResponse {
   runId: string | null;
   recoveredFromStale: boolean;
   previousRunId: string | null;
 }
 
 /**
- * Simplified hook for just checking if a project has an active run.
+ * Hook to check for active batch story run.
  * Also detects and reports stale run recovery.
  */
-export function useActiveRun(projectId: string) {
+export function useActiveBatchStoryRun(projectId: string) {
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
   const [recoveredFromStale, setRecoveredFromStale] = useState(false);
@@ -244,11 +259,11 @@ export function useActiveRun(projectId: string) {
 
     const checkActiveRun = async () => {
       try {
-        const response = await fetch(`/api/projects/${projectId}/active-run`, {
+        const response = await fetch(`/api/projects/${projectId}/active-batch-story-run`, {
           cache: "no-store",
         });
         if (response.ok && !isCancelled) {
-          const data: ActiveRunResponse = await response.json();
+          const data: ActiveBatchStoryRunResponse = await response.json();
           setActiveRunId(data.runId || null);
           setRecoveredFromStale(data.recoveredFromStale || false);
           setPreviousRunId(data.previousRunId || null);

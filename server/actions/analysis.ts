@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { executeRun, markRunCancelled, isRunActive } from "@/lib/run-engine/executor";
+import { triggerProcessNextUpload } from "@/lib/run-engine/process-next-trigger";
 import {
   RunType,
   RunStatus,
@@ -106,17 +106,13 @@ export async function analyzeProject(
       data: { analysisStatus: AnalysisStatus.QUEUED },
     });
 
-    // 7. Start async execution
-    // On Vercel (serverless), we MUST await - fire-and-forget doesn't work
-    // because the function terminates when the response is sent.
-    // For long-running jobs, consider using Vercel Cron or a queue system.
-    try {
-      await executeRun(run.id);
-    } catch (err) {
-      console.error(`[Run ${run.id}] Execution error:`, err);
-      // Run already marked as failed by executor, just log
-    }
+    // 7. Fire-and-forget: trigger the first process-next-upload call
+    // This pattern works within Vercel's serverless timeout limits.
+    // Each upload is processed in its own function invocation.
+    console.log(`[CardAnalysis Run ${run.id}] Triggering process-next-upload (fire-and-forget)`);
+    triggerProcessNextUpload(run.id);
 
+    // Return immediately - don't wait for processing
     revalidatePath(`/projects/${projectId}`);
 
     return { success: true, runId: run.id };
@@ -203,33 +199,28 @@ export async function cancelRun(
     return { success: false, error: "Run is not active" };
   }
 
-  // Mark run as cancelled in executor
-  const wasActive = markRunCancelled(runId);
+  // With the continuation pattern, we just mark the run as cancelled
+  // The next process-next-upload call will see this and stop
+  await db.run.update({
+    where: { id: runId },
+    data: {
+      status: RunStatus.CANCELLED,
+      completedAt: new Date(),
+    },
+  });
 
-  if (!wasActive) {
-    // Run is not actively being processed, update directly
-    await db.run.update({
-      where: { id: runId },
-      data: {
-        status: RunStatus.CANCELLED,
-        completedAt: new Date(),
-      },
+  // Reset pending uploads back to PENDING analysis status
+  const pendingRunUploads = await db.runUpload.findMany({
+    where: { runId, status: "PENDING" },
+    select: { uploadId: true },
+  });
+
+  if (pendingRunUploads.length > 0) {
+    await db.upload.updateMany({
+      where: { id: { in: pendingRunUploads.map((ru) => ru.uploadId) } },
+      data: { analysisStatus: AnalysisStatus.PENDING },
     });
-
-    // Reset pending uploads back to PENDING analysis status
-    const pendingRunUploads = await db.runUpload.findMany({
-      where: { runId, status: "PENDING" },
-      select: { uploadId: true },
-    });
-
-    if (pendingRunUploads.length > 0) {
-      await db.upload.updateMany({
-        where: { id: { in: pendingRunUploads.map((ru) => ru.uploadId) } },
-        data: { analysisStatus: AnalysisStatus.PENDING },
-      });
-    }
   }
-  // If wasActive, the executor will handle the cancellation
 
   revalidatePath(`/projects/${run.projectId}`);
 
@@ -271,22 +262,75 @@ export async function retryFailedUploads(
 }
 
 // ============================================
-// Get Active Run for Project
+// Get Active Run for Project (with Stale Detection)
 // ============================================
+
+// Stale threshold: 2 minutes without heartbeat
+const STALE_THRESHOLD_MS = 2 * 60 * 1000;
+
+export interface ActiveRunResult {
+  runId: string | null;
+  recoveredFromStale?: boolean;
+  previousRunId?: string;
+}
 
 export async function getActiveRunForProject(
   projectId: string
-): Promise<{ runId: string } | null> {
+): Promise<ActiveRunResult> {
   const activeRun = await db.run.findFirst({
     where: {
       projectId,
       type: RunType.ANALYZE_CARDS,
       status: { in: [RunStatus.QUEUED, RunStatus.RUNNING] },
     },
-    select: { id: true },
+    select: { id: true, heartbeatAt: true, status: true, startedAt: true, createdAt: true },
   });
 
-  return activeRun ? { runId: activeRun.id } : null;
+  if (!activeRun) {
+    return { runId: null };
+  }
+
+  // Check for stale run (heartbeat older than threshold)
+  // Fallback chain: heartbeatAt -> startedAt -> createdAt
+  // This ensures QUEUED runs that never started are also checked
+  const lastActivity = activeRun.heartbeatAt || activeRun.startedAt || activeRun.createdAt;
+  const isStale = Date.now() - lastActivity.getTime() > STALE_THRESHOLD_MS;
+
+  if (isStale) {
+    console.log(`[StaleDetection] Run ${activeRun.id} is stale (last activity: ${lastActivity?.toISOString()})`);
+
+    // Mark as failed and allow restart
+    await db.run.update({
+      where: { id: activeRun.id },
+      data: {
+        status: RunStatus.FAILED,
+        phase: RunPhase.FAILED,
+        errorMsg: 'Run became stale (worker disconnected)',
+        completedAt: new Date(),
+      },
+    });
+
+    // Reset pending uploads back to PENDING analysis status
+    const pendingRunUploads = await db.runUpload.findMany({
+      where: { runId: activeRun.id, status: "PENDING" },
+      select: { uploadId: true },
+    });
+
+    if (pendingRunUploads.length > 0) {
+      await db.upload.updateMany({
+        where: { id: { in: pendingRunUploads.map((ru) => ru.uploadId) } },
+        data: { analysisStatus: AnalysisStatus.PENDING },
+      });
+    }
+
+    return {
+      runId: null,
+      recoveredFromStale: true,
+      previousRunId: activeRun.id,
+    };
+  }
+
+  return { runId: activeRun.id };
 }
 
 // ============================================
