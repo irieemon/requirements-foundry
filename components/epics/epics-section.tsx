@@ -75,7 +75,7 @@ export function EpicsSection({ projectId, epics, cardCount }: EpicsSectionProps)
       )}
 
       {/* Header with Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold">Generated Epics</h3>
           <p className="text-sm text-muted-foreground">
@@ -84,7 +84,7 @@ export function EpicsSection({ projectId, epics, cardCount }: EpicsSectionProps)
               : "Epics synthesized from your use case cards."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <GenerateEpicsButton
             projectId={projectId}
             cardCount={cardCount}
