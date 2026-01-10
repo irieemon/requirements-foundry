@@ -36,7 +36,7 @@ export function MobileNav() {
         className="flex items-center space-x-2"
         aria-label="Requirements Foundry home"
       >
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground" aria-hidden="true">
           <Hammer className="h-5 w-5" />
         </div>
         <span className="font-semibold text-sidebar-foreground">
@@ -52,24 +52,28 @@ export function MobileNav() {
             size="icon"
             className="text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent"
             aria-label="Open navigation menu"
+            aria-expanded={open}
+            aria-controls="mobile-nav-content"
           >
-            <Menu className="h-6 w-6" />
+            <Menu className="h-6 w-6" aria-hidden="true" />
           </Button>
         </SheetTrigger>
         <SheetContent
+          id="mobile-nav-content"
           side="left"
           className="w-64 bg-sidebar text-sidebar-foreground border-sidebar-border p-0"
+          aria-label="Navigation menu"
         >
           <SheetHeader className="border-b border-sidebar-border p-4">
             <SheetTitle className="flex items-center space-x-2 text-sidebar-foreground">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground" aria-hidden="true">
                 <Hammer className="h-5 w-5" />
               </div>
               <span>Requirements Foundry</span>
             </SheetTitle>
           </SheetHeader>
 
-          <nav className="flex-1 space-y-1 px-3 py-4" role="navigation">
+          <nav className="flex-1 space-y-1 px-3 py-4" role="navigation" aria-label="Mobile navigation">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname.startsWith(item.href);
