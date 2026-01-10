@@ -170,7 +170,9 @@ test.describe("Action Buttons Visibility", () => {
     );
 
     // On mobile (<768px), should have 0 or minimal padding
-    expect(parseInt(computedStyle)).toBeLessThan(64); // Less than sidebar width
+    // parseFloat handles "0px" -> 0, parseInt would give NaN for empty string
+    const paddingValue = parseFloat(computedStyle) || 0;
+    expect(paddingValue).toBeLessThan(64); // Less than sidebar width
   });
 });
 
