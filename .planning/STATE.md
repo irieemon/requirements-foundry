@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2025-01-12)
 ## Current Position
 
 Phase: 1 of 5 (Investigation & Instrumentation)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2025-01-12 — Project initialized
+Plan: 01-01 complete
+Status: Ready for 01-02
+Last activity: 2025-01-12 — Investigation mapping complete
 
-Progress: ░░░░░░░░░░ 0%
+Progress: █░░░░░░░░░ 10%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: ~30 min
+- Total execution time: ~0.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| — | — | — | — |
+| 1. Investigation | 1 | ~30 min | ~30 min |
 
 **Recent Trend:**
-- Last 5 plans: —
-- Trend: —
+- Last 5 plans: 01-01
+- Trend: Investigation phase
 
 ## Accumulated Context
 
@@ -41,6 +41,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
 - Heartbeat-based stale detection may have caused E7 failure (marked for revisit)
+- CONFIRMED: batch-story endpoint missing cache headers is root cause of "no progress" symptom
+- RunLogger exists but is never used - all logging is console.log
 
 ### Deferred Issues
 
@@ -54,5 +56,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2025-01-12
-Stopped at: Project initialization complete
-Resume file: None
+Stopped at: Plan 01-01 complete, ready for 01-02 (Add Instrumentation)
+Resume file: .planning/phases/01-investigation-instrumentation/01-01-SUMMARY.md
