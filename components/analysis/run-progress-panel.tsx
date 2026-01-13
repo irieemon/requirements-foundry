@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
   ChevronDown,
   FileText,
   Layers,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRunProgress } from "@/hooks/use-run-progress";
@@ -175,6 +176,59 @@ function formatDuration(ms: number): string {
 }
 
 // ============================================
+// Format Elapsed Time (live counter)
+// ============================================
+
+function formatElapsedTime(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+}
+
+// ============================================
+// Extract Current Document from Phase Detail
+// ============================================
+
+function extractCurrentDocument(
+  phaseDetail: string | undefined,
+  uploads: RunUploadProgress[]
+): { filename: string; uploadIndex: number; totalUploads: number } | null {
+  // First try to parse phaseDetail format: "Processing upload X of Y: filename"
+  if (phaseDetail) {
+    const match = phaseDetail.match(
+      /Processing upload (\d+) of (\d+): (.+)/
+    );
+    if (match) {
+      return {
+        uploadIndex: parseInt(match[1], 10),
+        totalUploads: parseInt(match[2], 10),
+        filename: match[3],
+      };
+    }
+  }
+
+  // Fallback: find the currently active upload from uploads array
+  const activeUpload = uploads.find(
+    (u) =>
+      u.status === RunUploadStatus.LOADING ||
+      u.status === RunUploadStatus.ANALYZING ||
+      u.status === RunUploadStatus.SAVING
+  );
+
+  if (activeUpload) {
+    const uploadIndex = uploads.findIndex((u) => u.uploadId === activeUpload.uploadId) + 1;
+    return {
+      filename: activeUpload.filename,
+      uploadIndex,
+      totalUploads: uploads.length,
+    };
+  }
+
+  return null;
+}
+
+// ============================================
 // Upload Timeline Item Component
 // ============================================
 
@@ -317,6 +371,62 @@ function UploadTimelineItem({ upload }: { upload: RunUploadProgress }) {
 }
 
 // ============================================
+// Currently Processing Banner Component
+// ============================================
+
+interface CurrentlyProcessingBannerProps {
+  currentDoc: { filename: string; uploadIndex: number; totalUploads: number };
+  elapsedSeconds: number;
+  activeStatus: string;
+}
+
+function CurrentlyProcessingBanner({
+  currentDoc,
+  elapsedSeconds,
+  activeStatus,
+}: CurrentlyProcessingBannerProps) {
+  const statusLabel =
+    activeStatus === RunUploadStatus.ANALYZING
+      ? "Analyzing with AI"
+      : activeStatus === RunUploadStatus.LOADING
+        ? "Loading content"
+        : activeStatus === RunUploadStatus.SAVING
+          ? "Saving results"
+          : "Processing";
+
+  return (
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 animate-in fade-in slide-in-from-top-1 duration-300">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {/* Pulsing indicator */}
+          <div className="relative flex h-10 w-10 items-center justify-center">
+            <div className="absolute h-10 w-10 animate-ping rounded-full bg-primary/20" />
+            <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Zap className="h-4 w-4" aria-hidden="true" />
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              {statusLabel}
+            </p>
+            <p className="text-sm text-muted-foreground truncate max-w-[280px]">
+              Document {currentDoc.uploadIndex} of {currentDoc.totalUploads}:{" "}
+              <span className="font-medium text-foreground">{currentDoc.filename}</span>
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <Clock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <span className="font-mono font-medium text-primary">
+            {formatElapsedTime(elapsedSeconds)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // Main Component
 // ============================================
 
@@ -328,6 +438,8 @@ export function RunProgressPanel({
   const router = useRouter();
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [processingElapsed, setProcessingElapsed] = useState(0);
+  const processingStartRef = useRef<number | null>(null);
 
   const { progress, isLoading, error, isActive, isComplete } = useRunProgress(
     runId,
@@ -346,6 +458,51 @@ export function RunProgressPanel({
       },
     }
   );
+
+  // Extract current document info
+  const currentDoc = progress
+    ? extractCurrentDocument(progress.phaseDetail, progress.uploads)
+    : null;
+
+  // Find the active upload status for banner display
+  const activeUpload = progress?.uploads.find(
+    (u) =>
+      u.status === RunUploadStatus.LOADING ||
+      u.status === RunUploadStatus.ANALYZING ||
+      u.status === RunUploadStatus.SAVING
+  );
+
+  // Elapsed time counter for currently processing document
+  useEffect(() => {
+    // Only run timer when we have an actively processing document
+    if (!isActive || !currentDoc || !activeUpload) {
+      processingStartRef.current = null;
+      setProcessingElapsed(0);
+      return;
+    }
+
+    // Start timing from now if we just started or document changed
+    if (processingStartRef.current === null) {
+      processingStartRef.current = Date.now();
+    }
+
+    const interval = setInterval(() => {
+      if (processingStartRef.current) {
+        const elapsed = Math.floor((Date.now() - processingStartRef.current) / 1000);
+        setProcessingElapsed(elapsed);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isActive, currentDoc?.filename, activeUpload?.uploadId]);
+
+  // Reset timer when the active document changes
+  useEffect(() => {
+    if (activeUpload?.uploadId) {
+      processingStartRef.current = Date.now();
+      setProcessingElapsed(0);
+    }
+  }, [activeUpload?.uploadId]);
 
   const handleCancel = async () => {
     setIsCancelling(true);
@@ -512,6 +669,15 @@ export function RunProgressPanel({
             </p>
           )}
         </div>
+
+        {/* Currently Processing Banner - shows during active processing */}
+        {isActive && currentDoc && activeUpload && (
+          <CurrentlyProcessingBanner
+            currentDoc={currentDoc}
+            elapsedSeconds={processingElapsed}
+            activeStatus={activeUpload.status}
+          />
+        )}
 
         {/* Document List */}
         <div className="space-y-2">
