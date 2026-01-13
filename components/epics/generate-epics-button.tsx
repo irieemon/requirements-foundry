@@ -1,17 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { generateEpicsForProject } from "@/server/actions/generation";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 interface GenerateEpicsButtonProps {
   projectId: string;
   cardCount: number;
   hasExistingEpics: boolean;
+}
+
+function formatElapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
 export function GenerateEpicsButton({
@@ -21,6 +28,19 @@ export function GenerateEpicsButton({
 }: GenerateEpicsButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Elapsed time counter when loading
+  useEffect(() => {
+    if (!loading) {
+      setElapsedSeconds(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setElapsedSeconds((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const handleGenerate = async () => {
     if (hasExistingEpics) {
@@ -63,12 +83,22 @@ export function GenerateEpicsButton({
   return (
     <Button onClick={handleGenerate} disabled={loading || cardCount === 0}>
       {loading ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <>
+          <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
+          <span>Grouping {cardCount} cards...</span>
+          <span className="ml-2 font-mono text-xs opacity-80">
+            {formatElapsed(elapsedSeconds)}
+          </span>
+        </>
       ) : (
-        <Sparkles className="mr-2 h-4 w-4" />
+        <>
+          <Sparkles className="mr-2 h-4 w-4" />
+          {hasExistingEpics ? "Regenerate Epics" : "Generate Epics"}
+          {cardCount > 0 && (
+            <span className="ml-1 text-xs opacity-70">({cardCount} cards)</span>
+          )}
+        </>
       )}
-      {hasExistingEpics ? "Regenerate Epics" : "Generate Epics"}
-      {cardCount > 0 && <span className="ml-1 text-xs opacity-70">({cardCount} cards)</span>}
     </Button>
   );
 }
