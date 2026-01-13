@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { createRunLogger } from "@/lib/observability";
 import { triggerProcessNextAsync } from "@/lib/run-engine/process-next-trigger";
 import {
   RunType,
@@ -105,14 +106,20 @@ export async function startGenerateAllStories(
       })),
     });
 
-    // 6. Trigger the first process-next call (MUST await on Vercel)
+    // 6. Log run creation and trigger processing
+    const logger = createRunLogger(run.id);
+    logger.runCreated(projectId, epicsToProcess.length, options);
+
+    // Trigger the first process-next call (MUST await on Vercel)
     // Fire-and-forget doesn't work from Server Actions on Vercel because
     // the function terminates when the action returns, killing pending fetches.
-    console.log(`[BatchStoryRun ${run.id}] Triggering process-next (async)`);
+    logger.info("invocation.continuation_triggered", {
+      metadata: { targetEndpoint: "process-next" },
+    });
     const triggerResult = await triggerProcessNextAsync(run.id);
-    
+
     if (!triggerResult.success) {
-      console.error(`[BatchStoryRun ${run.id}] Failed to trigger processing:`, triggerResult.error);
+      logger.continuationFailed(new Error(triggerResult.error || "Unknown error"));
       
       // Mark the run as failed so the UI shows the error
       await db.run.update({

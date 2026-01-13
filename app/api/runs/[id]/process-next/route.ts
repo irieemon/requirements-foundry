@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { createRunLogger } from "@/lib/observability";
 import { getAIProvider, hasAnthropicKey } from "@/lib/ai/provider";
 import {
   RunStatus,
@@ -36,16 +37,18 @@ export async function POST(
   // Validate secret (security)
   const secret = request.headers.get("x-batch-secret");
   if (!validateBatchSecret(secret)) {
-    console.warn(`[ProcessNext ${runId}] Invalid or missing batch secret`);
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Create logger for structured observability
+  const logger = createRunLogger(runId, request);
 
   const invocationStartTime = Date.now();
   let epicsProcessed = 0;
   let timedOut = false;
 
   try {
-    console.log(`[ProcessNext ${runId}] Starting batch processing...`);
+    logger.invocationStarted(0); // Will update with actual count
 
     // 1. Load the run
     const run = await db.run.findUnique({
@@ -61,7 +64,7 @@ export async function POST(
 
     // 2. Check if run is cancelled or already completed
     if (run.status === RunStatus.CANCELLED) {
-      console.log(`[ProcessNext ${runId}] Run was cancelled, stopping`);
+      logger.runCancelled("user", "before processing");
       return NextResponse.json({ success: true, message: "Run cancelled" });
     }
 
@@ -70,7 +73,7 @@ export async function POST(
       run.status === RunStatus.FAILED ||
       run.status === RunStatus.PARTIAL
     ) {
-      console.log(`[ProcessNext ${runId}] Run already completed with status: ${run.status}`);
+      logger.info("run.already_completed", { metadata: { status: run.status } });
       return NextResponse.json({ success: true, message: "Run already completed" });
     }
 
@@ -85,6 +88,7 @@ export async function POST(
           heartbeatAt: new Date(),
         },
       });
+      logger.dbRunUpdated(RunStatus.RUNNING, RunPhase.GENERATING_STORIES);
     }
 
     // Parse options (once, outside the loop)
@@ -106,7 +110,7 @@ export async function POST(
       // Check timeout - gracefully stop if approaching limit
       const elapsed = Date.now() - invocationStartTime;
       if (elapsed > TIMEOUT_SAFETY_MS) {
-        console.log(`[ProcessNext ${runId}] Approaching timeout (${elapsed}ms), stopping gracefully`);
+        logger.invocationTimeoutWarning(elapsed, TIMEOUT_SAFETY_MS);
         timedOut = true;
         break;
       }
@@ -116,6 +120,7 @@ export async function POST(
         where: { id: runId },
         data: { heartbeatAt: new Date() },
       });
+      logger.dbHeartbeatUpdated();
 
       // Check for cancellation (re-fetch run status)
       const currentRun = await db.run.findUnique({
@@ -123,7 +128,7 @@ export async function POST(
         select: { status: true },
       });
       if (currentRun?.status === RunStatus.CANCELLED) {
-        console.log(`[ProcessNext ${runId}] Run cancelled, stopping loop`);
+        logger.runCancelled("user", `after ${epicsProcessed} epics`);
         break;
       }
 
@@ -145,7 +150,7 @@ export async function POST(
 
       // No more pending epics - we're done
       if (!pendingEpic) {
-        console.log(`[ProcessNext ${runId}] No more pending epics, finalizing`);
+        logger.info("run.finalizing", { metadata: { reason: "no_pending_epics" } });
         break;
       }
 
@@ -168,7 +173,8 @@ export async function POST(
         },
       });
 
-      console.log(`[ProcessNext ${runId}] Processing epic ${epic.code}: ${epic.title} (${completedCount + 1}/${totalEpics})`);
+      // Log epic processing start
+      logger.epicStarted(epic.id, epic.code, completedCount, totalEpics);
 
       try {
         // Check for existing stories
@@ -188,7 +194,7 @@ export async function POST(
           await incrementRunCounter(runId, "skipped");
           await appendLog(runId, `⊘ ${epic.code}: Skipped (${existingStoryCount} existing stories)`);
 
-          console.log(`[ProcessNext ${runId}] Skipped ${epic.code}`);
+          logger.epicSkipped("existing stories", existingStoryCount);
         } else {
           // Mark as GENERATING
           await db.runEpic.update({
@@ -226,15 +232,21 @@ export async function POST(
             where: { id: runId },
             data: { heartbeatAt: new Date() },
           });
+          logger.dbHeartbeatUpdated();
 
-          console.log(`[ProcessNext ${runId}] Calling AI provider (real: ${isRealAI})...`);
+          // Log AI request and call provider
+          logger.claudeRequest(isRealAI ? "claude" : "mock", 0);
+          const aiStartTime = Date.now();
           const result = await provider.generateStories(epicData, mode, personaSet);
+          const aiDuration = Date.now() - aiStartTime;
 
           // Update heartbeat after AI call completes
           await db.run.update({
             where: { id: runId },
             data: { heartbeatAt: new Date() },
           });
+          logger.dbHeartbeatUpdated();
+          logger.claudeResponse(undefined, result.tokensUsed || 0, aiDuration);
 
           if (!result.success || !result.data) {
             throw new Error(result.error || "Story generation failed");
@@ -297,7 +309,7 @@ export async function POST(
               (storiesDeleted > 0 ? ` [replaced ${storiesDeleted}]` : "")
           );
 
-          console.log(`[ProcessNext ${runId}] Completed ${epic.code}: ${storiesCreated} stories`);
+          logger.epicCompleted(storiesCreated, durationMs, storiesDeleted);
         }
 
         epicsProcessed++;
@@ -320,7 +332,7 @@ export async function POST(
         await incrementRunCounter(runId, "failed");
         await appendLog(runId, `✗ ${epic.code}: ${errorMsg}`);
 
-        console.error(`[ProcessNext ${runId}] Epic ${epic.code} failed:`, error);
+        logger.epicFailed(error instanceof Error ? error : errorMsg, false);
         epicsProcessed++; // Still count as processed (for accurate reporting)
       }
 
@@ -337,7 +349,10 @@ export async function POST(
 
     if (timedOut) {
       // We hit the timeout - mark remaining as pending for retry
-      console.log(`[ProcessNext ${runId}] Timed out after processing ${epicsProcessed} epics (${totalElapsed}ms)`);
+      logger.warn("invocation.timeout_graceful", {
+        duration: totalElapsed,
+        metadata: { epicsProcessed },
+      });
       await appendLog(runId, `⚠ Processing paused after ${epicsProcessed} epics (timeout - will continue on retry)`);
 
       // Don't finalize - leave run in RUNNING state for stale detection/retry
@@ -350,8 +365,8 @@ export async function POST(
     }
 
     // Normal completion - finalize the run
-    await finalizeRun(runId);
-    console.log(`[ProcessNext ${runId}] Completed all ${epicsProcessed} epics in ${totalElapsed}ms`);
+    await finalizeRun(runId, logger);
+    logger.invocationCompleted(`${epicsProcessed} epics`, totalElapsed);
 
     return NextResponse.json({
       success: true,
@@ -361,7 +376,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error(`[ProcessNext ${runId}] Fatal error:`, error);
+    logger.runFailed(error instanceof Error ? error : "Unknown error");
 
     // Mark run as failed
     await db.run.update({
@@ -387,7 +402,7 @@ export async function POST(
 // Helper Functions
 // ============================================
 
-async function finalizeRun(runId: string): Promise<void> {
+async function finalizeRun(runId: string, logger: ReturnType<typeof createRunLogger>): Promise<void> {
   const run = await db.run.findUnique({ where: { id: runId } });
   if (!run) return;
 
@@ -460,7 +475,13 @@ async function finalizeRun(runId: string): Promise<void> {
       (skipped > 0 ? ` (${skipped} skipped)` : "")
   );
 
-  console.log(`[ProcessNext ${runId}] Run finalized with status: ${finalStatus}`);
+  logger.runCompleted({
+    duration: durationMs || 0,
+    success: completed,
+    failed,
+    skipped,
+    stories: totalStories,
+  });
 }
 
 async function incrementRunCounter(
