@@ -38,6 +38,33 @@ export function getBatchSecret(): string {
 }
 
 /**
+ * Get the Vercel Deployment Protection bypass secret.
+ * This is required when Vercel Authentication is enabled on preview deployments.
+ * @see https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation
+ */
+export function getVercelBypassSecret(): string | undefined {
+  return process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+}
+
+/**
+ * Build headers for internal API calls, including bypass headers for Vercel Deployment Protection.
+ */
+function buildInternalApiHeaders(batchSecret: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-batch-secret": batchSecret,
+  };
+
+  // Add Vercel Deployment Protection bypass if configured
+  const bypassSecret = getVercelBypassSecret();
+  if (bypassSecret) {
+    headers["x-vercel-protection-bypass"] = bypassSecret;
+  }
+
+  return headers;
+}
+
+/**
  * Fire-and-forget trigger for processing the next epic in a batch run.
  * Does NOT wait for the response - returns immediately.
  *
@@ -51,17 +78,16 @@ export function triggerProcessNext(runId: string): void {
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}/api/runs/${runId}/process-next`;
   const secret = getBatchSecret();
+  const headers = buildInternalApiHeaders(secret);
 
   console.log(`[BatchStory] Triggering process-next for run ${runId}`);
   console.log(`[BatchStory] URL: ${url}`);
+  console.log(`[BatchStory] Bypass header present: ${!!headers["x-vercel-protection-bypass"]}`);
 
   // Fire and forget - do NOT await
   fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-batch-secret": secret,
-    },
+    headers,
   }).catch((error) => {
     // Log but don't throw - this is fire-and-forget
     console.error(`[BatchStory] Failed to trigger process-next:`, error);
@@ -85,12 +111,14 @@ export async function triggerProcessNextAsync(runId: string): Promise<{ success:
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}/api/runs/${runId}/process-next`;
   const secret = getBatchSecret();
+  const headers = buildInternalApiHeaders(secret);
   const secretPreview = secret.substring(0, 8) + "...";
 
   console.log(`[BatchStory] Triggering process-next (async) for run ${runId}`);
   console.log(`[BatchStory] Base URL: ${baseUrl}`);
   console.log(`[BatchStory] Full URL: ${url}`);
   console.log(`[BatchStory] Secret preview: ${secretPreview}`);
+  console.log(`[BatchStory] Bypass header present: ${!!headers["x-vercel-protection-bypass"]}`);
   console.log(`[BatchStory] NODE_ENV: ${process.env.NODE_ENV}`);
   console.log(`[BatchStory] VERCEL_URL: ${process.env.VERCEL_URL || "(not set)"}`);
 
@@ -98,10 +126,7 @@ export async function triggerProcessNextAsync(runId: string): Promise<{ success:
     const startTime = Date.now();
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-batch-secret": secret,
-      },
+      headers,
     });
     const elapsed = Date.now() - startTime;
 
@@ -137,17 +162,16 @@ export function triggerProcessNextUpload(runId: string): void {
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}/api/runs/${runId}/process-next-upload`;
   const secret = getBatchSecret();
+  const headers = buildInternalApiHeaders(secret);
 
   console.log(`[CardAnalysis] Triggering process-next-upload for run ${runId}`);
   console.log(`[CardAnalysis] URL: ${url}`);
+  console.log(`[CardAnalysis] Bypass header present: ${!!headers["x-vercel-protection-bypass"]}`);
 
   // Fire and forget - do NOT await
   fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-batch-secret": secret,
-    },
+    headers,
   }).catch((error) => {
     // Log but don't throw - this is fire-and-forget
     console.error(`[CardAnalysis] Failed to trigger process-next-upload:`, error);
@@ -169,17 +193,16 @@ export async function triggerProcessNextUploadAsync(runId: string): Promise<{ su
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}/api/runs/${runId}/process-next-upload`;
   const secret = getBatchSecret();
+  const headers = buildInternalApiHeaders(secret);
 
   console.log(`[CardAnalysis] Triggering process-next-upload (async) for run ${runId}`);
   console.log(`[CardAnalysis] URL: ${url}`);
+  console.log(`[CardAnalysis] Bypass header present: ${!!headers["x-vercel-protection-bypass"]}`);
 
   try {
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-batch-secret": secret,
-      },
+      headers,
     });
 
     if (!response.ok) {
