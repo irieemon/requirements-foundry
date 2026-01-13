@@ -152,6 +152,7 @@ export function EpicsSection({ projectId, epics, cardCount }: EpicsSectionProps)
         onOpenChange={setStoryDialogOpen}
         projectId={projectId}
         epicCount={epicCount}
+        onRunStarted={setActiveRunId}
       />
 
       {/* Epic Grid */}
