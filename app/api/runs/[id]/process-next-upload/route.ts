@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { createRunLogger } from "@/lib/observability";
 import { getDocumentAnalyzer } from "@/lib/ai/document-analyzer";
 import type { ExtractedContent, ExtractedImage } from "@/lib/documents/types";
 import {
@@ -35,12 +36,14 @@ export async function POST(
   // Validate secret (security)
   const secret = request.headers.get("x-batch-secret");
   if (!validateBatchSecret(secret)) {
-    console.warn(`[ProcessNextUpload ${runId}] Invalid or missing batch secret`);
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Create logger for structured observability
+  const logger = createRunLogger(runId, request);
+
   try {
-    console.log(`[ProcessNextUpload ${runId}] Starting...`);
+    logger.invocationStarted(0); // Will update with actual count after query
 
     // 1. Load the run
     const run = await db.run.findUnique({
@@ -64,7 +67,7 @@ export async function POST(
 
     // 2. Check if run is cancelled or already completed
     if (run.status === RunStatus.CANCELLED) {
-      console.log(`[ProcessNextUpload ${runId}] Run was cancelled, stopping`);
+      logger.runCancelled("user", "before processing");
       return NextResponse.json({ success: true, message: "Run cancelled" });
     }
 
@@ -73,7 +76,7 @@ export async function POST(
       run.status === RunStatus.FAILED ||
       run.status === RunStatus.PARTIAL
     ) {
-      console.log(`[ProcessNextUpload ${runId}] Run already completed with status: ${run.status}`);
+      logger.info("run.already_completed", { metadata: { status: run.status } });
       return NextResponse.json({ success: true, message: "Run already completed" });
     }
 
@@ -82,6 +85,7 @@ export async function POST(
       where: { id: runId },
       data: { heartbeatAt: new Date() },
     });
+    logger.dbHeartbeatUpdated();
 
     // 4. Find the next PENDING upload
     const pendingRunUpload = await db.runUpload.findFirst({
@@ -99,8 +103,8 @@ export async function POST(
 
     // 5. If no pending uploads, finalize the run
     if (!pendingRunUpload) {
-      console.log(`[ProcessNextUpload ${runId}] No more pending uploads, finalizing`);
-      await finalizeRun(runId);
+      logger.info("run.finalizing", { metadata: { reason: "no_pending_uploads" } });
+      await finalizeRun(runId, logger);
       return NextResponse.json({ success: true, message: "Run finalized" });
     }
 
@@ -114,6 +118,7 @@ export async function POST(
           startedAt: new Date(),
         },
       });
+      logger.dbRunUpdated(RunStatus.RUNNING, RunPhase.ANALYZING);
     }
 
     // 7. Process this single upload
@@ -142,7 +147,15 @@ export async function POST(
       },
     });
 
-    console.log(`[ProcessNextUpload ${runId}] Processing upload: ${upload.filename || "Untitled"}`);
+    // Log upload processing start (using epic context for upload tracking)
+    logger.setCurrentEpic(upload.id, upload.filename || "Untitled", completedCount);
+    logger.info("upload.processing", {
+      metadata: {
+        uploadId: upload.id,
+        filename: upload.filename || "Untitled",
+        position: `${completedCount + 1}/${totalUploads}`,
+      },
+    });
 
     try {
       // Update per-upload status to LOADING
@@ -192,16 +205,23 @@ export async function POST(
       // Get analyzer
       const analyzer = getDocumentAnalyzer();
 
-      // Analyze document
+      // Log AI request and analyze document
+      logger.claudeRequest("document-analyzer", content.text?.length || 0);
+      const analysisStartTime = Date.now();
+
       const result = await analyzer.analyzeDocument(content, {
         maxCards: options.maxCardsPerUpload || 20,
         includeRawText: true,
         projectContext: run.project.description || undefined,
       });
 
+      const analysisDuration = Date.now() - analysisStartTime;
       if (!result.success || !result.cards) {
+        logger.claudeError(result.error || "Analysis failed");
         throw new Error(result.error || "Analysis failed");
       }
+
+      logger.claudeResponse(undefined, result.tokensUsed || 0, analysisDuration);
 
       // Update to SAVING
       await db.runUpload.update({
@@ -278,7 +298,11 @@ export async function POST(
         `✓ ${upload.filename || "Untitled"}: ${cardsCreated} cards (${durationMs}ms)`
       );
 
-      console.log(`[ProcessNextUpload ${runId}] Completed ${upload.filename}: ${cardsCreated} cards`);
+      logger.info("upload.completed", {
+        duration: durationMs,
+        metadata: { cardsCreated, tokensUsed: result.tokensUsed || 0 },
+      });
+      logger.clearCurrentEpic();
     } catch (error) {
       // Upload-level failure - don't stop the whole run
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
@@ -310,10 +334,14 @@ export async function POST(
 
       await appendLog(runId, `✗ ${upload.filename || "Untitled"}: ${errorMsg}`);
 
-      console.error(`[ProcessNextUpload ${runId}] Upload ${upload.filename} failed:`, error);
+      logger.error("upload.failed", error instanceof Error ? error : errorMsg, {
+        duration: durationMs,
+      });
+      logger.clearCurrentEpic();
     }
 
     // 8. Trigger continuation (fire-and-forget)
+    logger.continuationTriggered("/api/runs/[id]/process-next-upload");
     triggerProcessNextUpload(runId);
 
     return NextResponse.json({
@@ -322,7 +350,7 @@ export async function POST(
       message: "Upload processed, continuation triggered",
     });
   } catch (error) {
-    console.error(`[ProcessNextUpload ${runId}] Fatal error:`, error);
+    logger.error("invocation.fatal_error", error instanceof Error ? error : "Unknown error");
 
     // Mark run as failed
     await db.run.update({
@@ -348,7 +376,7 @@ export async function POST(
 // Helper Functions
 // ============================================
 
-async function finalizeRun(runId: string): Promise<void> {
+async function finalizeRun(runId: string, logger: ReturnType<typeof createRunLogger>): Promise<void> {
   const run = await db.run.findUnique({ where: { id: runId } });
   if (!run) return;
 
@@ -421,7 +449,13 @@ async function finalizeRun(runId: string): Promise<void> {
       (skipped > 0 ? ` (${skipped} skipped)` : "")
   );
 
-  console.log(`[ProcessNextUpload ${runId}] Run finalized with status: ${finalStatus}`);
+  logger.runCompleted({
+    duration: durationMs || 0,
+    success: completed,
+    failed,
+    skipped,
+    stories: totalCards,
+  });
 }
 
 async function appendLog(runId: string, message: string): Promise<void> {

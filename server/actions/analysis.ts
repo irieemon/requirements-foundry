@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { createRunLogger } from "@/lib/observability";
 import { triggerProcessNextUploadAsync } from "@/lib/run-engine/process-next-trigger";
 import {
   RunType,
@@ -106,14 +107,20 @@ export async function analyzeProject(
       data: { analysisStatus: AnalysisStatus.QUEUED },
     });
 
-    // 7. Trigger the first process-next-upload call (MUST await on Vercel)
+    // 7. Log run creation and trigger processing
+    const logger = createRunLogger(run.id);
+    logger.runCreated(projectId, uploadsToAnalyze.length, options);
+
+    // Trigger the first process-next-upload call (MUST await on Vercel)
     // Fire-and-forget doesn't work from Server Actions on Vercel because
     // the function terminates when the action returns, killing pending fetches.
-    console.log(`[CardAnalysis Run ${run.id}] Triggering process-next-upload (async)`);
+    logger.info("invocation.continuation_triggered", {
+      metadata: { targetEndpoint: "process-next-upload" },
+    });
     const triggerResult = await triggerProcessNextUploadAsync(run.id);
-    
+
     if (!triggerResult.success) {
-      console.error(`[CardAnalysis Run ${run.id}] Failed to trigger processing:`, triggerResult.error);
+      logger.continuationFailed(new Error(triggerResult.error || "Unknown error"));
       // Don't fail - the run is created and can be recovered via stale detection
     }
 
