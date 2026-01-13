@@ -108,14 +108,29 @@ export async function startGenerateAllStories(
     // 6. Trigger the first process-next call (MUST await on Vercel)
     // Fire-and-forget doesn't work from Server Actions on Vercel because
     // the function terminates when the action returns, killing pending fetches.
-    // Subsequent triggers from API routes can use fire-and-forget.
     console.log(`[BatchStoryRun ${run.id}] Triggering process-next (async)`);
     const triggerResult = await triggerProcessNextAsync(run.id);
     
     if (!triggerResult.success) {
       console.error(`[BatchStoryRun ${run.id}] Failed to trigger processing:`, triggerResult.error);
-      // Don't fail the whole operation - the run is created and can be recovered
-      // via stale detection if the trigger failed
+      
+      // Mark the run as failed so the UI shows the error
+      await db.run.update({
+        where: { id: run.id },
+        data: {
+          status: RunStatus.FAILED,
+          phase: RunPhase.FAILED,
+          errorMsg: `Failed to start processing: ${triggerResult.error}`,
+          completedAt: new Date(),
+        },
+      });
+      
+      revalidatePath(`/projects/${projectId}`);
+      return {
+        success: false,
+        error: `Failed to start processing: ${triggerResult.error}`,
+        runId: run.id,
+      };
     }
 
     revalidatePath(`/projects/${projectId}`);

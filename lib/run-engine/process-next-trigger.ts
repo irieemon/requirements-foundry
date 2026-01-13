@@ -85,11 +85,17 @@ export async function triggerProcessNextAsync(runId: string): Promise<{ success:
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}/api/runs/${runId}/process-next`;
   const secret = getBatchSecret();
+  const secretPreview = secret.substring(0, 8) + "...";
 
   console.log(`[BatchStory] Triggering process-next (async) for run ${runId}`);
-  console.log(`[BatchStory] URL: ${url}`);
+  console.log(`[BatchStory] Base URL: ${baseUrl}`);
+  console.log(`[BatchStory] Full URL: ${url}`);
+  console.log(`[BatchStory] Secret preview: ${secretPreview}`);
+  console.log(`[BatchStory] NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`[BatchStory] VERCEL_URL: ${process.env.VERCEL_URL || "(not set)"}`);
 
   try {
+    const startTime = Date.now();
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -97,6 +103,9 @@ export async function triggerProcessNextAsync(runId: string): Promise<{ success:
         "x-batch-secret": secret,
       },
     });
+    const elapsed = Date.now() - startTime;
+
+    console.log(`[BatchStory] Response received in ${elapsed}ms: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       const text = await response.text();
@@ -104,11 +113,14 @@ export async function triggerProcessNextAsync(runId: string): Promise<{ success:
       return { success: false, error: `HTTP ${response.status}: ${text}` };
     }
 
+    const responseText = await response.text();
+    console.log(`[BatchStory] process-next response: ${responseText}`);
     console.log(`[BatchStory] process-next triggered successfully for run ${runId}`);
     return { success: true };
   } catch (error) {
     console.error(`[BatchStory] Failed to trigger process-next:`, error);
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    const errorMsg = error instanceof Error ? `${error.name}: ${error.message}` : "Unknown error";
+    return { success: false, error: errorMsg };
   }
 }
 

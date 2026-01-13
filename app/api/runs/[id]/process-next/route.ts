@@ -1,9 +1,9 @@
 // ============================================
-// Process Next Epic - Continuation Endpoint
+// Process Next Epic - Batch Processing Endpoint
 // POST /api/runs/[id]/process-next
 // ============================================
-// Processes ONE epic at a time with self-invocation for continuation.
-// This pattern works within Vercel's serverless timeout limits.
+// Processes ALL pending epics in a loop within a single invocation.
+// This avoids fire-and-forget HTTP self-calls that fail on Vercel serverless.
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
@@ -18,14 +18,14 @@ import {
   type GenerationMode,
   type PersonaSet,
 } from "@/lib/types";
-import {
-  triggerProcessNext,
-  validateBatchSecret,
-} from "@/lib/run-engine/process-next-trigger";
+import { validateBatchSecret } from "@/lib/run-engine/process-next-trigger";
 
-// Configure for longer execution (within Vercel Pro limits)
-export const maxDuration = 120; // 2 minutes - plenty for one epic
+// Configure for longer execution (Vercel Pro limit)
+export const maxDuration = 300; // 5 minutes - process all epics
 export const runtime = "nodejs";
+
+// Safety margin: stop processing 20s before timeout to finalize cleanly
+const TIMEOUT_SAFETY_MS = 280 * 1000; // 280 seconds
 
 export async function POST(
   request: NextRequest,
@@ -40,8 +40,12 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const invocationStartTime = Date.now();
+  let epicsProcessed = 0;
+  let timedOut = false;
+
   try {
-    console.log(`[ProcessNext ${runId}] Starting...`);
+    console.log(`[ProcessNext ${runId}] Starting batch processing...`);
 
     // 1. Load the run
     const run = await db.run.findUnique({
@@ -70,36 +74,7 @@ export async function POST(
       return NextResponse.json({ success: true, message: "Run already completed" });
     }
 
-    // 2.5. Update heartbeat for stale detection (Vercel serverless recovery)
-    await db.run.update({
-      where: { id: runId },
-      data: { heartbeatAt: new Date() },
-    });
-
-    // 3. Find the next PENDING epic
-    const pendingEpic = await db.runEpic.findFirst({
-      where: {
-        runId,
-        status: RunEpicStatus.PENDING,
-      },
-      include: {
-        epic: {
-          include: {
-            _count: { select: { stories: true } },
-          },
-        },
-      },
-      orderBy: { order: "asc" },
-    });
-
-    // 4. If no pending epics, finalize the run
-    if (!pendingEpic) {
-      console.log(`[ProcessNext ${runId}] No more pending epics, finalizing`);
-      await finalizeRun(runId);
-      return NextResponse.json({ success: true, message: "Run finalized" });
-    }
-
-    // 5. Update run to RUNNING if not already
+    // 3. Update run to RUNNING if not already
     if (run.status === RunStatus.QUEUED) {
       await db.run.update({
         where: { id: runId },
@@ -107,15 +82,12 @@ export async function POST(
           status: RunStatus.RUNNING,
           phase: RunPhase.GENERATING_STORIES,
           startedAt: new Date(),
+          heartbeatAt: new Date(),
         },
       });
     }
 
-    // 6. Process this single epic
-    const { epic } = pendingEpic;
-    const startTime = Date.now();
-
-    // Parse options
+    // Parse options (once, outside the loop)
     const options = run.inputConfig ? JSON.parse(run.inputConfig) : {};
     const mode: GenerationMode = options.mode || "standard";
     const personaSet: PersonaSet = options.personaSet || "core";
@@ -124,175 +96,258 @@ export async function POST(
     const pacing: ProcessingPacing = options.pacing || "safe";
     const pacingConfig = PACING_CONFIG[pacing];
 
-    // Count total epics and current position for progress
+    // Count total epics (once, for progress)
     const totalEpics = await db.runEpic.count({ where: { runId } });
-    const completedCount = await db.runEpic.count({
-      where: { runId, status: { in: [RunEpicStatus.COMPLETED, RunEpicStatus.SKIPPED, RunEpicStatus.FAILED] } },
-    });
 
-    // Update progress pointer
-    await db.run.update({
-      where: { id: runId },
-      data: {
-        currentItemId: epic.id,
-        currentItemIndex: completedCount + 1,
-        phaseDetail: `Processing Epic ${completedCount + 1} of ${totalEpics}: ${epic.title}`,
-      },
-    });
-
-    console.log(`[ProcessNext ${runId}] Processing epic ${epic.code}: ${epic.title}`);
-
-    try {
-      // Check for existing stories
-      const existingStoryCount = epic._count.stories;
-
-      if (existingStoryCount > 0 && existingBehavior === ExistingStoriesBehavior.SKIP) {
-        // Skip this epic
-        await db.runEpic.update({
-          where: { id: pendingEpic.id },
-          data: {
-            status: RunEpicStatus.SKIPPED,
-            completedAt: new Date(),
-            durationMs: Date.now() - startTime,
-          },
-        });
-
-        await incrementRunCounter(runId, "skipped");
-        await appendLog(runId, `⊘ ${epic.code}: Skipped (${existingStoryCount} existing stories)`);
-
-        console.log(`[ProcessNext ${runId}] Skipped ${epic.code}`);
-      } else {
-        // Mark as GENERATING
-        await db.runEpic.update({
-          where: { id: pendingEpic.id },
-          data: {
-            status: RunEpicStatus.GENERATING,
-            startedAt: new Date(),
-          },
-        });
-
-        await appendLog(runId, `Generating stories for ${epic.code}: ${epic.title}`);
-
-        // Build epic data
-        const epicData = {
-          code: epic.code,
-          title: epic.title,
-          theme: epic.theme || undefined,
-          description: epic.description || undefined,
-          businessValue: epic.businessValue || undefined,
-          acceptanceCriteria: epic.acceptanceCriteria
-            ? JSON.parse(epic.acceptanceCriteria)
-            : undefined,
-          dependencies: epic.dependencies ? JSON.parse(epic.dependencies) : undefined,
-          effort: epic.effort || undefined,
-          impact: epic.impact || undefined,
-          priority: epic.priority || undefined,
-        };
-
-        // Generate stories via AI
-        const provider = getAIProvider();
-        const isRealAI = hasAnthropicKey();
-
-        console.log(`[ProcessNext ${runId}] Calling AI provider (real: ${isRealAI})...`);
-        const result = await provider.generateStories(epicData, mode, personaSet);
-
-        if (!result.success || !result.data) {
-          throw new Error(result.error || "Story generation failed");
-        }
-
-        // Mark as SAVING
-        await db.runEpic.update({
-          where: { id: pendingEpic.id },
-          data: { status: RunEpicStatus.SAVING },
-        });
-
-        // Delete existing if replace mode
-        let storiesDeleted = 0;
-        if (existingStoryCount > 0 && existingBehavior === ExistingStoriesBehavior.REPLACE) {
-          await db.story.deleteMany({ where: { epicId: epic.id } });
-          storiesDeleted = existingStoryCount;
-          await appendLog(runId, `  Deleted ${storiesDeleted} existing stories`);
-        }
-
-        // Create new stories
-        for (const story of result.data) {
-          await db.story.create({
-            data: {
-              epicId: epic.id,
-              code: story.code,
-              title: story.title,
-              userStory: story.userStory,
-              persona: story.persona || null,
-              acceptanceCriteria: story.acceptanceCriteria
-                ? JSON.stringify(story.acceptanceCriteria)
-                : null,
-              technicalNotes: story.technicalNotes || null,
-              priority: story.priority || null,
-              effort: story.effort || null,
-              runId: runId,
-            },
-          });
-        }
-
-        const storiesCreated = result.data.length;
-        const durationMs = Date.now() - startTime;
-
-        // Mark epic as COMPLETED
-        await db.runEpic.update({
-          where: { id: pendingEpic.id },
-          data: {
-            status: RunEpicStatus.COMPLETED,
-            completedAt: new Date(),
-            storiesCreated,
-            storiesDeleted,
-            tokensUsed: result.tokensUsed || 0,
-            durationMs,
-          },
-        });
-
-        await incrementRunCounter(runId, "completed", storiesCreated);
-        await appendLog(
-          runId,
-          `✓ ${epic.code}: ${storiesCreated} stories (${durationMs}ms)` +
-            (storiesDeleted > 0 ? ` [replaced ${storiesDeleted}]` : "")
-        );
-
-        console.log(`[ProcessNext ${runId}] Completed ${epic.code}: ${storiesCreated} stories`);
+    // ====================================================
+    // MAIN PROCESSING LOOP - process ALL pending epics
+    // ====================================================
+    while (true) {
+      // Check timeout - gracefully stop if approaching limit
+      const elapsed = Date.now() - invocationStartTime;
+      if (elapsed > TIMEOUT_SAFETY_MS) {
+        console.log(`[ProcessNext ${runId}] Approaching timeout (${elapsed}ms), stopping gracefully`);
+        timedOut = true;
+        break;
       }
-    } catch (error) {
-      // Epic-level failure - don't stop the whole run
-      const errorMsg = error instanceof Error ? error.message : "Unknown error";
 
-      await db.runEpic.update({
-        where: { id: pendingEpic.id },
+      // Update heartbeat for stale detection
+      await db.run.update({
+        where: { id: runId },
+        data: { heartbeatAt: new Date() },
+      });
+
+      // Check for cancellation (re-fetch run status)
+      const currentRun = await db.run.findUnique({
+        where: { id: runId },
+        select: { status: true },
+      });
+      if (currentRun?.status === RunStatus.CANCELLED) {
+        console.log(`[ProcessNext ${runId}] Run cancelled, stopping loop`);
+        break;
+      }
+
+      // Find the next PENDING epic
+      const pendingEpic = await db.runEpic.findFirst({
+        where: {
+          runId,
+          status: RunEpicStatus.PENDING,
+        },
+        include: {
+          epic: {
+            include: {
+              _count: { select: { stories: true } },
+            },
+          },
+        },
+        orderBy: { order: "asc" },
+      });
+
+      // No more pending epics - we're done
+      if (!pendingEpic) {
+        console.log(`[ProcessNext ${runId}] No more pending epics, finalizing`);
+        break;
+      }
+
+      // Process this epic
+      const { epic } = pendingEpic;
+      const epicStartTime = Date.now();
+
+      // Count completed for progress
+      const completedCount = await db.runEpic.count({
+        where: { runId, status: { in: [RunEpicStatus.COMPLETED, RunEpicStatus.SKIPPED, RunEpicStatus.FAILED] } },
+      });
+
+      // Update progress pointer
+      await db.run.update({
+        where: { id: runId },
         data: {
-          status: RunEpicStatus.FAILED,
-          completedAt: new Date(),
-          errorMsg,
-          durationMs: Date.now() - startTime,
-          retryCount: pendingEpic.retryCount + 1,
+          currentItemId: epic.id,
+          currentItemIndex: completedCount + 1,
+          phaseDetail: `Processing Epic ${completedCount + 1} of ${totalEpics}: ${epic.title}`,
         },
       });
 
-      await incrementRunCounter(runId, "failed");
-      await appendLog(runId, `✗ ${epic.code}: ${errorMsg}`);
+      console.log(`[ProcessNext ${runId}] Processing epic ${epic.code}: ${epic.title} (${completedCount + 1}/${totalEpics})`);
 
-      console.error(`[ProcessNext ${runId}] Epic ${epic.code} failed:`, error);
+      try {
+        // Check for existing stories
+        const existingStoryCount = epic._count.stories;
+
+        if (existingStoryCount > 0 && existingBehavior === ExistingStoriesBehavior.SKIP) {
+          // Skip this epic
+          await db.runEpic.update({
+            where: { id: pendingEpic.id },
+            data: {
+              status: RunEpicStatus.SKIPPED,
+              completedAt: new Date(),
+              durationMs: Date.now() - epicStartTime,
+            },
+          });
+
+          await incrementRunCounter(runId, "skipped");
+          await appendLog(runId, `⊘ ${epic.code}: Skipped (${existingStoryCount} existing stories)`);
+
+          console.log(`[ProcessNext ${runId}] Skipped ${epic.code}`);
+        } else {
+          // Mark as GENERATING
+          await db.runEpic.update({
+            where: { id: pendingEpic.id },
+            data: {
+              status: RunEpicStatus.GENERATING,
+              startedAt: new Date(),
+            },
+          });
+
+          await appendLog(runId, `Generating stories for ${epic.code}: ${epic.title}`);
+
+          // Build epic data
+          const epicData = {
+            code: epic.code,
+            title: epic.title,
+            theme: epic.theme || undefined,
+            description: epic.description || undefined,
+            businessValue: epic.businessValue || undefined,
+            acceptanceCriteria: epic.acceptanceCriteria
+              ? JSON.parse(epic.acceptanceCriteria)
+              : undefined,
+            dependencies: epic.dependencies ? JSON.parse(epic.dependencies) : undefined,
+            effort: epic.effort || undefined,
+            impact: epic.impact || undefined,
+            priority: epic.priority || undefined,
+          };
+
+          // Generate stories via AI
+          const provider = getAIProvider();
+          const isRealAI = hasAnthropicKey();
+
+          console.log(`[ProcessNext ${runId}] Calling AI provider (real: ${isRealAI})...`);
+          const result = await provider.generateStories(epicData, mode, personaSet);
+
+          if (!result.success || !result.data) {
+            throw new Error(result.error || "Story generation failed");
+          }
+
+          // Mark as SAVING
+          await db.runEpic.update({
+            where: { id: pendingEpic.id },
+            data: { status: RunEpicStatus.SAVING },
+          });
+
+          // Delete existing if replace mode
+          let storiesDeleted = 0;
+          if (existingStoryCount > 0 && existingBehavior === ExistingStoriesBehavior.REPLACE) {
+            await db.story.deleteMany({ where: { epicId: epic.id } });
+            storiesDeleted = existingStoryCount;
+            await appendLog(runId, `  Deleted ${storiesDeleted} existing stories`);
+          }
+
+          // Create new stories
+          for (const story of result.data) {
+            await db.story.create({
+              data: {
+                epicId: epic.id,
+                code: story.code,
+                title: story.title,
+                userStory: story.userStory,
+                persona: story.persona || null,
+                acceptanceCriteria: story.acceptanceCriteria
+                  ? JSON.stringify(story.acceptanceCriteria)
+                  : null,
+                technicalNotes: story.technicalNotes || null,
+                priority: story.priority || null,
+                effort: story.effort || null,
+                runId: runId,
+              },
+            });
+          }
+
+          const storiesCreated = result.data.length;
+          const durationMs = Date.now() - epicStartTime;
+
+          // Mark epic as COMPLETED
+          await db.runEpic.update({
+            where: { id: pendingEpic.id },
+            data: {
+              status: RunEpicStatus.COMPLETED,
+              completedAt: new Date(),
+              storiesCreated,
+              storiesDeleted,
+              tokensUsed: result.tokensUsed || 0,
+              durationMs,
+            },
+          });
+
+          await incrementRunCounter(runId, "completed", storiesCreated);
+          await appendLog(
+            runId,
+            `✓ ${epic.code}: ${storiesCreated} stories (${durationMs}ms)` +
+              (storiesDeleted > 0 ? ` [replaced ${storiesDeleted}]` : "")
+          );
+
+          console.log(`[ProcessNext ${runId}] Completed ${epic.code}: ${storiesCreated} stories`);
+        }
+
+        epicsProcessed++;
+
+      } catch (error) {
+        // Epic-level failure - don't stop the whole run
+        const errorMsg = error instanceof Error ? error.message : "Unknown error";
+
+        await db.runEpic.update({
+          where: { id: pendingEpic.id },
+          data: {
+            status: RunEpicStatus.FAILED,
+            completedAt: new Date(),
+            errorMsg,
+            durationMs: Date.now() - epicStartTime,
+            retryCount: pendingEpic.retryCount + 1,
+          },
+        });
+
+        await incrementRunCounter(runId, "failed");
+        await appendLog(runId, `✗ ${epic.code}: ${errorMsg}`);
+
+        console.error(`[ProcessNext ${runId}] Epic ${epic.code} failed:`, error);
+        epicsProcessed++; // Still count as processed (for accurate reporting)
+      }
+
+      // Apply pacing delay (if configured)
+      if (pacingConfig.delayBetweenEpicsMs > 0) {
+        await sleep(pacingConfig.delayBetweenEpicsMs);
+      }
     }
 
-    // 7. Apply pacing delay (if configured)
-    if (pacingConfig.delayBetweenEpicsMs > 0) {
-      await sleep(pacingConfig.delayBetweenEpicsMs);
+    // ====================================================
+    // FINALIZATION
+    // ====================================================
+    const totalElapsed = Date.now() - invocationStartTime;
+
+    if (timedOut) {
+      // We hit the timeout - mark remaining as pending for retry
+      console.log(`[ProcessNext ${runId}] Timed out after processing ${epicsProcessed} epics (${totalElapsed}ms)`);
+      await appendLog(runId, `⚠ Processing paused after ${epicsProcessed} epics (timeout - will continue on retry)`);
+
+      // Don't finalize - leave run in RUNNING state for stale detection/retry
+      return NextResponse.json({
+        success: true,
+        message: `Timed out after ${epicsProcessed} epics`,
+        epicsProcessed,
+        timedOut: true,
+      });
     }
 
-    // 8. Trigger continuation (fire-and-forget)
-    triggerProcessNext(runId);
+    // Normal completion - finalize the run
+    await finalizeRun(runId);
+    console.log(`[ProcessNext ${runId}] Completed all ${epicsProcessed} epics in ${totalElapsed}ms`);
 
     return NextResponse.json({
       success: true,
-      processed: epic.code,
-      message: "Epic processed, continuation triggered",
+      message: "All epics processed",
+      epicsProcessed,
+      durationMs: totalElapsed,
     });
+
   } catch (error) {
     console.error(`[ProcessNext ${runId}] Fatal error:`, error);
 
