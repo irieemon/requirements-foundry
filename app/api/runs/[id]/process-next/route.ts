@@ -221,8 +221,20 @@ export async function POST(
           const provider = getAIProvider();
           const isRealAI = hasAnthropicKey();
 
+          // Update heartbeat before long AI call to prevent stale detection
+          await db.run.update({
+            where: { id: runId },
+            data: { heartbeatAt: new Date() },
+          });
+
           console.log(`[ProcessNext ${runId}] Calling AI provider (real: ${isRealAI})...`);
           const result = await provider.generateStories(epicData, mode, personaSet);
+
+          // Update heartbeat after AI call completes
+          await db.run.update({
+            where: { id: runId },
+            data: { heartbeatAt: new Date() },
+          });
 
           if (!result.success || !result.data) {
             throw new Error(result.error || "Story generation failed");
