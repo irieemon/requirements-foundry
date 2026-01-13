@@ -19,7 +19,7 @@ import {
   type GenerationMode,
   type PersonaSet,
 } from "@/lib/types";
-import { validateBatchSecret } from "@/lib/run-engine/process-next-trigger";
+import { validateBatchSecret, triggerProcessNext } from "@/lib/run-engine/process-next-trigger";
 
 // Configure for longer execution (Vercel Pro limit)
 export const maxDuration = 300; // 5 minutes - process all epics
@@ -353,12 +353,20 @@ export async function POST(
         duration: totalElapsed,
         metadata: { epicsProcessed },
       });
-      await appendLog(runId, `⚠ Processing paused after ${epicsProcessed} epics (timeout - will continue on retry)`);
+      await appendLog(runId, `⚠ Processing paused after ${epicsProcessed} epics (timeout - will continue)`);
 
-      // Don't finalize - leave run in RUNNING state for stale detection/retry
+      // Trigger immediate self-continuation instead of waiting for cron job
+      // This prevents the frontend from detecting a "stale" run during the gap
+      triggerProcessNext(runId);
+      logger.info("run.continuation_triggered", { metadata: { reason: "timeout" } });
+
+      // Small delay to ensure the fetch is initiated before we return
+      await sleep(100);
+
+      // Return - leave run in RUNNING state, continuation will pick up
       return NextResponse.json({
         success: true,
-        message: `Timed out after ${epicsProcessed} epics`,
+        message: `Timed out after ${epicsProcessed} epics, continuation triggered`,
         epicsProcessed,
         timedOut: true,
       });
