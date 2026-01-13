@@ -41,6 +41,9 @@ export function getBatchSecret(): string {
  * Fire-and-forget trigger for processing the next epic in a batch run.
  * Does NOT wait for the response - returns immediately.
  *
+ * NOTE: Use triggerProcessNextAsync() for the INITIAL trigger from Server Actions,
+ * as fire-and-forget will be killed when the Server Action returns on Vercel.
+ *
  * @param runId - The batch story run ID
  * @returns void (fire-and-forget)
  */
@@ -68,10 +71,52 @@ export function triggerProcessNext(runId: string): void {
 }
 
 /**
+ * Awaitable trigger for the FIRST process-next call.
+ * 
+ * IMPORTANT: On Vercel, fire-and-forget fetch calls are killed when the Server Action
+ * returns. The initial trigger MUST be awaited to ensure it actually executes.
+ * Subsequent triggers from within API routes can use fire-and-forget since the
+ * route handler keeps running.
+ *
+ * @param runId - The batch story run ID
+ * @returns Promise that resolves when the request is sent (not when processing completes)
+ */
+export async function triggerProcessNextAsync(runId: string): Promise<{ success: boolean; error?: string }> {
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}/api/runs/${runId}/process-next`;
+  const secret = getBatchSecret();
+
+  console.log(`[BatchStory] Triggering process-next (async) for run ${runId}`);
+  console.log(`[BatchStory] URL: ${url}`);
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-batch-secret": secret,
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`[BatchStory] process-next failed: ${response.status} ${text}`);
+      return { success: false, error: `HTTP ${response.status}: ${text}` };
+    }
+
+    console.log(`[BatchStory] process-next triggered successfully for run ${runId}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`[BatchStory] Failed to trigger process-next:`, error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+/**
  * Fire-and-forget trigger for processing the next upload in a card analysis run.
  * Does NOT wait for the response - returns immediately.
  *
- * This mirrors triggerProcessNext() but for the card analysis flow.
+ * NOTE: Use triggerProcessNextUploadAsync() for the INITIAL trigger from Server Actions.
  *
  * @param runId - The card analysis run ID
  * @returns void (fire-and-forget)
@@ -97,6 +142,46 @@ export function triggerProcessNextUpload(runId: string): void {
   });
 
   // Return immediately - don't wait for the fetch
+}
+
+/**
+ * Awaitable trigger for the FIRST process-next-upload call.
+ * 
+ * IMPORTANT: On Vercel, fire-and-forget fetch calls are killed when the Server Action
+ * returns. The initial trigger MUST be awaited to ensure it actually executes.
+ *
+ * @param runId - The card analysis run ID
+ * @returns Promise that resolves when the request is sent
+ */
+export async function triggerProcessNextUploadAsync(runId: string): Promise<{ success: boolean; error?: string }> {
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}/api/runs/${runId}/process-next-upload`;
+  const secret = getBatchSecret();
+
+  console.log(`[CardAnalysis] Triggering process-next-upload (async) for run ${runId}`);
+  console.log(`[CardAnalysis] URL: ${url}`);
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-batch-secret": secret,
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`[CardAnalysis] process-next-upload failed: ${response.status} ${text}`);
+      return { success: false, error: `HTTP ${response.status}: ${text}` };
+    }
+
+    console.log(`[CardAnalysis] process-next-upload triggered successfully for run ${runId}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`[CardAnalysis] Failed to trigger process-next-upload:`, error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
 }
 
 /**

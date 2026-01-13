@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { triggerProcessNext } from "@/lib/run-engine/process-next-trigger";
+import { triggerProcessNextAsync } from "@/lib/run-engine/process-next-trigger";
 import {
   RunType,
   RunStatus,
@@ -105,13 +105,19 @@ export async function startGenerateAllStories(
       })),
     });
 
-    // 6. Fire-and-forget: trigger the first process-next call
-    // This pattern works within Vercel's serverless timeout limits
-    // Each epic is processed in its own function invocation
-    console.log(`[BatchStoryRun ${run.id}] Triggering process-next (fire-and-forget)`);
-    triggerProcessNext(run.id);
+    // 6. Trigger the first process-next call (MUST await on Vercel)
+    // Fire-and-forget doesn't work from Server Actions on Vercel because
+    // the function terminates when the action returns, killing pending fetches.
+    // Subsequent triggers from API routes can use fire-and-forget.
+    console.log(`[BatchStoryRun ${run.id}] Triggering process-next (async)`);
+    const triggerResult = await triggerProcessNextAsync(run.id);
+    
+    if (!triggerResult.success) {
+      console.error(`[BatchStoryRun ${run.id}] Failed to trigger processing:`, triggerResult.error);
+      // Don't fail the whole operation - the run is created and can be recovered
+      // via stale detection if the trigger failed
+    }
 
-    // Return immediately - don't wait for processing
     revalidatePath(`/projects/${projectId}`);
 
     return { success: true, runId: run.id, epicCount: epicsToProcess.length };

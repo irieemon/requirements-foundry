@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { triggerProcessNextUpload } from "@/lib/run-engine/process-next-trigger";
+import { triggerProcessNextUploadAsync } from "@/lib/run-engine/process-next-trigger";
 import {
   RunType,
   RunStatus,
@@ -106,13 +106,17 @@ export async function analyzeProject(
       data: { analysisStatus: AnalysisStatus.QUEUED },
     });
 
-    // 7. Fire-and-forget: trigger the first process-next-upload call
-    // This pattern works within Vercel's serverless timeout limits.
-    // Each upload is processed in its own function invocation.
-    console.log(`[CardAnalysis Run ${run.id}] Triggering process-next-upload (fire-and-forget)`);
-    triggerProcessNextUpload(run.id);
+    // 7. Trigger the first process-next-upload call (MUST await on Vercel)
+    // Fire-and-forget doesn't work from Server Actions on Vercel because
+    // the function terminates when the action returns, killing pending fetches.
+    console.log(`[CardAnalysis Run ${run.id}] Triggering process-next-upload (async)`);
+    const triggerResult = await triggerProcessNextUploadAsync(run.id);
+    
+    if (!triggerResult.success) {
+      console.error(`[CardAnalysis Run ${run.id}] Failed to trigger processing:`, triggerResult.error);
+      // Don't fail - the run is created and can be recovered via stale detection
+    }
 
-    // Return immediately - don't wait for processing
     revalidatePath(`/projects/${projectId}`);
 
     return { success: true, runId: run.id };
