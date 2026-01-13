@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StatusPill } from "@/components/ui/status-pill";
 import {
@@ -563,14 +562,29 @@ export function RunProgressPanel({
 
   if (!progress) return null;
 
-  const progressPercent =
+  // Calculate progress percentages for completed and in-progress
+  const completedPercent =
     progress.totalUploads > 0
-      ? Math.round(
-          ((progress.completedUploads + progress.failedUploads) /
-            progress.totalUploads) *
-            100
-        )
+      ? ((progress.completedUploads + progress.failedUploads) /
+          progress.totalUploads) *
+        100
       : 0;
+
+  // Count actively processing uploads (LOADING, ANALYZING, SAVING)
+  const analyzingCount = progress.uploads.filter(
+    (u) =>
+      u.status === RunUploadStatus.LOADING ||
+      u.status === RunUploadStatus.ANALYZING ||
+      u.status === RunUploadStatus.SAVING
+  ).length;
+
+  // In-progress percentage (one segment per active upload)
+  const inProgressPercent =
+    progress.totalUploads > 0
+      ? (analyzingCount / progress.totalUploads) * 100
+      : 0;
+
+  const progressPercent = Math.round(completedPercent);
 
   const runStatusVariant =
     progress.status === RunStatus.SUCCEEDED
@@ -657,12 +671,49 @@ export function RunProgressPanel({
             <span className="font-medium">
               {progress.completedUploads + progress.failedUploads} of{" "}
               {progress.totalUploads} documents processed
+              {analyzingCount > 0 && (
+                <span className="text-primary ml-1">
+                  ({analyzingCount} analyzing)
+                </span>
+              )}
             </span>
             <span className="font-semibold text-primary">
               {progress.totalCards} cards extracted
             </span>
           </div>
-          <Progress value={progressPercent} className="h-2" />
+          {/* Custom progress bar with completed (solid) + in-progress (striped) */}
+          <div className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20">
+            {/* Completed segment (solid) */}
+            <div
+              className="absolute left-0 top-0 h-full bg-primary transition-all duration-300"
+              style={{ width: `${completedPercent}%` }}
+            />
+            {/* In-progress segment (animated striped) */}
+            {analyzingCount > 0 && (
+              <div
+                className="absolute top-0 h-full overflow-hidden transition-all duration-300"
+                style={{
+                  left: `${completedPercent}%`,
+                  width: `${inProgressPercent}%`,
+                }}
+              >
+                <div
+                  className="h-full w-full animate-pulse"
+                  style={{
+                    background: `repeating-linear-gradient(
+                      -45deg,
+                      hsl(var(--primary)),
+                      hsl(var(--primary)) 4px,
+                      hsl(var(--primary) / 0.6) 4px,
+                      hsl(var(--primary) / 0.6) 8px
+                    )`,
+                    backgroundSize: "200% 100%",
+                    animation: "shimmer 1.5s ease-in-out infinite",
+                  }}
+                />
+              </div>
+            )}
+          </div>
           {progress.estimatedRemainingMs && isActive && (
             <p className="text-xs text-muted-foreground text-right">
               ~{formatDuration(progress.estimatedRemainingMs)} remaining

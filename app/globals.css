@@ -155,6 +155,16 @@
   }
 }
 
+/* Progress bar shimmer animation */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 /* Utility classes for the hybrid dashboard */
 @layer utilities {
   .content-canvas {
