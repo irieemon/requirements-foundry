@@ -93,14 +93,15 @@ Features:
 **Plans**: TBD
 
 Components needed:
-- [ ] Subtask model in Prisma schema
-- [ ] RunStory junction model (tracks per-story progress)
-- [ ] Server actions (startGenerateSubtasks, getSubtaskProgress)
-- [ ] Subtask executor (lib/run-engine/subtask-executor.ts)
-- [ ] AI prompt for subtask generation
-- [ ] SubtaskConfigDialog component
-- [ ] SubtaskRunProgress component
-- [ ] Subtask display in story detail/expansion
+- [x] Subtask model in Prisma schema (07-01)
+- [x] RunStory junction model (tracks per-story progress) (07-01)
+- [x] Server actions (startGenerateSubtasks, getSubtaskProgress) (07-02)
+- [x] Subtask executor (lib/run-engine/subtask-executor.ts) (07-02)
+- [x] AI prompt for subtask generation (07-02)
+- [x] SubtaskConfigDialog component (07-04)
+- [x] SubtaskRunProgress component (07-04)
+- [ ] Epic page integration (07-05)
+- [ ] Subtask display in story detail/expansion (future)
 
 ## Progress
 
@@ -115,4 +116,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Story Generation Timeout Fix | 1/1 | Complete | 2026-01-14 |
 | 5. Integration Verification | 0/TBD | Not started | - |
 | 6. Stories Page | 1/1 | Complete | 2026-01-14 |
-| 7. Subtask Generation | 3/4 | In progress | - |
+| 7. Subtask Generation | 4/5 | In progress | - |
