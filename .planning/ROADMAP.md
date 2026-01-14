@@ -21,7 +21,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Epic Generation Progress Fix** - Add progress indicator for epic generation
 - [x] **Phase 4: Story Generation Timeout Fix** - Fix silent failures and modal resets
 - [ ] **Phase 5: Integration Verification** - End-to-end testing of all three flows
-- [ ] **Phase 6: Stories Page** - Add stories section to view all generated stories
+- [x] **Phase 6: Stories Page** - Add stories section to view all generated stories
+- [ ] **Phase 7: Subtask Generation** - Generate subtasks from stories (following epic/story pattern)
 
 ## Phase Details
 
@@ -78,18 +79,33 @@ Verification checklist:
 **Goal**: Add a dedicated stories section to view all generated stories (similar to uploads, cards, epics pages)
 **Depends on**: Phase 5
 **Research**: Unlikely (follows existing page patterns)
-**Plans**: TBD
+**Plans**: 1/1 Complete
 
 Features:
-- [ ] Stories list page showing all stories across projects
-- [ ] Filter/search by epic, project, or story title
-- [ ] Story detail view with full content
-- [ ] Navigation consistent with uploads/cards/epics sections
+- [x] Stories section on project detail page (grouped by epic)
+- [x] KPI card showing total story count
+- [x] Reuses existing StoryTable component with expandable rows
+
+### Phase 7: Subtask Generation
+**Goal**: Generate subtasks from user stories, following the same Run + Junction + Executor + Polling pattern used for epic and story generation
+**Depends on**: Phase 6
+**Research**: Unlikely (replicates established patterns)
+**Plans**: TBD
+
+Components needed:
+- [ ] Subtask model in Prisma schema
+- [ ] RunStory junction model (tracks per-story progress)
+- [ ] Server actions (startGenerateSubtasks, getSubtaskProgress)
+- [ ] Subtask executor (lib/run-engine/subtask-executor.ts)
+- [ ] AI prompt for subtask generation
+- [ ] SubtaskConfigDialog component
+- [ ] SubtaskRunProgress component
+- [ ] Subtask display in story detail/expansion
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -98,4 +114,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Epic Generation Progress Fix | 1/1 | Complete | 2026-01-13 |
 | 4. Story Generation Timeout Fix | 1/1 | Complete | 2026-01-14 |
 | 5. Integration Verification | 0/TBD | Not started | - |
-| 6. Stories Page | 0/TBD | Not started | - |
+| 6. Stories Page | 1/1 | Complete | 2026-01-14 |
+| 7. Subtask Generation | 0/TBD | Not started | - |
