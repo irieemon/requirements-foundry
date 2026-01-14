@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2025-01-12)
 
 ## Current Position
 
-Phase: 4 of 5 (Story Generation Timeout Fix)
+Phase: 4 of 6 (Story Generation Timeout Fix)
 Plan: 1 of 1 in current phase
 Status: Phase complete
 Last activity: 2026-01-14 — Completed 04-01-PLAN.md
 
-Progress: ████████░░ 80%
+Progress: ███████░░░ 67%
 
 ## Performance Metrics
 
@@ -52,6 +52,10 @@ Recent decisions affecting current work:
 ### Deferred Issues
 
 None yet.
+
+### Roadmap Evolution
+
+- Phase 6 added: Stories Page (view all generated stories)
 
 ### Blockers/Concerns
 

@@ -21,6 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Epic Generation Progress Fix** - Add progress indicator for epic generation
 - [x] **Phase 4: Story Generation Timeout Fix** - Fix silent failures and modal resets
 - [ ] **Phase 5: Integration Verification** - End-to-end testing of all three flows
+- [ ] **Phase 6: Stories Page** - Add stories section to view all generated stories
 
 ## Phase Details
 
@@ -73,10 +74,22 @@ Verification checklist:
 - [ ] Epic generation: Progress indicator visible, completes successfully
 - [ ] Story generation: Progress visible, no timeouts, stories created
 
+### Phase 6: Stories Page
+**Goal**: Add a dedicated stories section to view all generated stories (similar to uploads, cards, epics pages)
+**Depends on**: Phase 5
+**Research**: Unlikely (follows existing page patterns)
+**Plans**: TBD
+
+Features:
+- [ ] Stories list page showing all stories across projects
+- [ ] Filter/search by epic, project, or story title
+- [ ] Story detail view with full content
+- [ ] Navigation consistent with uploads/cards/epics sections
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -85,3 +98,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. Epic Generation Progress Fix | 1/1 | Complete | 2026-01-13 |
 | 4. Story Generation Timeout Fix | 1/1 | Complete | 2026-01-14 |
 | 5. Integration Verification | 0/TBD | Not started | - |
+| 6. Stories Page | 0/TBD | Not started | - |
