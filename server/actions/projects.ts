@@ -45,6 +45,20 @@ export async function getProject(id: string) {
         orderBy: { priority: "asc" },
         include: {
           _count: { select: { stories: true } },
+          stories: {
+            orderBy: { code: "asc" },
+            select: {
+              id: true,
+              code: true,
+              title: true,
+              userStory: true,
+              persona: true,
+              acceptanceCriteria: true,
+              technicalNotes: true,
+              priority: true,
+              effort: true,
+            },
+          },
         },
       },
       runs: {

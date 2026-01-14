@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { KpiCard } from "./kpi-card";
-import { FileText, Layers, BookOpen, Activity, LucideIcon } from "lucide-react";
+import { FileText, Layers, BookOpen, Activity, ScrollText, LucideIcon } from "lucide-react";
 
 // Map icon names to actual icon components (client-side only)
 const iconMap: Record<string, LucideIcon> = {
@@ -10,13 +10,14 @@ const iconMap: Record<string, LucideIcon> = {
   Layers,
   BookOpen,
   Activity,
+  ScrollText,
 };
 
 interface NavigableKpiCardProps {
   label: string;
   value: string | number;
   /** Icon name as string - must match a key in iconMap */
-  iconName: "FileText" | "Layers" | "BookOpen" | "Activity";
+  iconName: "FileText" | "Layers" | "BookOpen" | "Activity" | "ScrollText";
   section: string;
   projectId: string;
   trend?: {

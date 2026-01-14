@@ -10,12 +10,13 @@ import { MultiFileUpload } from "@/components/uploads/multi-file-upload";
 import { UploadList } from "@/components/uploads/upload-list";
 import { AnalyzePanel } from "@/components/analysis/analyze-panel";
 import { EpicsSection } from "@/components/epics/epics-section";
+import { StoriesSection } from "@/components/stories/stories-section";
 import { RunList } from "@/components/runs/run-list";
 import { ExportProjectButton } from "@/components/export/export-buttons";
 import { EmptyState } from "@/components/layout/empty-state";
 import { Layers } from "lucide-react";
 
-type Section = "uploads" | "cards" | "epics" | "runs";
+type Section = "uploads" | "cards" | "epics" | "runs" | "stories";
 
 interface ProjectPageProps {
   params: Promise<{ id: string }>;
@@ -32,10 +33,13 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
   }
 
   // Validate and default the section
-  const validSections: Section[] = ["uploads", "cards", "epics", "runs"];
+  const validSections: Section[] = ["uploads", "cards", "epics", "runs", "stories"];
   const activeSection: Section = validSections.includes(sectionParam as Section)
     ? (sectionParam as Section)
     : "uploads";
+
+  // Compute total stories across all epics
+  const totalStories = project.epics.reduce((sum, epic) => sum + epic._count.stories, 0);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -79,6 +83,13 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
             value={project._count.runs}
             iconName="Activity"
             section="runs"
+            projectId={project.id}
+          />
+          <NavigableKpiCard
+            label="Stories"
+            value={totalStories}
+            iconName="ScrollText"
+            section="stories"
             projectId={project.id}
           />
         </KpiStrip>
@@ -192,6 +203,11 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
                 <RunList runs={project.runs} />
               </CardContent>
             </Card>
+          )}
+
+          {/* Stories Section */}
+          {activeSection === "stories" && (
+            <StoriesSection epics={project.epics} />
           )}
         </div>
         </div>
