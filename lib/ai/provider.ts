@@ -3,6 +3,7 @@ import {
   CardData,
   EpicData,
   StoryData,
+  SubtaskData,
   GenerationMode,
   PersonaSet,
   GenerationResult,
@@ -21,6 +22,11 @@ export interface AIProvider {
     mode: GenerationMode,
     personaSet: PersonaSet
   ): Promise<GenerationResult<StoryData[]>>;
+  generateSubtasks(
+    story: StoryData,
+    epicContext: { code: string; title: string },
+    mode: GenerationMode
+  ): Promise<GenerationResult<SubtaskData[]>>;
   isAvailable(): boolean;
 }
 
@@ -214,6 +220,79 @@ Return ONLY valid JSON array:
       };
     }
   }
+
+  async generateSubtasks(
+    story: StoryData,
+    epicContext: { code: string; title: string },
+    mode: GenerationMode
+  ): Promise<GenerationResult<SubtaskData[]>> {
+    try {
+      const modeConfig = GENERATION_MODE_CONFIG[mode];
+      // Subtask counts: compact 3-5, standard 5-8, detailed 8-12
+      const subtaskCounts = {
+        compact: { min: 3, max: 5 },
+        standard: { min: 5, max: 8 },
+        detailed: { min: 8, max: 12 },
+      };
+      const countConfig = subtaskCounts[mode];
+
+      const prompt = `You are a technical product analyst. Generate implementation subtasks for the following User Story.
+
+CONTEXT:
+Epic: ${epicContext.code} - ${epicContext.title}
+Story: ${story.code} - ${story.title}
+User Story: ${story.userStory}
+${story.persona ? `Persona: ${story.persona}` : ""}
+${story.acceptanceCriteria ? `Acceptance Criteria:\n${story.acceptanceCriteria.map((ac, i) => `  ${i + 1}. ${ac}`).join("\n")}` : ""}
+${story.technicalNotes ? `Technical Notes: ${story.technicalNotes}` : ""}
+
+GENERATION MODE: ${mode.toUpperCase()}
+- Generate ${countConfig.min}-${countConfig.max} subtasks
+- Focus: ${modeConfig.focus}
+
+Generate subtasks that represent concrete implementation work. Each subtask should:
+- Be a specific, actionable piece of work
+- Have a clear definition of done
+- Estimate effort (XS=<2h, S=2-4h, M=4-8h, L=1-2d, XL=>2d)
+- Include technical implementation details where relevant
+
+Return ONLY valid JSON array:
+[
+  {
+    "code": "ST1",
+    "title": "Subtask title",
+    "description": "What needs to be done and how",
+    "effort": "S"
+  }
+]`;
+
+      const message = await this.client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2048,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const content = message.content[0];
+      if (content.type !== "text") {
+        return { success: false, error: "Unexpected response type" };
+      }
+
+      const jsonMatch = content.text.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        return { success: false, error: "Could not parse JSON from response" };
+      }
+
+      const subtasks = JSON.parse(jsonMatch[0]) as SubtaskData[];
+      const tokensUsed = message.usage.input_tokens + message.usage.output_tokens;
+
+      return { success: true, data: subtasks, tokensUsed };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
 }
 
 // ============================================
@@ -325,6 +404,52 @@ class MockProvider implements AIProvider {
     }
 
     return { success: true, data: stories, tokensUsed: 0 };
+  }
+
+  async generateSubtasks(
+    story: StoryData,
+    epicContext: { code: string; title: string },
+    mode: GenerationMode
+  ): Promise<GenerationResult<SubtaskData[]>> {
+    await sleep(800);
+
+    // Subtask counts based on mode
+    const subtaskCounts = {
+      compact: 4,
+      standard: 6,
+      detailed: 10,
+    };
+    const subtaskCount = subtaskCounts[mode];
+
+    const subtaskTemplates = [
+      { action: "Design", type: "UI/UX", effort: "S" },
+      { action: "Implement", type: "frontend component", effort: "M" },
+      { action: "Create", type: "API endpoint", effort: "M" },
+      { action: "Write", type: "database queries", effort: "S" },
+      { action: "Add", type: "validation logic", effort: "S" },
+      { action: "Implement", type: "error handling", effort: "S" },
+      { action: "Write", type: "unit tests", effort: "M" },
+      { action: "Write", type: "integration tests", effort: "M" },
+      { action: "Update", type: "documentation", effort: "XS" },
+      { action: "Perform", type: "code review", effort: "S" },
+      { action: "Configure", type: "feature flags", effort: "XS" },
+      { action: "Set up", type: "monitoring/logging", effort: "S" },
+    ];
+
+    const subtasks: SubtaskData[] = [];
+
+    for (let i = 0; i < subtaskCount; i++) {
+      const template = subtaskTemplates[i % subtaskTemplates.length];
+
+      subtasks.push({
+        code: `ST${i + 1}`,
+        title: `${template.action} ${template.type} for ${story.title}`,
+        description: `${template.action} the ${template.type} required to implement "${story.title}" in ${epicContext.code}.`,
+        effort: template.effort,
+      });
+    }
+
+    return { success: true, data: subtasks, tokensUsed: 0 };
   }
 }
 

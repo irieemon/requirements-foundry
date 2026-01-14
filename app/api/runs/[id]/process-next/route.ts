@@ -1,15 +1,17 @@
 // ============================================
-// Process Next Epic - Batch Processing Endpoint
+// Process Next - Batch Processing Endpoint
 // POST /api/runs/[id]/process-next
 // ============================================
-// Processes ALL pending epics in a loop within a single invocation.
+// Processes ALL pending items in a loop within a single invocation.
 // This avoids fire-and-forget HTTP self-calls that fail on Vercel serverless.
+// Handles both GENERATE_ALL_STORIES (epics→stories) and GENERATE_SUBTASKS (stories→subtasks)
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createRunLogger } from "@/lib/observability";
 import { getAIProvider, hasAnthropicKey } from "@/lib/ai/provider";
 import {
+  RunType,
   RunStatus,
   RunPhase,
   RunEpicStatus,
@@ -20,6 +22,7 @@ import {
   type PersonaSet,
 } from "@/lib/types";
 import { validateBatchSecret, triggerProcessNext } from "@/lib/run-engine/process-next-trigger";
+import { executeSubtaskGeneration, finalizeSubtaskRun } from "@/lib/run-engine/subtask-executor";
 
 // Configure for longer execution (Vercel Pro limit)
 export const maxDuration = 300; // 5 minutes - process all epics
@@ -79,6 +82,47 @@ export async function POST(
       logger.info("run.already_completed", { metadata: { status: run.status } });
       return NextResponse.json({ success: true, message: "Run already completed" });
     }
+
+    // ====================================================
+    // DISPATCH: Route to appropriate executor based on run type
+    // ====================================================
+    if (run.type === RunType.GENERATE_SUBTASKS) {
+      // Execute subtask generation
+      const result = await executeSubtaskGeneration({
+        runId,
+        timeoutMs: TIMEOUT_SAFETY_MS,
+        startTime: invocationStartTime,
+        logger,
+      });
+
+      if (result.timedOut) {
+        // Trigger continuation for remaining stories
+        triggerProcessNext(runId);
+        logger.info("run.continuation_triggered", { metadata: { reason: "timeout" } });
+        await sleep(100);
+
+        return NextResponse.json({
+          success: true,
+          message: result.message,
+          storiesProcessed: result.storiesProcessed,
+          timedOut: true,
+        });
+      }
+
+      // Finalize the run
+      await finalizeSubtaskRun(runId, logger);
+
+      return NextResponse.json({
+        success: result.success,
+        message: result.message,
+        storiesProcessed: result.storiesProcessed,
+        durationMs: Date.now() - invocationStartTime,
+      });
+    }
+
+    // ====================================================
+    // GENERATE_ALL_STORIES: Original batch story generation
+    // ====================================================
 
     // 3. Update run to RUNNING if not already
     if (run.status === RunStatus.QUEUED) {
