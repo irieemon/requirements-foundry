@@ -115,4 +115,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Story Generation Timeout Fix | 1/1 | Complete | 2026-01-14 |
 | 5. Integration Verification | 0/TBD | Not started | - |
 | 6. Stories Page | 1/1 | Complete | 2026-01-14 |
-| 7. Subtask Generation | 0/TBD | Not started | - |
+| 7. Subtask Generation | 3/4 | In progress | - |
