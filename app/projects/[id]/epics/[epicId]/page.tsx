@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GenerateStoriesForm } from "@/components/stories/generate-stories-form";
 import { StoryTable } from "@/components/stories/story-table";
+import { SubtaskGenerationSection } from "@/components/subtasks/subtask-generation-section";
 import { ExportEpicButton } from "@/components/export/export-buttons";
 import { PageHeader } from "@/components/layout/page-header";
 import { BookOpen } from "lucide-react";
@@ -172,6 +173,20 @@ export default async function EpicPage({ params }: EpicPageProps) {
               <StoryTable stories={epic.stories} />
             </CardContent>
           </Card>
+
+          {/* Subtask Generation */}
+          {epic.stories.length > 0 && (
+            <SubtaskGenerationSection
+              epicId={epic.id}
+              projectId={id}
+              stories={epic.stories.map(s => ({
+                id: s.id,
+                code: s.code,
+                title: s.title,
+                _count: { subtasks: s._count?.subtasks || 0 }
+              }))}
+            />
+          )}
         </div>
       </div>
     </div>
