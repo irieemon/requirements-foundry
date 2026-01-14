@@ -25,8 +25,11 @@ import { validateBatchSecret, triggerProcessNext } from "@/lib/run-engine/proces
 export const maxDuration = 300; // 5 minutes - process all epics
 export const runtime = "nodejs";
 
-// Safety margin: stop processing 20s before timeout to finalize cleanly
-const TIMEOUT_SAFETY_MS = 280 * 1000; // 280 seconds
+// Safety margin: stop processing with enough time for one more epic + finalization
+// Each epic takes ~40-60s (Claude API call), so stop at 220s to ensure we can:
+// 1. Complete current epic (if mid-processing)
+// 2. Have time to trigger continuation before Vercel kills us at 300s
+const TIMEOUT_SAFETY_MS = 220 * 1000; // 220 seconds (80s buffer for epic + finalization)
 
 export async function POST(
   request: NextRequest,
