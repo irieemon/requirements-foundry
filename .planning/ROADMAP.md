@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Story Generation Timeout Fix** - Fix silent failures and modal resets
 - [ ] **Phase 5: Integration Verification** - End-to-end testing of all three flows
 - [x] **Phase 6: Stories Page** - Add stories section to view all generated stories
-- [ ] **Phase 7: Subtask Generation** - Generate subtasks from stories (following epic/story pattern)
+- [x] **Phase 7: Subtask Generation** - Generate subtasks from stories (following epic/story pattern)
 
 ## Phase Details
 
@@ -100,7 +100,7 @@ Components needed:
 - [x] AI prompt for subtask generation (07-02)
 - [x] SubtaskConfigDialog component (07-04)
 - [x] SubtaskRunProgress component (07-04)
-- [ ] Epic page integration (07-05)
+- [x] Epic page integration (07-05)
 - [ ] Subtask display in story detail/expansion (future)
 
 ## Progress
@@ -116,4 +116,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Story Generation Timeout Fix | 1/1 | Complete | 2026-01-14 |
 | 5. Integration Verification | 0/TBD | Not started | - |
 | 6. Stories Page | 1/1 | Complete | 2026-01-14 |
-| 7. Subtask Generation | 4/5 | In progress | - |
+| 7. Subtask Generation | 5/5 | Complete | 2026-01-14 |
