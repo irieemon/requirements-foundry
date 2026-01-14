@@ -36,6 +36,7 @@ export const RunType = {
   GENERATE_EPICS: "GENERATE_EPICS",
   GENERATE_STORIES: "GENERATE_STORIES",
   GENERATE_ALL_STORIES: "GENERATE_ALL_STORIES",
+  GENERATE_SUBTASKS: "GENERATE_SUBTASKS",
   EXPORT: "EXPORT",
 } as const;
 export type RunType = (typeof RunType)[keyof typeof RunType];
@@ -55,8 +56,10 @@ export const RunPhase = {
   INITIALIZING: "INITIALIZING",
   LOADING_CONTENT: "LOADING_CONTENT",
   ANALYZING: "ANALYZING",
-  QUEUEING_EPICS: "QUEUEING_EPICS",        // For batch story generation
-  GENERATING_STORIES: "GENERATING_STORIES", // For batch story generation
+  QUEUEING_EPICS: "QUEUEING_EPICS",          // For batch story generation
+  GENERATING_STORIES: "GENERATING_STORIES",   // For batch story generation
+  QUEUEING_STORIES: "QUEUEING_STORIES",       // For batch subtask generation
+  GENERATING_SUBTASKS: "GENERATING_SUBTASKS", // For batch subtask generation
   SAVING_RESULTS: "SAVING_RESULTS",
   FINALIZING: "FINALIZING",
   COMPLETED: "COMPLETED",
@@ -86,6 +89,17 @@ export const RunEpicStatus = {
   SKIPPED: "SKIPPED",
 } as const;
 export type RunEpicStatus = (typeof RunEpicStatus)[keyof typeof RunEpicStatus];
+
+// Per-story status within a batch subtask generation run
+export const RunStoryStatus = {
+  PENDING: "PENDING",
+  GENERATING: "GENERATING",
+  SAVING: "SAVING",
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+  SKIPPED: "SKIPPED",
+} as const;
+export type RunStoryStatus = (typeof RunStoryStatus)[keyof typeof RunStoryStatus];
 
 // Batch story generation: how to handle epics that already have stories
 export const ExistingStoriesBehavior = {
@@ -364,6 +378,68 @@ export interface BatchStoryProgress {
 
   // Epic details
   epics: RunEpicProgress[];
+
+  // Timing
+  startedAt?: Date;
+  elapsedMs?: number;
+  estimatedRemainingMs?: number;
+
+  // Error
+  error?: string;
+}
+
+// ============================================
+// Batch Subtask Generation Types
+// ============================================
+
+export interface GenerateSubtasksInput {
+  epicId: string;
+  storyIds?: string[];  // Optional: specific stories only. If omitted, all stories in epic
+  options: {
+    mode: GenerationMode;
+    existingSubtasksBehavior: ExistingStoriesBehavior;  // Reuse existing enum
+    pacing: ProcessingPacing;
+  };
+}
+
+export interface GenerateSubtasksResult {
+  success: boolean;
+  runId?: string;
+  error?: string;
+  storyCount?: number;
+}
+
+export interface RunStoryProgress {
+  storyId: string;
+  storyCode: string;
+  storyTitle: string;
+  status: RunStoryStatus;
+  subtasksCreated: number;
+  subtasksDeleted: number;
+  error?: string;
+  durationMs?: number;
+}
+
+export interface BatchSubtaskProgress {
+  runId: string;
+  status: RunStatus;
+  phase: RunPhase;
+  phaseDetail?: string;
+
+  // Counters
+  totalStories: number;
+  completedStories: number;
+  failedStories: number;
+  skippedStories: number;
+  totalSubtasksCreated: number;
+
+  // Current processing
+  currentStoryIndex?: number;  // 1-based
+  currentStoryId?: string;
+  currentStoryTitle?: string;
+
+  // Story details
+  stories: RunStoryProgress[];
 
   // Timing
   startedAt?: Date;

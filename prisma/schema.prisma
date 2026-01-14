@@ -163,7 +163,8 @@ model Story {
   runId              String?   // which run generated this
   createdAt          DateTime  @default(now())
 
-  subtasks Subtask[]
+  subtasks   Subtask[]
+  runStories RunStory[]
 
   @@unique([epicId, code])
   @@index([epicId])
@@ -174,14 +175,16 @@ model Subtask {
   id          String   @id @default(cuid())
   storyId     String
   story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  code        String   // ST1, ST2, etc.
+  code        String   // ST1, ST2, etc. unique per story
   title       String
-  description String?
-  effort      String?
+  description String?  @db.Text
+  effort      String?  // XS, S, M, L, XL or hours
+  runId       String?  // which generation run created this
   createdAt   DateTime @default(now())
 
   @@unique([storyId, code])
   @@index([storyId])
+  @@index([runId])
 }
 
 // ============================================
@@ -192,7 +195,7 @@ model Run {
   id          String    @id @default(cuid())
   projectId   String
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  type        String    // ANALYZE_CARDS, GENERATE_EPICS, GENERATE_STORIES, GENERATE_ALL_STORIES, EXPORT
+  type        String    // ANALYZE_CARDS, GENERATE_EPICS, GENERATE_STORIES, GENERATE_ALL_STORIES, GENERATE_SUBTASKS, EXPORT
   status      String    @default("QUEUED") // QUEUED, RUNNING, SUCCEEDED, PARTIAL, FAILED, CANCELLED
 
   // Granular phase tracking
@@ -231,6 +234,7 @@ model Run {
   // Relations
   runUploads  RunUpload[]
   runEpics    RunEpic[]
+  runStories  RunStory[]
 
   @@index([projectId])
   @@index([status])
@@ -317,6 +321,44 @@ model RunEpic {
   @@unique([runId, epicId])
   @@index([runId])
   @@index([epicId])
+  @@index([runId, status])
+}
+
+// ============================================
+// Run-Story Junction
+// Tracks per-story progress within a batch subtask generation run
+// ============================================
+
+enum RunStoryStatus {
+  PENDING
+  GENERATING
+  SAVING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+model RunStory {
+  id              String         @id @default(cuid())
+  runId           String
+  run             Run            @relation(fields: [runId], references: [id], onDelete: Cascade)
+  storyId         String
+  story           Story          @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  status          RunStoryStatus @default(PENDING)
+  subtasksCreated Int            @default(0)
+  subtasksDeleted Int            @default(0)
+  tokensUsed      Int?
+  durationMs      Int?
+  errorMsg        String?
+  retryCount      Int            @default(0)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([runId, storyId])
+  @@index([runId])
+  @@index([storyId])
   @@index([runId, status])
 }
 
