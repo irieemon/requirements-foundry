@@ -8,6 +8,11 @@ export async function getEpic(id: string) {
     include: {
       project: true,
       stories: {
+        include: {
+          _count: {
+            select: { subtasks: true }
+          }
+        },
         orderBy: { code: "asc" },
       },
     },
