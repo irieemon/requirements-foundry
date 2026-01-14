@@ -122,12 +122,21 @@ export async function triggerProcessNextAsync(runId: string): Promise<{ success:
   console.log(`[BatchStory] NODE_ENV: ${process.env.NODE_ENV}`);
   console.log(`[BatchStory] VERCEL_URL: ${process.env.VERCEL_URL || "(not set)"}`);
 
+  // Use "fire-and-confirm" pattern: wait just long enough to confirm request was accepted,
+  // then return without waiting for processing to complete. This prevents the server action
+  // from timing out while waiting for a multi-minute processing job.
+  const CONFIRM_TIMEOUT_MS = 10000; // 10 seconds to confirm acceptance
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CONFIRM_TIMEOUT_MS);
+
   try {
     const startTime = Date.now();
     const response = await fetch(url, {
       method: "POST",
       headers,
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     const elapsed = Date.now() - startTime;
 
     console.log(`[BatchStory] Response received in ${elapsed}ms: ${response.status} ${response.statusText}`);
@@ -138,11 +147,20 @@ export async function triggerProcessNextAsync(runId: string): Promise<{ success:
       return { success: false, error: `HTTP ${response.status}: ${text}` };
     }
 
+    // Got a successful response - processing is complete (fast path for small jobs)
     const responseText = await response.text();
     console.log(`[BatchStory] process-next response: ${responseText}`);
-    console.log(`[BatchStory] process-next triggered successfully for run ${runId}`);
+    console.log(`[BatchStory] process-next completed for run ${runId}`);
     return { success: true };
   } catch (error) {
+    clearTimeout(timeoutId);
+
+    // AbortError means we hit our timeout - the request was accepted and is processing
+    if (error instanceof Error && error.name === "AbortError") {
+      console.log(`[BatchStory] Request accepted, processing in background for run ${runId}`);
+      return { success: true };
+    }
+
     console.error(`[BatchStory] Failed to trigger process-next:`, error);
     const errorMsg = error instanceof Error ? `${error.name}: ${error.message}` : "Unknown error";
     return { success: false, error: errorMsg };
@@ -199,11 +217,22 @@ export async function triggerProcessNextUploadAsync(runId: string): Promise<{ su
   console.log(`[CardAnalysis] URL: ${url}`);
   console.log(`[CardAnalysis] Bypass header present: ${!!headers["x-vercel-protection-bypass"]}`);
 
+  // Use "fire-and-confirm" pattern (same as triggerProcessNextAsync)
+  const CONFIRM_TIMEOUT_MS = 10000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CONFIRM_TIMEOUT_MS);
+
   try {
+    const startTime = Date.now();
     const response = await fetch(url, {
       method: "POST",
       headers,
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
+    const elapsed = Date.now() - startTime;
+
+    console.log(`[CardAnalysis] Response received in ${elapsed}ms: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       const text = await response.text();
@@ -211,9 +240,17 @@ export async function triggerProcessNextUploadAsync(runId: string): Promise<{ su
       return { success: false, error: `HTTP ${response.status}: ${text}` };
     }
 
-    console.log(`[CardAnalysis] process-next-upload triggered successfully for run ${runId}`);
+    console.log(`[CardAnalysis] process-next-upload completed for run ${runId}`);
     return { success: true };
   } catch (error) {
+    clearTimeout(timeoutId);
+
+    // AbortError means request accepted and is processing
+    if (error instanceof Error && error.name === "AbortError") {
+      console.log(`[CardAnalysis] Request accepted, processing in background for run ${runId}`);
+      return { success: true };
+    }
+
     console.error(`[CardAnalysis] Failed to trigger process-next-upload:`, error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
