@@ -23,7 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Integration Verification** - End-to-end testing of all three flows
 - [x] **Phase 6: Stories Page** - Add stories section to view all generated stories
 - [x] **Phase 7: Subtask Generation** - Generate subtasks from stories (following epic/story pattern)
-- [ ] **Phase 8: Subtask Viewing** - Add subtasks section to view generated subtasks (similar to stories page)
+- [x] **Phase 8: Subtask Viewing** - Add subtasks section to view generated subtasks (similar to stories page)
 
 ## Phase Details
 
@@ -115,9 +115,9 @@ Components needed:
 **Plans**: TBD
 
 Features:
-- [ ] Subtasks section on project detail page (grouped by story within epic)
-- [ ] KPI card showing total subtask count
-- [ ] SubtaskTable component with expandable rows
+- [x] Subtasks section on project detail page (grouped by story within epic)
+- [x] KPI card showing total subtask count
+- [x] SubtaskTable component with expandable rows
 
 ## Progress
 
@@ -133,4 +133,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Integration Verification | 2/2 | Complete | 2026-01-15 |
 | 6. Stories Page | 1/1 | Complete | 2026-01-14 |
 | 7. Subtask Generation | 5/5 | Complete | 2026-01-14 |
-| 8. Subtask Viewing | 0/1 | Planned | - |
+| 8. Subtask Viewing | 1/1 | Complete | 2026-01-15 |
