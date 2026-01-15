@@ -3,6 +3,7 @@ import { getProject } from "@/server/actions/projects";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
+import { BreadcrumbItem } from "@/components/layout/breadcrumb";
 import { KpiStrip } from "@/components/ui/kpi-card";
 import { NavigableKpiCard } from "@/components/ui/navigable-kpi-card";
 import { TextPasteDialog } from "@/components/uploads/text-paste-dialog";
@@ -16,6 +17,16 @@ import { RunList } from "@/components/runs/run-list";
 import { ExportProjectButton } from "@/components/export/export-buttons";
 import { EmptyState } from "@/components/layout/empty-state";
 import { Layers } from "lucide-react";
+
+// Section label mapping for breadcrumbs
+const sectionLabels: Record<string, string> = {
+  uploads: "Uploads",
+  cards: "Cards",
+  epics: "Epics",
+  runs: "Runs",
+  stories: "Stories",
+  subtasks: "Subtasks",
+};
 
 type Section = "uploads" | "cards" | "epics" | "runs" | "stories" | "subtasks";
 
@@ -49,14 +60,34 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
     0
   );
 
+  // Build breadcrumb items based on current state
+  const breadcrumbItems: BreadcrumbItem[] = [
+    { label: "Projects", href: "/projects" },
+  ];
+
+  // If on a specific section (not default "uploads"), add project link and section
+  if (sectionParam && validSections.includes(sectionParam as Section)) {
+    breadcrumbItems.push({
+      label: project.name,
+      href: `/projects/${id}`,
+    });
+    breadcrumbItems.push({
+      label: sectionLabels[sectionParam] || sectionParam,
+    });
+  } else {
+    // Default view - project name is the current page
+    breadcrumbItems.push({
+      label: project.name,
+    });
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Sticky Header */}
       <PageHeader
         title={project.name}
         description={project.description || undefined}
-        backHref="/projects"
-        backLabel="Back to projects"
+        breadcrumbs={breadcrumbItems}
         actions={<ExportProjectButton projectId={project.id} hasEpics={project._count.epics > 0} />}
       />
 
