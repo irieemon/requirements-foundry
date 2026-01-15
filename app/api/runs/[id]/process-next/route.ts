@@ -109,6 +109,17 @@ export async function POST(
         });
       }
 
+      // If executor failed, save the error message to the run before finalizing
+      if (!result.success) {
+        await db.run.update({
+          where: { id: runId },
+          data: {
+            errorMsg: result.message,
+          },
+        });
+        logger.error("subtask_executor.failed", new Error(result.message));
+      }
+
       // Finalize the run
       await finalizeSubtaskRun(runId, logger);
 
