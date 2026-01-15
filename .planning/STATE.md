@@ -2,63 +2,46 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2025-01-12)
+See: .planning/PROJECT.md (updated 2026-01-15)
 
-**Core value:** All three generative flows must complete successfully with real-time progress feedback.
-**Current focus:** Performance Optimization - make generation faster without breaking stability
+**Core value:** All generative flows complete successfully with real-time progress feedback.
+**Current focus:** v1.0 milestone complete — ready for next feature development
 
 ## Current Position
 
 Phase: 9 of 9 (Performance Optimization)
 Plan: 3 of 3 in current phase
-Status: Complete
-Last activity: 2026-01-15 — Completed 09-03-PLAN.md (parallel card analysis)
+Status: v1.0 SHIPPED
+Last activity: 2026-01-15 — Milestone v1.0 complete
 
-Progress: ██████████ 100% (9/9 phases, 3/3 plans)
+Progress: SHIPPED v1.0 (9/9 phases, 17 plans)
 
-## Performance Metrics
+## Milestone Summary
 
-**Velocity:**
-- Total plans completed: 6
-- Average duration: ~18 min
-- Total execution time: ~1.9 hours
+**v1.0 Generative Pipeline Fix** shipped 2026-01-15
 
-**By Phase:**
+Key deliverables:
+- Fixed real-time progress for card analysis, epic generation, story generation
+- Added Stories page and Subtasks page
+- Implemented full subtask generation pipeline
+- Optimized with batch DB operations and parallel processing
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1. Investigation | 2 | ~55 min | ~28 min |
-| 2. Card Analysis Progress | 1 | ~20 min | ~20 min |
-| 3. Epic Generation Progress | 1 | ~15 min | ~15 min |
-| 4. Story Generation Timeout | 1 | ~15 min | ~15 min |
-| 8. Subtask Viewing | 1 | ~15 min | ~15 min |
-
-**Recent Trend:**
-- Last 5 plans: 02-01, 03-01, 04-01, 08-01
-- Trend: Execution plans consistently ~15 min
+See: .planning/MILESTONES.md for full details
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- Heartbeat-based stale detection may have caused E7 failure (marked for revisit)
-- CONFIRMED: batch-story endpoint missing cache headers is root cause of "no progress" symptom — **FIXED in 01-02**
-- RunLogger exists but was never used - all logging was console.log — **FIXED in 01-02**
-- Frontend-only enhancement using existing polling data (no new API calls) — **APPLIED in 02-01**
-- Fire-and-confirm pattern for server action triggers (10s abort timeout) — **APPLIED in 04-01**
-- Follow Phase 6 patterns exactly for subtask viewing — **APPLIED in 08-01**
+All decisions logged in PROJECT.md Key Decisions table.
+Key decisions from v1.0:
+- Fire-and-confirm pattern for server action triggers
+- Frontend-only enhancement using existing polling data
+- Batch DB operations before parallelization
+- Limited parallelization (2-3 concurrent) respecting Claude API limits
 
 ### Deferred Issues
 
 None.
-
-### Roadmap Evolution
-
-- Phase 6 added: Stories Page (view all generated stories)
-- Phase 8 added: Subtask Viewing (view generated subtasks)
 
 ### Blockers/Concerns
 
@@ -67,19 +50,11 @@ None — milestone complete.
 ## Session Continuity
 
 Last session: 2026-01-15
-Stopped at: Milestone complete - all 9 phases finished
+Stopped at: v1.0 milestone shipped
 Resume file: N/A
 
 ## Notes
 
-**Phase 9: Performance Optimization** — Making generation faster without breaking stability.
-
-The generative pipeline is fully functional:
-- Card analysis with real-time progress ✓
-- Epic generation with elapsed time ✓
-- Story generation with timeout handling ✓
-- Stories display page ✓
-- Subtask generation ✓
-- Subtask viewing page ✓
-
-**Next:** Optimize with batch DB operations and limited parallelization.
+**What's next:**
+- Plan next milestone (`/gsd:discuss-milestone`)
+- Or start fresh feature work
