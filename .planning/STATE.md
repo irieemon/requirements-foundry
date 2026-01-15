@@ -5,28 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-15)
 
 **Core value:** All generative flows complete successfully with real-time progress feedback.
-**Current focus:** v1.0 milestone complete — ready for next feature development
+**Current focus:** v1.1 UX Polish — Transform interface into polished, modern dashboard
 
 ## Current Position
 
-Phase: 9 of 9 (Performance Optimization)
-Plan: 3 of 3 in current phase
-Status: v1.0 SHIPPED
-Last activity: 2026-01-15 — Milestone v1.0 complete
+Phase: 10 of 12 (Navigation & Layout)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-15 — Milestone v1.1 created
 
-Progress: SHIPPED v1.0 (9/9 phases, 17 plans)
-
-## Milestone Summary
-
-**v1.0 Generative Pipeline Fix** shipped 2026-01-15
-
-Key deliverables:
-- Fixed real-time progress for card analysis, epic generation, story generation
-- Added Stories page and Subtasks page
-- Implemented full subtask generation pipeline
-- Optimized with batch DB operations and parallel processing
-
-See: .planning/MILESTONES.md for full details
+Progress: ░░░░░░░░░░ 0%
 
 ## Accumulated Context
 
@@ -43,18 +31,28 @@ Key decisions from v1.0:
 
 None.
 
-### Blockers/Concerns
+### Blockers/Concerns Carried Forward
 
-None — milestone complete.
+None.
+
+## Roadmap Evolution
+
+- Milestone v1.1 created: UX Polish, 3 phases (Phase 10-12)
 
 ## Session Continuity
 
 Last session: 2026-01-15
-Stopped at: v1.0 milestone shipped
-Resume file: N/A
+Stopped at: Milestone v1.1 initialization
+Resume file: None
 
 ## Notes
 
-**What's next:**
-- Plan next milestone (`/gsd:discuss-milestone`)
-- Or start fresh feature work
+**v1.1 Focus:**
+- UX Overhaul: Navigation, layout, visual hierarchy
+- Relationship Visualization: card → epic → story → subtask clarity
+- JIRA Export Preview: Show what will be imported before export
+- Modern Dashboard Aesthetic: Clean, minimal (Notion/Linear style)
+
+**Constraints:**
+- Keep existing shadcn/ui component library
+- Maintain all existing functionality

@@ -2,7 +2,8 @@
 
 ## Milestones
 
-- [v1.0 Generative Pipeline Fix](milestones/v1.0-ROADMAP.md) (Phases 1-9) — SHIPPED 2026-01-15
+- ✅ [v1.0 Generative Pipeline Fix](milestones/v1.0-ROADMAP.md) (Phases 1-9) — SHIPPED 2026-01-15
+- 🚧 **v1.1 UX Polish** — Phases 10-12 (in progress)
 
 ## Overview
 
@@ -37,6 +38,40 @@ See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full details.
 
 </details>
 
+### 🚧 v1.1 UX Polish (In Progress)
+
+**Milestone Goal:** Transform working but clunky interface into polished, modern dashboard that makes relationships clear
+
+#### Phase 10: Navigation & Layout
+
+**Goal**: Overhaul sidebar, page structure, and flow between sections
+**Depends on**: v1.0 complete
+**Research**: Unlikely (internal UX patterns, existing shadcn/ui)
+**Plans**: TBD
+
+Plans:
+- [ ] 10-01: TBD (run /gsd:plan-phase 10 to break down)
+
+#### Phase 11: Data Display & Hierarchy
+
+**Goal**: Visualize cards, epics, stories, subtasks - making relationships clear and intuitive
+**Depends on**: Phase 10
+**Research**: Unlikely (existing components, no external APIs)
+**Plans**: TBD
+
+Plans:
+- [ ] 11-01: TBD (run /gsd:plan-phase 11 to break down)
+
+#### Phase 12: JIRA Export Preview
+
+**Goal**: Show users exactly what will be imported into JIRA before export, final polish
+**Depends on**: Phase 11
+**Research**: Unlikely (existing JIRA mapping logic)
+**Plans**: TBD
+
+Plans:
+- [ ] 12-01: TBD (run /gsd:plan-phase 12 to break down)
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -50,3 +85,6 @@ See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full details.
 | 7. Subtask Generation | v1.0 | 5/5 | Complete | 2026-01-14 |
 | 8. Subtask Viewing | v1.0 | 1/1 | Complete | 2026-01-15 |
 | 9. Performance Optimization | v1.0 | 3/3 | Complete | 2026-01-15 |
+| 10. Navigation & Layout | v1.1 | 0/? | Not started | - |
+| 11. Data Display & Hierarchy | v1.1 | 0/? | Not started | - |
+| 12. JIRA Export Preview | v1.1 | 0/? | Not started | - |
