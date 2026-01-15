@@ -24,6 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Stories Page** - Add stories section to view all generated stories
 - [x] **Phase 7: Subtask Generation** - Generate subtasks from stories (following epic/story pattern)
 - [x] **Phase 8: Subtask Viewing** - Add subtasks section to view generated subtasks (similar to stories page)
+- [ ] **Phase 9: Performance Optimization** - Optimize generative pipeline for faster execution through batch operations and limited parallelization
 
 ## Phase Details
 
@@ -119,10 +120,26 @@ Features:
 - [x] KPI card showing total subtask count
 - [x] SubtaskTable component with expandable rows
 
+### Phase 9: Performance Optimization
+**Goal**: Optimize the generative pipeline for faster execution while maintaining stability
+**Depends on**: Phase 8
+**Research**: Completed (deep analysis via specialized agents)
+**Plans**: 3 (escalating risk/reward)
+
+Optimization tiers:
+- [ ] Plan 09-01: Quick wins - Batch `createMany()` operations (zero risk, ~1.5-2x on DB ops)
+- [ ] Plan 09-02: Safety infrastructure - Version fields, atomic logging (low risk, foundation for parallelization)
+- [ ] Plan 09-03: Limited parallelization - 2-3 concurrent uploads with rate limiting (medium risk, ~2x speedup)
+
+Key constraints:
+- Claude API rate limits (max 2-3 concurrent requests recommended)
+- Database concurrency safety (version fields + atomic operations)
+- Maintain existing functionality (no breaking changes)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -134,3 +151,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 6. Stories Page | 1/1 | Complete | 2026-01-14 |
 | 7. Subtask Generation | 5/5 | Complete | 2026-01-14 |
 | 8. Subtask Viewing | 1/1 | Complete | 2026-01-15 |
+| 9. Performance Optimization | 0/3 | Planned | - |
