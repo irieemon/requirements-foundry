@@ -20,6 +20,7 @@ export default async function RunsPage() {
       />
 
       <div className="flex-1 p-6">
+        <div className="max-w-7xl mx-auto">
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle>Recent Runs</CardTitle>
@@ -35,6 +36,7 @@ export default async function RunsPage() {
             />
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );
