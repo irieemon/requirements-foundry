@@ -50,7 +50,7 @@ See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full details.
 **Plans**: 3
 
 Plans:
-- [ ] 10-01: Enhanced Sidebar Navigation - contextual project sections
+- [x] 10-01: Enhanced Sidebar Navigation - contextual project sections ✓
 - [ ] 10-02: Breadcrumb Navigation - hierarchical location trail
 - [ ] 10-03: Mobile Nav & Layout Polish - mobile parity and spacing consistency
 
@@ -87,6 +87,6 @@ Plans:
 | 7. Subtask Generation | v1.0 | 5/5 | Complete | 2026-01-14 |
 | 8. Subtask Viewing | v1.0 | 1/1 | Complete | 2026-01-15 |
 | 9. Performance Optimization | v1.0 | 3/3 | Complete | 2026-01-15 |
-| 10. Navigation & Layout | v1.1 | 0/3 | Planned | - |
+| 10. Navigation & Layout | v1.1 | 1/3 | In progress | - |
 | 11. Data Display & Hierarchy | v1.1 | 0/? | Not started | - |
 | 12. JIRA Export Preview | v1.1 | 0/? | Not started | - |
