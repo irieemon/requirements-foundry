@@ -170,23 +170,21 @@ export async function executeBatchStoryRun(runId: string): Promise<void> {
           await appendLog(runId, `  Deleted ${storiesDeleted} existing stories`);
         }
 
-        // Create new stories
-        for (const story of result.data) {
-          await db.story.create({
-            data: {
-              epicId: epic.id,
-              code: story.code,
-              title: story.title,
-              userStory: story.userStory,
-              persona: story.persona || null,
-              acceptanceCriteria: story.acceptanceCriteria ? JSON.stringify(story.acceptanceCriteria) : null,
-              technicalNotes: story.technicalNotes || null,
-              priority: story.priority || null,
-              effort: story.effort || null,
-              runId: runId,
-            },
-          });
-        }
+        // Create new stories (batched for performance)
+        const storiesData = result.data.map((story) => ({
+          epicId: epic.id,
+          code: story.code,
+          title: story.title,
+          userStory: story.userStory,
+          persona: story.persona || null,
+          acceptanceCriteria: story.acceptanceCriteria ? JSON.stringify(story.acceptanceCriteria) : null,
+          technicalNotes: story.technicalNotes || null,
+          priority: story.priority || null,
+          effort: story.effort || null,
+          runId: runId,
+        }));
+
+        await db.story.createMany({ data: storiesData });
 
         const storiesCreated = result.data.length;
         totalStoriesCreated += storiesCreated;
