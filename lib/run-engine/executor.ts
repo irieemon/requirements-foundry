@@ -146,26 +146,24 @@ export async function executeRun(runId: string): Promise<void> {
           });
         }
 
-        // Create cards
-        for (const cardData of result.cards) {
-          await db.card.create({
-            data: {
-              projectId: run.projectId,
-              uploadId: upload.id,
-              runId: run.id,
-              title: cardData.title,
-              problem: cardData.problem,
-              targetUsers: cardData.targetUsers,
-              currentState: cardData.currentState,
-              desiredOutcomes: cardData.desiredOutcomes,
-              constraints: cardData.constraints,
-              systems: cardData.systems,
-              priority: cardData.priority,
-              impact: cardData.impact,
-              rawText: cardData.rawText,
-            },
-          });
-        }
+        // Create cards (batched for performance)
+        const cardsData = result.cards.map((cardData) => ({
+          projectId: run.projectId,
+          uploadId: upload.id,
+          runId: run.id,
+          title: cardData.title,
+          problem: cardData.problem,
+          targetUsers: cardData.targetUsers,
+          currentState: cardData.currentState,
+          desiredOutcomes: cardData.desiredOutcomes,
+          constraints: cardData.constraints,
+          systems: cardData.systems,
+          priority: cardData.priority,
+          impact: cardData.impact,
+          rawText: cardData.rawText,
+        }));
+
+        await db.card.createMany({ data: cardsData });
 
         const cardsCreated = result.cards.length;
         totalCardsCreated += cardsCreated;
