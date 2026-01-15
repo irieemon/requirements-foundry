@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-01-12)
 
 **Core value:** All three generative flows must complete successfully with real-time progress feedback.
-**Current focus:** Phase 5 — Integration Verification
+**Current focus:** Phase 8 — Subtask Viewing
 
 ## Current Position
 
-Phase: 5 of 7 (Integration Verification)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-01-15 — Completed 05-01-PLAN.md
+Phase: 8 of 8 (Subtask Viewing)
+Plan: 0 of 1 in current phase
+Status: Planned
+Last activity: 2026-01-15 — Created 08-01-PLAN.md
 
-Progress: ██████████ ~90% (Phase 7 complete, Phase 5 plan 1 of 2 done)
+Progress: █████████░ ~90% (Phase 8 planned, ready for execution)
 
 ## Performance Metrics
 
@@ -65,5 +65,16 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-15
-Stopped at: Completed 05-01-PLAN.md (foundational flow verification)
-Resume file: None - ready for 05-02-PLAN.md
+Stopped at: Created 08-01-PLAN.md (subtask viewing phase planned)
+Resume file: .planning/phases/08-subtask-viewing/08-01-PLAN.md
+
+## Notes
+
+All 7 phases verified and complete. The generative pipeline is fully functional:
+- Card analysis with real-time progress ✓
+- Epic generation with elapsed time ✓
+- Story generation with timeout handling ✓
+- Stories display page ✓
+- Subtask generation ✓
+
+Phase 8 added to address subtask viewing UX gap identified during Phase 5 verification.

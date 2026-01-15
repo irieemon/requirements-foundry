@@ -20,9 +20,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Card Analysis Progress Fix** - Fix frozen progress panel during card analysis
 - [x] **Phase 3: Epic Generation Progress Fix** - Add progress indicator for epic generation
 - [x] **Phase 4: Story Generation Timeout Fix** - Fix silent failures and modal resets
-- [ ] **Phase 5: Integration Verification** - End-to-end testing of all three flows
+- [x] **Phase 5: Integration Verification** - End-to-end testing of all three flows
 - [x] **Phase 6: Stories Page** - Add stories section to view all generated stories
 - [x] **Phase 7: Subtask Generation** - Generate subtasks from stories (following epic/story pattern)
+- [ ] **Phase 8: Subtask Viewing** - Add subtasks section to view generated subtasks (similar to stories page)
 
 ## Phase Details
 
@@ -73,9 +74,11 @@ Note: Heartbeat-based stale detection may have caused E7 failure (see PROJECT.md
 Verification checklist:
 - [x] Card analysis: Progress updates visible, completes successfully (05-01)
 - [x] Epic generation: Progress indicator visible, completes successfully (05-01)
-- [ ] Story generation: Progress visible, no timeouts, stories created
-- [ ] Stories page: Displays generated stories grouped by epic
-- [ ] Subtask generation: Progress visible, subtasks created
+- [x] Story generation: Progress visible, no timeouts, stories created (05-02)
+- [x] Stories page: Displays generated stories grouped by epic (05-02)
+- [x] Subtask generation: Progress visible, subtasks created (05-02)
+
+Note: Subtask viewing UX to be addressed in future phase (generation works, but no dedicated view)
 
 ### Phase 6: Stories Page
 **Goal**: Add a dedicated stories section to view all generated stories (similar to uploads, cards, epics pages)
@@ -103,12 +106,23 @@ Components needed:
 - [x] SubtaskConfigDialog component (07-04)
 - [x] SubtaskRunProgress component (07-04)
 - [x] Epic page integration (07-05)
-- [ ] Subtask display in story detail/expansion (future)
+- [x] Subtask display in story detail/expansion (moved to Phase 8)
+
+### Phase 8: Subtask Viewing
+**Goal**: Add a dedicated subtasks section to view all generated subtasks (similar to stories page pattern)
+**Depends on**: Phase 7
+**Research**: Unlikely (follows Phase 6 patterns exactly)
+**Plans**: TBD
+
+Features:
+- [ ] Subtasks section on project detail page (grouped by story within epic)
+- [ ] KPI card showing total subtask count
+- [ ] SubtaskTable component with expandable rows
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -116,6 +130,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Card Analysis Progress Fix | 1/1 | Complete | 2026-01-13 |
 | 3. Epic Generation Progress Fix | 1/1 | Complete | 2026-01-13 |
 | 4. Story Generation Timeout Fix | 1/1 | Complete | 2026-01-14 |
-| 5. Integration Verification | 1/2 | In progress | - |
+| 5. Integration Verification | 2/2 | Complete | 2026-01-15 |
 | 6. Stories Page | 1/1 | Complete | 2026-01-14 |
 | 7. Subtask Generation | 5/5 | Complete | 2026-01-14 |
+| 8. Subtask Viewing | 0/1 | Planned | - |
