@@ -6,6 +6,10 @@
 import { db } from "@/lib/db";
 import { getDocumentAnalyzer } from "@/lib/ai/document-analyzer";
 import type { ExtractedContent, ExtractedImage } from "@/lib/documents/types";
+import pLimit from "p-limit";
+
+// Concurrency limit for parallel AI calls (safe for API rate limits)
+const CONCURRENCY_LIMIT = 2;
 import {
   RunStatus,
   RunPhase,
@@ -72,177 +76,204 @@ export async function executeRun(runId: string): Promise<void> {
 
     await updateRun(runId, { phase: RunPhase.ANALYZING });
 
-    // 4. Process each upload
-    let totalCardsCreated = 0;
-    let completedCount = 0;
-    let failedCount = 0;
+    // 4. Process uploads in parallel with concurrency control
+    const limit = pLimit(CONCURRENCY_LIMIT);
 
-    for (const runUpload of run.runUploads) {
-      if (context.cancelled) {
-        await handleCancellation(runId);
-        return;
-      }
+    await appendLog(
+      runId,
+      `Processing ${run.runUploads.length} documents (${CONCURRENCY_LIMIT} concurrent)...`
+    );
 
-      const { upload } = runUpload;
-      const startTime = Date.now();
+    await Promise.all(
+      run.runUploads.map((runUpload) =>
+        limit(async () => {
+          // Check for cancellation before processing
+          if (context.cancelled) {
+            return;
+          }
 
-      try {
-        // Update per-upload status to LOADING
-        await updateRunUpload(runUpload.id, {
-          status: RunUploadStatus.LOADING,
-          startedAt: new Date(),
-        });
+          const { upload } = runUpload;
+          const startTime = Date.now();
 
-        await appendLog(runId, `Processing: ${upload.filename || "Untitled"}`);
+          try {
+            // Update per-upload status to LOADING
+            await updateRunUpload(runUpload.id, {
+              status: RunUploadStatus.LOADING,
+              startedAt: new Date(),
+            });
 
-        // Build extracted content object from stored data
-        const content: ExtractedContent = {
-          text: upload.rawContent,
-          images: upload.images.map((img): ExtractedImage => ({
-            base64: img.base64,
-            mimeType: img.mimeType as "image/png" | "image/jpeg" | "image/gif" | "image/webp",
-            index: img.index,
-            pageNumber: img.pageNumber || undefined,
-            slideNumber: img.slideNumber || undefined,
-            width: img.width || undefined,
-            height: img.height || undefined,
-            description: img.description || undefined,
-          })),
-          metadata: {
-            filename: upload.filename || "unknown",
-            mimeType: upload.fileType,
-            fileSize: upload.fileSize || 0,
-            pageCount: upload.pageCount || undefined,
-            slideCount: upload.slideCount || undefined,
-            sheetCount: upload.sheetCount || undefined,
-            wordCount: upload.wordCount || 0,
-            hasImages: upload.hasImages,
-            extractionMethod: upload.processingMethod || "unknown",
-            processingTimeMs: upload.processingTimeMs || 0,
-          },
-        };
+            await appendLog(runId, `Processing: ${upload.filename || "Untitled"}`);
 
-        // Update to ANALYZING
-        await updateRunUpload(runUpload.id, { status: RunUploadStatus.ANALYZING });
+            // Build extracted content object from stored data
+            const content: ExtractedContent = {
+              text: upload.rawContent,
+              images: upload.images.map(
+                (img): ExtractedImage => ({
+                  base64: img.base64,
+                  mimeType: img.mimeType as
+                    | "image/png"
+                    | "image/jpeg"
+                    | "image/gif"
+                    | "image/webp",
+                  index: img.index,
+                  pageNumber: img.pageNumber || undefined,
+                  slideNumber: img.slideNumber || undefined,
+                  width: img.width || undefined,
+                  height: img.height || undefined,
+                  description: img.description || undefined,
+                })
+              ),
+              metadata: {
+                filename: upload.filename || "unknown",
+                mimeType: upload.fileType,
+                fileSize: upload.fileSize || 0,
+                pageCount: upload.pageCount || undefined,
+                slideCount: upload.slideCount || undefined,
+                sheetCount: upload.sheetCount || undefined,
+                wordCount: upload.wordCount || 0,
+                hasImages: upload.hasImages,
+                extractionMethod: upload.processingMethod || "unknown",
+                processingTimeMs: upload.processingTimeMs || 0,
+              },
+            };
 
-        // Analyze document
-        const result = await analyzer.analyzeDocument(content, {
-          maxCards: options.maxCardsPerUpload || 20,
-          includeRawText: true,
-          projectContext: run.project.description || undefined,
-        });
+            // Update to ANALYZING
+            await updateRunUpload(runUpload.id, {
+              status: RunUploadStatus.ANALYZING,
+            });
 
-        if (!result.success || !result.cards) {
-          throw new Error(result.error || "Analysis failed");
-        }
+            // Analyze document (AI call - limited by pLimit)
+            const result = await analyzer.analyzeDocument(content, {
+              maxCards: options.maxCardsPerUpload || 20,
+              includeRawText: true,
+              projectContext: run.project.description || undefined,
+            });
 
-        // Update to SAVING
-        await updateRunUpload(runUpload.id, { status: RunUploadStatus.SAVING });
+            if (!result.success || !result.cards) {
+              throw new Error(result.error || "Analysis failed");
+            }
 
-        // Handle existing cards if replaceExisting
-        if (options.replaceExisting) {
-          await db.card.deleteMany({
-            where: { uploadId: upload.id },
-          });
-        }
+            // Update to SAVING
+            await updateRunUpload(runUpload.id, {
+              status: RunUploadStatus.SAVING,
+            });
 
-        // Create cards (batched for performance)
-        const cardsData = result.cards.map((cardData) => ({
-          projectId: run.projectId,
-          uploadId: upload.id,
-          runId: run.id,
-          title: cardData.title,
-          problem: cardData.problem,
-          targetUsers: cardData.targetUsers,
-          currentState: cardData.currentState,
-          desiredOutcomes: cardData.desiredOutcomes,
-          constraints: cardData.constraints,
-          systems: cardData.systems,
-          priority: cardData.priority,
-          impact: cardData.impact,
-          rawText: cardData.rawText,
-        }));
+            // Handle existing cards if replaceExisting
+            if (options.replaceExisting) {
+              await db.card.deleteMany({
+                where: { uploadId: upload.id },
+              });
+            }
 
-        await db.card.createMany({ data: cardsData });
+            // Create cards (batched for performance)
+            const cardsData = result.cards.map((cardData) => ({
+              projectId: run.projectId,
+              uploadId: upload.id,
+              runId: run.id,
+              title: cardData.title,
+              problem: cardData.problem,
+              targetUsers: cardData.targetUsers,
+              currentState: cardData.currentState,
+              desiredOutcomes: cardData.desiredOutcomes,
+              constraints: cardData.constraints,
+              systems: cardData.systems,
+              priority: cardData.priority,
+              impact: cardData.impact,
+              rawText: cardData.rawText,
+            }));
 
-        const cardsCreated = result.cards.length;
-        totalCardsCreated += cardsCreated;
-        completedCount++;
+            await db.card.createMany({ data: cardsData });
 
-        const durationMs = Date.now() - startTime;
+            const cardsCreated = result.cards.length;
+            const durationMs = Date.now() - startTime;
 
-        // Update upload analysis status
-        await db.upload.update({
-          where: { id: upload.id },
-          data: {
-            analysisStatus: AnalysisStatus.COMPLETED,
-            lastAnalyzedRunId: run.id,
-            lastAnalyzedAt: new Date(),
-            errorMsg: null,
-            errorPhase: null,
-          },
-        });
+            // Update upload analysis status
+            await db.upload.update({
+              where: { id: upload.id },
+              data: {
+                analysisStatus: AnalysisStatus.COMPLETED,
+                lastAnalyzedRunId: run.id,
+                lastAnalyzedAt: new Date(),
+                errorMsg: null,
+                errorPhase: null,
+              },
+            });
 
-        // Update RunUpload as completed
-        await updateRunUpload(runUpload.id, {
-          status: RunUploadStatus.COMPLETED,
-          completedAt: new Date(),
-          cardsCreated,
-          tokensUsed: result.tokensUsed || 0,
-          durationMs,
-        });
+            // Update RunUpload as completed
+            await updateRunUpload(runUpload.id, {
+              status: RunUploadStatus.COMPLETED,
+              completedAt: new Date(),
+              cardsCreated,
+              tokensUsed: result.tokensUsed || 0,
+              durationMs,
+            });
 
-        // Update run counters
-        await db.run.update({
-          where: { id: runId },
-          data: {
-            completedItems: completedCount,
-            totalCards: totalCardsCreated,
-            phaseDetail: `Processed ${completedCount} of ${run.totalItems} documents`,
-          },
-        });
+            // Update run counters atomically (safe for concurrency)
+            await db.run.update({
+              where: { id: runId },
+              data: {
+                completedItems: { increment: 1 },
+                totalCards: { increment: cardsCreated },
+              },
+            });
 
-        await appendLog(
-          runId,
-          `✓ ${upload.filename || "Untitled"}: ${cardsCreated} cards (${durationMs}ms)`
-        );
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : "Unknown error";
-        failedCount++;
+            await appendLog(
+              runId,
+              `✓ ${upload.filename || "Untitled"}: ${cardsCreated} cards (${durationMs}ms)`
+            );
+          } catch (error) {
+            const errorMsg =
+              error instanceof Error ? error.message : "Unknown error";
 
-        await updateRunUpload(runUpload.id, {
-          status: RunUploadStatus.FAILED,
-          completedAt: new Date(),
-          errorMsg,
-          durationMs: Date.now() - startTime,
-        });
+            await updateRunUpload(runUpload.id, {
+              status: RunUploadStatus.FAILED,
+              completedAt: new Date(),
+              errorMsg,
+              durationMs: Date.now() - startTime,
+            });
 
-        await db.upload.update({
-          where: { id: upload.id },
-          data: {
-            analysisStatus: AnalysisStatus.FAILED,
-            errorMsg,
-            errorPhase: "analysis",
-          },
-        });
+            await db.upload.update({
+              where: { id: upload.id },
+              data: {
+                analysisStatus: AnalysisStatus.FAILED,
+                errorMsg,
+                errorPhase: "analysis",
+              },
+            });
 
-        await db.run.update({
-          where: { id: runId },
-          data: { failedItems: failedCount },
-        });
+            // Increment failed counter atomically (safe for concurrency)
+            await db.run.update({
+              where: { id: runId },
+              data: { failedItems: { increment: 1 } },
+            });
 
-        await appendLog(runId, `✗ ${upload.filename || "Untitled"}: ${errorMsg}`);
-      }
+            await appendLog(
+              runId,
+              `✗ ${upload.filename || "Untitled"}: ${errorMsg}`
+            );
+          }
+        })
+      )
+    );
+
+    // Check for cancellation after parallel processing
+    if (context.cancelled) {
+      await handleCancellation(runId);
+      return;
     }
 
     // 5. Finalize
     if (!context.cancelled) {
       await updateRun(runId, { phase: RunPhase.FINALIZING });
 
+      // Get final counts from database (updated atomically during parallel processing)
       const finalRun = await db.run.findUnique({ where: { id: runId } });
       const durationMs = finalRun?.startedAt
         ? Date.now() - finalRun.startedAt.getTime()
         : 0;
+      const totalCardsCreated = finalRun?.totalCards || 0;
+      const completedCount = finalRun?.completedItems || 0;
+      const failedCount = finalRun?.failedItems || 0;
 
       await updateRun(runId, {
         status: RunStatus.SUCCEEDED,
