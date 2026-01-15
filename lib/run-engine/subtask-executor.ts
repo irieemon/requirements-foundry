@@ -210,14 +210,24 @@ export async function executeSubtaskGeneration(
           await appendLog(runId, `Generating subtasks for ${story.code}: ${story.title}`);
 
           // Build story data for generation
+          // Safe JSON parse for acceptanceCriteria - may be malformed
+          let parsedAC: string[] | undefined;
+          if (story.acceptanceCriteria) {
+            try {
+              parsedAC = JSON.parse(story.acceptanceCriteria);
+            } catch {
+              // If JSON parse fails, treat as single-item array
+              parsedAC = [story.acceptanceCriteria];
+              logger.warn("story.ac_parse_fallback", { metadata: { storyId: story.id } });
+            }
+          }
+
           const storyData: StoryData = {
             code: story.code,
             title: story.title,
             userStory: story.userStory,
             persona: story.persona || undefined,
-            acceptanceCriteria: story.acceptanceCriteria
-              ? JSON.parse(story.acceptanceCriteria)
-              : undefined,
+            acceptanceCriteria: parsedAC,
             technicalNotes: story.technicalNotes || undefined,
             priority: story.priority || undefined,
             effort: story.effort || undefined,
