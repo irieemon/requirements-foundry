@@ -57,6 +57,17 @@ export async function getProject(id: string) {
               technicalNotes: true,
               priority: true,
               effort: true,
+              subtasks: {
+                orderBy: { code: "asc" },
+                select: {
+                  id: true,
+                  code: true,
+                  title: true,
+                  description: true,
+                  effort: true,
+                },
+              },
+              _count: { select: { subtasks: true } },
             },
           },
         },

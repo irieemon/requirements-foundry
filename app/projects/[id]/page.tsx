@@ -11,12 +11,13 @@ import { UploadList } from "@/components/uploads/upload-list";
 import { AnalyzePanel } from "@/components/analysis/analyze-panel";
 import { EpicsSection } from "@/components/epics/epics-section";
 import { StoriesSection } from "@/components/stories/stories-section";
+import { SubtasksSection } from "@/components/subtasks/subtasks-section";
 import { RunList } from "@/components/runs/run-list";
 import { ExportProjectButton } from "@/components/export/export-buttons";
 import { EmptyState } from "@/components/layout/empty-state";
 import { Layers } from "lucide-react";
 
-type Section = "uploads" | "cards" | "epics" | "runs" | "stories";
+type Section = "uploads" | "cards" | "epics" | "runs" | "stories" | "subtasks";
 
 interface ProjectPageProps {
   params: Promise<{ id: string }>;
@@ -33,13 +34,20 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
   }
 
   // Validate and default the section
-  const validSections: Section[] = ["uploads", "cards", "epics", "runs", "stories"];
+  const validSections: Section[] = ["uploads", "cards", "epics", "runs", "stories", "subtasks"];
   const activeSection: Section = validSections.includes(sectionParam as Section)
     ? (sectionParam as Section)
     : "uploads";
 
   // Compute total stories across all epics
   const totalStories = project.epics.reduce((sum, epic) => sum + epic._count.stories, 0);
+
+  // Compute total subtasks across all stories
+  const totalSubtasks = project.epics.reduce(
+    (sum, epic) =>
+      sum + epic.stories.reduce((storySum, story) => storySum + (story._count?.subtasks || 0), 0),
+    0
+  );
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -90,6 +98,13 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
             value={totalStories}
             iconName="ScrollText"
             section="stories"
+            projectId={project.id}
+          />
+          <NavigableKpiCard
+            label="Subtasks"
+            value={totalSubtasks}
+            iconName="ListTodo"
+            section="subtasks"
             projectId={project.id}
           />
         </KpiStrip>
@@ -208,6 +223,11 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
           {/* Stories Section */}
           {activeSection === "stories" && (
             <StoriesSection epics={project.epics} />
+          )}
+
+          {/* Subtasks Section */}
+          {activeSection === "subtasks" && (
+            <SubtasksSection epics={project.epics} />
           )}
         </div>
         </div>
