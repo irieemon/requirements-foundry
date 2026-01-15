@@ -231,6 +231,9 @@ model Run {
   // Heartbeat for stale run detection (Vercel serverless recovery)
   heartbeatAt DateTime?  // Last worker check-in time
 
+  // Optimistic concurrency control
+  version     Int       @default(1)
+
   // Relations
   runUploads  RunUpload[]
   runEpics    RunEpic[]
@@ -316,6 +319,9 @@ model RunEpic {
   mode             String?  // compact/standard/detailed
   personaSet       String?  // lightweight/core/full
 
+  // Optimistic concurrency control
+  version          Int      @default(1)
+
   createdAt        DateTime @default(now())
 
   @@unique([runId, epicId])
@@ -355,6 +361,9 @@ model RunStory {
   completedAt     DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+
+  // Optimistic concurrency control
+  version         Int            @default(1)
 
   @@unique([runId, storyId])
   @@index([runId])
