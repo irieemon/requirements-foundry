@@ -419,6 +419,19 @@ export async function finalizeSubtaskRun(
 
   const durationMs = run.startedAt ? Date.now() - run.startedAt.getTime() : null;
 
+  // Build error message for failed runs (aggregate individual story errors)
+  let errorMsg: string | null = run.errorMsg; // Preserve any existing error
+  if (finalStatus === RunStatus.FAILED && !errorMsg) {
+    // Get first failed story's error for context
+    const firstFailed = await db.runStory.findFirst({
+      where: { runId, status: RunStoryStatus.FAILED },
+      select: { errorMsg: true, story: { select: { code: true } } },
+    });
+    if (firstFailed?.errorMsg) {
+      errorMsg = `${firstFailed.story.code}: ${firstFailed.errorMsg}`;
+    }
+  }
+
   await db.run.update({
     where: { id: runId },
     data: {
@@ -429,6 +442,7 @@ export async function finalizeSubtaskRun(
       currentItemId: null,
       currentItemIndex: null,
       phaseDetail: null,
+      errorMsg, // Preserve or set error message
       outputData: JSON.stringify({
         totalSubtasksCreated: totalSubtasks,
         completedStories: completed,
