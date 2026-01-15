@@ -71,9 +71,11 @@ Note: Heartbeat-based stale detection may have caused E7 failure (see PROJECT.md
 **Plans**: TBD
 
 Verification checklist:
-- [ ] Card analysis: Progress updates visible, completes successfully
-- [ ] Epic generation: Progress indicator visible, completes successfully
+- [x] Card analysis: Progress updates visible, completes successfully (05-01)
+- [x] Epic generation: Progress indicator visible, completes successfully (05-01)
 - [ ] Story generation: Progress visible, no timeouts, stories created
+- [ ] Stories page: Displays generated stories grouped by epic
+- [ ] Subtask generation: Progress visible, subtasks created
 
 ### Phase 6: Stories Page
 **Goal**: Add a dedicated stories section to view all generated stories (similar to uploads, cards, epics pages)
@@ -114,6 +116,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Card Analysis Progress Fix | 1/1 | Complete | 2026-01-13 |
 | 3. Epic Generation Progress Fix | 1/1 | Complete | 2026-01-13 |
 | 4. Story Generation Timeout Fix | 1/1 | Complete | 2026-01-14 |
-| 5. Integration Verification | 0/TBD | Not started | - |
+| 5. Integration Verification | 1/2 | In progress | - |
 | 6. Stories Page | 1/1 | Complete | 2026-01-14 |
 | 7. Subtask Generation | 5/5 | Complete | 2026-01-14 |
