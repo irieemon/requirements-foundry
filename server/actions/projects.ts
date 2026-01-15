@@ -20,6 +20,14 @@ export async function getProjects() {
   return projects;
 }
 
+export async function getProjectName(id: string) {
+  const project = await db.project.findUnique({
+    where: { id },
+    select: { name: true },
+  });
+  return project?.name || null;
+}
+
 export async function getProject(id: string) {
   const project = await db.project.findUnique({
     where: { id },

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ import {
   ScrollText,
   ListTodo,
 } from "lucide-react";
+import { getProjectName } from "@/server/actions/projects";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -44,6 +46,7 @@ const projectSections = [
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [projectName, setProjectName] = useState<string | null>(null);
 
   // Detect if we're on a project detail page and extract projectId
   const projectMatch = pathname.match(PROJECT_PATH_REGEX);
@@ -51,6 +54,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   // Get current section from URL (default to "uploads")
   const currentSection = searchParams.get("section") || "uploads";
+
+  // Fetch project name when projectId changes
+  useEffect(() => {
+    if (projectId) {
+      getProjectName(projectId).then(setProjectName);
+    } else {
+      setProjectName(null);
+    }
+  }, [projectId]);
 
   const navItems = [
     { href: "/projects", label: "Projects", icon: FolderOpen },
@@ -136,6 +148,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               {/* Separator */}
               <div className="my-3 border-t border-sidebar-border/50" />
 
+              {/* Project name header - shown when expanded */}
+              {!collapsed && projectName && (
+                <div className="px-3 py-1.5 mb-1">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-sidebar-muted-foreground/70 truncate">
+                    {projectName}
+                  </p>
+                </div>
+              )}
+
               {/* Project sections */}
               <div className="space-y-0.5">
                 {projectSections.map((item) => {
@@ -167,7 +188,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       <Tooltip key={item.section}>
                         <TooltipTrigger asChild>{sectionLink}</TooltipTrigger>
                         <TooltipContent side="right" className="font-medium">
-                          {item.label}
+                          {projectName ? `${item.label} - ${projectName}` : item.label}
                         </TooltipContent>
                       </Tooltip>
                     );
