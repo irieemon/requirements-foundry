@@ -2,11 +2,12 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
-  Upload,
+  Upload as UploadIcon,
   Loader2,
   FileText,
   FileSpreadsheet,
@@ -27,9 +28,11 @@ import { getAcceptString } from "@/lib/documents/types";
 interface FileWithPreview {
   file: File;
   id: string;
-  status: "pending" | "uploading" | "success" | "error";
+  status: "pending" | "uploading" | "processing" | "success" | "error";
   error?: string;
   wordCount?: number;
+  blobUrl?: string;
+  progress?: number;
 }
 
 interface UploadResult {
@@ -38,6 +41,15 @@ interface UploadResult {
   success: boolean;
   error?: string;
   wordCount?: number;
+}
+
+interface ProcessUploadRequest {
+  projectId: string;
+  blobUrl: string;
+  blobPathname: string;
+  filename: string;
+  fileType: string;
+  fileSize: number;
 }
 
 interface MultiFileUploadProps {
@@ -128,7 +140,7 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
   );
 
   // ============================================
-  // Upload
+  // Upload (Two-phase: Client → Blob, then Blob URL → API)
   // ============================================
 
   const handleUpload = async () => {
@@ -137,80 +149,116 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
     setUploading(true);
     setProgress(0);
 
-    // Mark all files as uploading
-    setFiles((prev) => prev.map((f) => ({ ...f, status: "uploading" as const })));
+    const results: UploadResult[] = [];
+    const totalFiles = files.length;
 
-    try {
-      const formData = new FormData();
-      formData.append("projectId", projectId);
+    // Process files sequentially to show individual progress
+    for (let i = 0; i < files.length; i++) {
+      const fileItem = files[i];
+      const { file, id } = fileItem;
 
-      for (const { file } of files) {
-        formData.append("files", file);
-      }
-
-      // Simulate progress (actual progress would need XHR)
-      const progressInterval = setInterval(() => {
-        setProgress((p) => Math.min(p + 10, 90));
-      }, 500);
-
-      const response = await fetch("/api/uploads", {
-        method: "POST",
-        body: formData,
-      });
-
-      clearInterval(progressInterval);
-      setProgress(100);
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      // Update file statuses based on results
+      // Mark this file as uploading
       setFiles((prev) =>
-        prev.map((f) => {
-          const result = data.results.find((r: UploadResult) => r.filename === f.file.name);
-          if (result) {
-            return {
-              ...f,
-              status: result.success ? ("success" as const) : ("error" as const),
-              error: result.error,
-              wordCount: result.wordCount,
-            };
-          }
-          return { ...f, status: "error" as const, error: "No result returned" };
-        })
+        prev.map((f) => (f.id === id ? { ...f, status: "uploading" as const, progress: 0 } : f))
       );
 
-      // Show summary toast
-      const successCount = data.results.filter((r: UploadResult) => r.success).length;
-      if (successCount === data.results.length) {
-        toast.success(`${successCount} document(s) uploaded - ready for analysis`);
-      } else if (successCount > 0) {
-        toast.warning(`${successCount}/${data.results.length} documents uploaded`);
-      } else {
-        toast.error("Upload failed");
+      try {
+        // Step 1: Upload directly to Blob (bypasses 4.5MB serverless limit)
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/uploads/get-upload-url",
+          clientPayload: JSON.stringify({ projectId }),
+          onUploadProgress: ({ percentage }) => {
+            // Update individual file progress
+            setFiles((prev) =>
+              prev.map((f) => (f.id === id ? { ...f, progress: percentage } : f))
+            );
+            // Update overall progress (blob upload is ~50% of total work)
+            const fileProgress = (i + percentage / 100) / totalFiles;
+            setProgress(Math.round(fileProgress * 50));
+          },
+        });
+
+        // Mark as processing (API step)
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === id ? { ...f, status: "processing" as const, blobUrl: blob.url } : f
+          )
+        );
+
+        // Step 2: Call API with blob URL for document processing
+        const processRequest: ProcessUploadRequest = {
+          projectId,
+          blobUrl: blob.url,
+          blobPathname: blob.pathname,
+          filename: file.name,
+          fileType: file.type || "application/octet-stream",
+          fileSize: file.size,
+        };
+
+        const response = await fetch("/api/uploads", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(processRequest),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Processing failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const result = data.results?.[0];
+
+        if (result?.success) {
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === id
+                ? { ...f, status: "success" as const, wordCount: result.wordCount }
+                : f
+            )
+          );
+          results.push(result);
+        } else {
+          throw new Error(result?.error || "Processing failed");
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : "Upload failed";
+        console.error(`Upload error for ${file.name}:`, error);
+
+        setFiles((prev) =>
+          prev.map((f) => (f.id === id ? { ...f, status: "error" as const, error: errorMsg } : f))
+        );
+
+        results.push({
+          uploadId: "",
+          filename: file.name,
+          success: false,
+          error: errorMsg,
+        });
       }
 
-      // Callback and refresh
-      onUploadComplete?.(data.results);
-      router.refresh();
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error(error instanceof Error ? error.message : "Upload failed");
-
-      // Mark all as error
-      setFiles((prev) =>
-        prev.map((f) => ({
-          ...f,
-          status: "error" as const,
-          error: error instanceof Error ? error.message : "Upload failed",
-        }))
-      );
-    } finally {
-      setUploading(false);
+      // Update overall progress
+      setProgress(Math.round(((i + 1) / totalFiles) * 100));
     }
+
+    // Show summary toast
+    const successCount = results.filter((r) => r.success).length;
+    if (successCount === results.length && successCount > 0) {
+      toast.success(`${successCount} document(s) uploaded - ready for analysis`);
+    } else if (successCount > 0) {
+      toast.warning(`${successCount}/${results.length} documents uploaded`);
+    } else if (results.length > 0) {
+      toast.error("Upload failed");
+    }
+
+    // Callback and refresh
+    if (results.length > 0) {
+      onUploadComplete?.(results);
+      router.refresh();
+    }
+
+    setUploading(false);
   };
 
   // ============================================
@@ -296,7 +344,20 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    {item.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {item.status === "uploading" && (
+                      <div className="flex items-center space-x-1">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {item.progress !== undefined && (
+                          <span className="text-xs text-muted-foreground">{item.progress}%</span>
+                        )}
+                      </div>
+                    )}
+                    {item.status === "processing" && (
+                      <div className="flex items-center space-x-1">
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                        <span className="text-xs text-muted-foreground">Processing</span>
+                      </div>
+                    )}
                     {item.status === "success" && <CheckCircle className="h-4 w-4 text-green-600" />}
                     {item.status === "error" && (
                       <span title={item.error}>
@@ -361,7 +422,7 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
               </>
             ) : (
               <>
-                <Upload className="mr-2 h-4 w-4" />
+                <UploadIcon className="mr-2 h-4 w-4" />
                 Upload {pendingCount} file(s)
               </>
             )}
