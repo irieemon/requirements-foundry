@@ -62,7 +62,17 @@ Plans:
 **Plans**: 1
 
 Plans:
-- [ ] 10.1-01: Migrate to client-side Blob upload pattern
+- [x] 10.1-01: Migrate to client-side Blob upload pattern ✓
+
+#### Phase 10.2: KPI & Subtask UX
+
+**Goal**: Fix KPI cards to fit in one row, make subtask generation discoverable
+**Depends on**: None (UX polish)
+**Research**: No (internal components)
+**Plans**: 1
+
+Plans:
+- [ ] 10.2-01: KPI row layout + subtask generation button
 
 #### Phase 11: Data Display & Hierarchy
 

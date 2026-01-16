@@ -41,7 +41,7 @@ export function KpiCard({
         }
       } : undefined}
       className={cn(
-        "relative overflow-hidden rounded-xl border bg-card p-5 shadow-sm transition-all",
+        "relative overflow-hidden rounded-xl border bg-card p-4 shadow-sm transition-all",
         // Default border
         !isActive && "border-border/50",
         // Hover state for navigable cards
@@ -95,7 +95,8 @@ export function KpiStrip({ children, className }: KpiStripProps) {
   return (
     <nav
       className={cn(
-        "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
+        // Responsive grid: 1 col → 2 cols → 3 cols → 6 cols (all in one row on desktop)
+        "grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6",
         className
       )}
       aria-label="Project sections"

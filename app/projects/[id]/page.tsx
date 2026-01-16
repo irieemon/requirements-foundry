@@ -258,7 +258,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
 
           {/* Subtasks Section */}
           {activeSection === "subtasks" && (
-            <SubtasksSection epics={project.epics} />
+            <SubtasksSection projectId={project.id} epics={project.epics} />
           )}
         </div>
         </div>
