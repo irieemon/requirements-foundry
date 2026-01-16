@@ -54,6 +54,16 @@ Plans:
 - [x] 10-02: Breadcrumb Navigation - hierarchical location trail ✓
 - [ ] 10-03: Mobile Nav & Layout Polish - mobile parity and spacing consistency
 
+#### Phase 10.1: Upload Client Direct (Urgent Fix)
+
+**Goal**: Fix 413 Content Too Large error for files >4.5MB by using Vercel Blob client-side upload
+**Depends on**: None (urgent infrastructure fix)
+**Research**: No (Vercel Blob docs consulted)
+**Plans**: 1
+
+Plans:
+- [ ] 10.1-01: Migrate to client-side Blob upload pattern
+
 #### Phase 11: Data Display & Hierarchy
 
 **Goal**: Visualize cards, epics, stories, subtasks - making relationships clear and intuitive
@@ -88,5 +98,6 @@ Plans:
 | 8. Subtask Viewing | v1.0 | 1/1 | Complete | 2026-01-15 |
 | 9. Performance Optimization | v1.0 | 3/3 | Complete | 2026-01-15 |
 | 10. Navigation & Layout | v1.1 | 2/3 | In progress | - |
+| 10.1 Upload Client Direct | v1.1 | 0/1 | Not started | - |
 | 11. Data Display & Hierarchy | v1.1 | 0/? | Not started | - |
 | 12. JIRA Export Preview | v1.1 | 0/? | Not started | - |
