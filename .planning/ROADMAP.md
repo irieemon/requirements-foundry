@@ -3,8 +3,8 @@
 ## Milestones
 
 - ✅ [v1.0 Generative Pipeline Fix](milestones/v1.0-ROADMAP.md) (Phases 1-9) — SHIPPED 2026-01-15
-- 🚧 **v1.1 UX Polish** — Phases 10-12 (in progress)
-- 📋 **v1.2 MSS Integration** — Phases 13-17 (planned)
+- ✅ **v1.1 UX Polish** — Phases 10-12 — SHIPPED 2026-01-20
+- 🚧 **v1.2 MSS Integration** — Phases 13-17 (next)
 
 ## Overview
 
@@ -39,7 +39,7 @@ See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full details.
 
 </details>
 
-### 🚧 v1.1 UX Polish (In Progress)
+### ✅ v1.1 UX Polish (SHIPPED 2026-01-20)
 
 **Milestone Goal:** Transform working but clunky interface into polished, modern dashboard that makes relationships clear
 
@@ -87,7 +87,7 @@ Plans:
 - [x] 11-02: Story Card Layout - replace tables with expandable cards ✓
 - [x] 11-03: Subtask Display Polish - compact cards, cleaner story headers ✓
 
-#### Phase 12: JIRA Export Preview
+#### Phase 12: JIRA Export Preview ✓
 
 **Goal**: Show users exactly what will be imported into JIRA before export, final polish
 **Depends on**: Phase 11
@@ -96,7 +96,7 @@ Plans:
 
 Plans:
 - [x] 12-01: Preview Data Layer - server action and tree component ✓
-- [ ] 12-02: Full Preview Page Integration
+- [x] 12-02: Full Preview Page Integration ✓
 
 ### 📋 v1.2 MSS Integration (Planned)
 
@@ -169,7 +169,7 @@ Plans:
 | 10.1 Upload Client Direct | v1.1 | 1/1 | Complete | 2026-01-16 |
 | 10.2 KPI & Subtask UX | v1.1 | 1/1 | Complete | 2026-01-16 |
 | 11. Data Display & Hierarchy | v1.1 | 3/3 | Complete | 2026-01-20 |
-| 12. JIRA Export Preview | v1.1 | 1/2 | In progress | - |
+| 12. JIRA Export Preview | v1.1 | 2/2 | Complete | 2026-01-20 |
 | 13. MSS Data Model & Import | v1.2 | 0/? | Not started | - |
 | 14. MSS Management UI | v1.2 | 0/? | Not started | - |
 | 15. MSS Mapping to Work Items | v1.2 | 0/? | Not started | - |
