@@ -61,3 +61,36 @@ export interface MssStats {
   serviceAreas: number;
   activities: number;
 }
+
+// ============================================
+// CRUD Input Types
+// ============================================
+
+/**
+ * Input for creating/updating a Service Line (L2)
+ */
+export interface MssServiceLineInput {
+  code: string;
+  name: string;
+  description?: string;
+}
+
+/**
+ * Input for creating/updating a Service Area (L3)
+ */
+export interface MssServiceAreaInput {
+  serviceLineId: string;
+  code: string;
+  name: string;
+  description?: string;
+}
+
+/**
+ * Input for creating/updating an Activity (L4)
+ */
+export interface MssActivityInput {
+  serviceAreaId: string;
+  code: string;
+  name: string;
+  description?: string;
+}
