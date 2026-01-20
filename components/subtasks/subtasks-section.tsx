@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/layout/empty-state";
-import { SubtaskTable } from "./subtask-table";
+import { SubtaskCard } from "./subtask-card";
 import { ProjectSubtaskConfigDialog } from "./project-subtask-config-dialog";
 import { SubtaskRunProgress } from "./subtask-run-progress";
 import { useActiveSubtaskRun } from "@/hooks/use-subtask-progress";
@@ -178,15 +178,19 @@ export function SubtasksSection({ projectId, epics }: SubtasksSectionProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               {storiesInEpicWithSubtasks.map(story => (
-                <div key={story.id} className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground border-b pb-2">
+                <div key={story.id}>
+                  <div className="flex items-center gap-2 mb-3">
                     <Badge variant="secondary" className="text-xs">{story.code}</Badge>
-                    {story.title}
-                    <span className="ml-auto text-xs">
+                    <span className="text-sm font-medium">{story.title}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">
                       {story.subtasks.length} subtasks
                     </span>
                   </div>
-                  <SubtaskTable subtasks={story.subtasks} />
+                  <div className="space-y-2">
+                    {story.subtasks.map(subtask => (
+                      <SubtaskCard key={subtask.id} subtask={subtask} />
+                    ))}
+                  </div>
                 </div>
               ))}
             </CardContent>
