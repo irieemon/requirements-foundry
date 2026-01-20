@@ -387,3 +387,50 @@ model PromptTemplate {
 
   @@index([name, isActive])
 }
+
+// ============================================
+// Master Service Schedule (MSS) Taxonomy
+// ============================================
+
+model MssServiceLine {
+  id          String   @id @default(cuid())
+  code        String   @unique  // e.g., "INF", "APP"
+  name        String             // e.g., "Infrastructure"
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  serviceAreas MssServiceArea[]
+
+  @@index([code])
+}
+
+model MssServiceArea {
+  id            String         @id @default(cuid())
+  serviceLineId String
+  serviceLine   MssServiceLine @relation(fields: [serviceLineId], references: [id], onDelete: Cascade)
+  code          String         // e.g., "CLD", "DBA" - unique within service line
+  name          String         // e.g., "Cloud Services"
+  description   String?        @db.Text
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  activities MssActivity[]
+
+  @@unique([serviceLineId, code])
+  @@index([serviceLineId])
+}
+
+model MssActivity {
+  id            String         @id @default(cuid())
+  serviceAreaId String
+  serviceArea   MssServiceArea @relation(fields: [serviceAreaId], references: [id], onDelete: Cascade)
+  code          String         // e.g., "EC2", "RDS" - unique within service area
+  name          String         // e.g., "AWS EC2 Management"
+  description   String?        @db.Text
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([serviceAreaId, code])
+  @@index([serviceAreaId])
+}
