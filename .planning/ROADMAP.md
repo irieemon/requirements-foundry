@@ -92,10 +92,11 @@ Plans:
 **Goal**: Show users exactly what will be imported into JIRA before export, final polish
 **Depends on**: Phase 11
 **Research**: Unlikely (existing JIRA mapping logic)
-**Plans**: TBD
+**Plans**: 2
 
 Plans:
-- [ ] 12-01: TBD (run /gsd:plan-phase 12 to break down)
+- [x] 12-01: Preview Data Layer - server action and tree component ✓
+- [ ] 12-02: Full Preview Page Integration
 
 ### 📋 v1.2 MSS Integration (Planned)
 
@@ -168,7 +169,7 @@ Plans:
 | 10.1 Upload Client Direct | v1.1 | 1/1 | Complete | 2026-01-16 |
 | 10.2 KPI & Subtask UX | v1.1 | 1/1 | Complete | 2026-01-16 |
 | 11. Data Display & Hierarchy | v1.1 | 3/3 | Complete | 2026-01-20 |
-| 12. JIRA Export Preview | v1.1 | 0/? | Not started | - |
+| 12. JIRA Export Preview | v1.1 | 1/2 | In progress | - |
 | 13. MSS Data Model & Import | v1.2 | 0/? | Not started | - |
 | 14. MSS Management UI | v1.2 | 0/? | Not started | - |
 | 15. MSS Mapping to Work Items | v1.2 | 0/? | Not started | - |
