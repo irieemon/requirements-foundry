@@ -42,7 +42,7 @@ See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full details.
 
 **Milestone Goal:** Transform working but clunky interface into polished, modern dashboard that makes relationships clear
 
-#### Phase 10: Navigation & Layout
+#### Phase 10: Navigation & Layout ✓
 
 **Goal**: Overhaul sidebar, page structure, and flow between sections
 **Depends on**: v1.0 complete
@@ -52,9 +52,9 @@ See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full details.
 Plans:
 - [x] 10-01: Enhanced Sidebar Navigation - contextual project sections ✓
 - [x] 10-02: Breadcrumb Navigation - hierarchical location trail ✓
-- [ ] 10-03: Mobile Nav & Layout Polish - mobile parity and spacing consistency
+- [x] 10-03: Mobile Nav & Layout Polish - mobile parity and spacing consistency ✓
 
-#### Phase 10.1: Upload Client Direct (Urgent Fix)
+#### Phase 10.1: Upload Client Direct ✓
 
 **Goal**: Fix 413 Content Too Large error for files >4.5MB by using Vercel Blob client-side upload
 **Depends on**: None (urgent infrastructure fix)
@@ -64,7 +64,7 @@ Plans:
 Plans:
 - [x] 10.1-01: Migrate to client-side Blob upload pattern ✓
 
-#### Phase 10.2: KPI & Subtask UX
+#### Phase 10.2: KPI & Subtask UX ✓
 
 **Goal**: Fix KPI cards to fit in one row, make subtask generation discoverable
 **Depends on**: None (UX polish)
@@ -72,17 +72,19 @@ Plans:
 **Plans**: 1
 
 Plans:
-- [ ] 10.2-01: KPI row layout + subtask generation button
+- [x] 10.2-01: KPI row layout + subtask generation button ✓
 
 #### Phase 11: Data Display & Hierarchy
 
 **Goal**: Visualize cards, epics, stories, subtasks - making relationships clear and intuitive
 **Depends on**: Phase 10
-**Research**: Unlikely (existing components, no external APIs)
-**Plans**: TBD
+**Research**: No (visual redesign of existing components)
+**Plans**: 3
 
 Plans:
-- [ ] 11-01: TBD (run /gsd:plan-phase 11 to break down)
+- [ ] 11-01: Epic Card Redesign - modern card styling, visual hierarchy
+- [ ] 11-02: Story Card Layout - replace tables with expandable cards
+- [ ] 11-03: Subtask Display Polish - compact cards, cleaner story headers
 
 #### Phase 12: JIRA Export Preview
 
@@ -107,7 +109,8 @@ Plans:
 | 7. Subtask Generation | v1.0 | 5/5 | Complete | 2026-01-14 |
 | 8. Subtask Viewing | v1.0 | 1/1 | Complete | 2026-01-15 |
 | 9. Performance Optimization | v1.0 | 3/3 | Complete | 2026-01-15 |
-| 10. Navigation & Layout | v1.1 | 2/3 | In progress | - |
-| 10.1 Upload Client Direct | v1.1 | 0/1 | Not started | - |
-| 11. Data Display & Hierarchy | v1.1 | 0/? | Not started | - |
+| 10. Navigation & Layout | v1.1 | 3/3 | Complete | 2026-01-15 |
+| 10.1 Upload Client Direct | v1.1 | 1/1 | Complete | 2026-01-16 |
+| 10.2 KPI & Subtask UX | v1.1 | 1/1 | Complete | 2026-01-16 |
+| 11. Data Display & Hierarchy | v1.1 | 0/3 | Not started | - |
 | 12. JIRA Export Preview | v1.1 | 0/? | Not started | - |
