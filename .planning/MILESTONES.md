@@ -1,5 +1,32 @@
 # Project Milestones: Requirements Foundry
 
+## v1.1 UX Polish (Shipped: 2026-01-20)
+
+**Delivered:** Transformed working but clunky interface into polished, modern dashboard with contextual navigation, modern card designs, and preview-first JIRA export experience.
+
+**Phases completed:** 10-12 (10 plans total, including decimal phases 10.1 and 10.2)
+
+**Key accomplishments:**
+
+- Contextual sidebar navigation with project sections and visual hierarchy
+- Fixed 413 file upload errors with client-side direct Blob uploads (files >4.5MB now work)
+- Modern card redesign for epics/stories/subtasks following Notion/Linear aesthetic
+- Tabbed JIRA export wizard with preview-first UX showing exact import hierarchy
+- Mobile navigation parity and responsive KPI layout
+
+**Stats:**
+
+- 44 files created/modified
+- ~3,666 net lines added
+- 5 phases (3 planned + 2 decimal), 10 plans
+- 5 days from start to ship (Jan 15-20, 2026)
+
+**Git range:** `feat(10-01)` → `feat(12-02)`
+
+**What's next:** v1.2 MSS Integration - Import and manage Master Service Schedule taxonomy
+
+---
+
 ## v1.0 Generative Pipeline Fix (Shipped: 2026-01-15)
 
 **Delivered:** Fixed all three regressed generative flows (card analysis, epic generation, story generation) with real-time progress feedback, plus added subtask generation and performance optimizations.

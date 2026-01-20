@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Requirements Foundry is a tool that transforms uploaded documents into structured requirements (cards), groups them into epics, generates user stories with AI, and breaks stories down into implementable subtasks. The generative pipeline now works reliably with real-time progress feedback across all flows.
+Requirements Foundry is a tool that transforms uploaded documents into structured requirements (cards), groups them into epics, generates user stories with AI, and breaks stories down into implementable subtasks. The generative pipeline works reliably with real-time progress feedback, and the UI provides a polished, modern dashboard with contextual navigation and preview-first JIRA export.
 
 ## Core Value
 
@@ -28,10 +28,20 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 - Subtask generation from user stories — v1.0
 - Subtasks viewing page — v1.0
 - Performance optimization (batch operations, parallel processing) — v1.0
+- Contextual sidebar navigation with project sections — v1.1
+- Breadcrumb navigation for hierarchical location — v1.1
+- Large file uploads (>4.5MB) via client-side Blob — v1.1
+- Modern card redesign for epics/stories/subtasks — v1.1
+- JIRA export preview showing exact import hierarchy — v1.1
+- Tabbed export wizard with validation indicators — v1.1
 
 ### Active
 
-(None — v1.0 milestone complete, awaiting next feature requests)
+- [ ] MSS taxonomy import (L2/L3/L4 service hierarchy)
+- [ ] MSS management UI (CRUD for service entries)
+- [ ] MSS mapping to epics/stories
+- [ ] MSS dashboard and effort reporting
+- [ ] MSS export integration with JIRA
 
 ### Out of Scope
 
@@ -41,13 +51,14 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 
 ## Context
 
-**Shipped v1.0 with:**
-- ~26,800 lines of TypeScript/TSX
-- Tech stack: Next.js, Prisma, Claude AI, Vercel
-- 9 phases, 17 plans executed over 3 days
-- All three generative flows working with real-time progress
-- Subtask generation pipeline fully operational
-- Performance optimized with batch operations and limited parallelization
+**Shipped v1.1 with:**
+- ~30,500 lines of TypeScript/TSX
+- Tech stack: Next.js, Prisma, Claude AI, Vercel, @vercel/blob
+- 12 phases (including decimals), 27 plans executed over 8 days
+- All generative flows working with real-time progress
+- Polished modern UI with Notion/Linear aesthetic
+- Preview-first JIRA export with tabbed wizard
+- Client-side Blob uploads supporting large files
 
 ## Constraints
 
@@ -67,6 +78,10 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 | Frontend-only progress enhancement | No new API calls, uses existing polling data | Good |
 | Batch DB operations first | Zero-risk foundation before parallelization | Good |
 | Limited parallelization (2-3 concurrent) | Respects Claude API rate limits | Good |
+| Preview tab default in export wizard | Data-first UX ensures users see what they export | Good |
+| Client-side Blob uploads | Bypasses 4.5MB serverless body limit | Good |
+| Container/Presentational card pattern | Better separation of concerns, testability | Good |
+| Tabbed interface for wizard steps | Reduces cognitive load, clear section separation | Good |
 
 ---
-*Last updated: 2026-01-15 after v1.0 milestone*
+*Last updated: 2026-01-20 after v1.1 milestone*

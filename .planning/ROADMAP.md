@@ -3,8 +3,8 @@
 ## Milestones
 
 - ✅ [v1.0 Generative Pipeline Fix](milestones/v1.0-ROADMAP.md) (Phases 1-9) — SHIPPED 2026-01-15
-- ✅ **v1.1 UX Polish** — Phases 10-12 — SHIPPED 2026-01-20
-- 🚧 **v1.2 MSS Integration** — Phases 13-17 (next)
+- ✅ [v1.1 UX Polish](milestones/v1.1-ROADMAP.md) (Phases 10-12) — SHIPPED 2026-01-20
+- 🚧 **v1.2 MSS Integration** — Phases 13-17 (in progress)
 
 ## Overview
 
@@ -39,68 +39,30 @@ See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full details.
 
 </details>
 
-### ✅ v1.1 UX Polish (SHIPPED 2026-01-20)
+<details>
+<summary>✅ v1.1 UX Polish (Phases 10-12) — SHIPPED 2026-01-20</summary>
 
-**Milestone Goal:** Transform working but clunky interface into polished, modern dashboard that makes relationships clear
+- [x] Phase 10: Navigation & Layout (3/3 plans) — completed 2026-01-15
+- [x] Phase 10.1: Upload Client Direct (1/1 plan) — completed 2026-01-16
+- [x] Phase 10.2: KPI & Subtask UX (1/1 plan) — completed 2026-01-16
+- [x] Phase 11: Data Display & Hierarchy (3/3 plans) — completed 2026-01-20
+- [x] Phase 12: JIRA Export Preview (2/2 plans) — completed 2026-01-20
 
-#### Phase 10: Navigation & Layout ✓
+**Key accomplishments:**
+- Contextual sidebar navigation with project sections
+- Fixed 413 file upload errors (client-side Blob uploads)
+- Modern card redesign for epics/stories/subtasks
+- Tabbed JIRA export wizard with preview-first UX
 
-**Goal**: Overhaul sidebar, page structure, and flow between sections
-**Depends on**: v1.0 complete
-**Research**: No (internal UX patterns, existing shadcn/ui)
-**Plans**: 3
+See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full details.
 
-Plans:
-- [x] 10-01: Enhanced Sidebar Navigation - contextual project sections ✓
-- [x] 10-02: Breadcrumb Navigation - hierarchical location trail ✓
-- [x] 10-03: Mobile Nav & Layout Polish - mobile parity and spacing consistency ✓
+</details>
 
-#### Phase 10.1: Upload Client Direct ✓
-
-**Goal**: Fix 413 Content Too Large error for files >4.5MB by using Vercel Blob client-side upload
-**Depends on**: None (urgent infrastructure fix)
-**Research**: No (Vercel Blob docs consulted)
-**Plans**: 1
-
-Plans:
-- [x] 10.1-01: Migrate to client-side Blob upload pattern ✓
-
-#### Phase 10.2: KPI & Subtask UX ✓
-
-**Goal**: Fix KPI cards to fit in one row, make subtask generation discoverable
-**Depends on**: None (UX polish)
-**Research**: No (internal components)
-**Plans**: 1
-
-Plans:
-- [x] 10.2-01: KPI row layout + subtask generation button ✓
-
-#### Phase 11: Data Display & Hierarchy ✓
-
-**Goal**: Visualize cards, epics, stories, subtasks - making relationships clear and intuitive
-**Depends on**: Phase 10
-**Research**: No (visual redesign of existing components)
-**Plans**: 3
-
-Plans:
-- [x] 11-01: Epic Card Redesign - modern card styling, visual hierarchy ✓
-- [x] 11-02: Story Card Layout - replace tables with expandable cards ✓
-- [x] 11-03: Subtask Display Polish - compact cards, cleaner story headers ✓
-
-#### Phase 12: JIRA Export Preview ✓
-
-**Goal**: Show users exactly what will be imported into JIRA before export, final polish
-**Depends on**: Phase 11
-**Research**: Unlikely (existing JIRA mapping logic)
-**Plans**: 2
-
-Plans:
-- [x] 12-01: Preview Data Layer - server action and tree component ✓
-- [x] 12-02: Full Preview Page Integration ✓
-
-### 📋 v1.2 MSS Integration (Planned)
+### 🚧 v1.2 MSS Integration (In Progress)
 
 **Milestone Goal:** Import and manage Master Service Schedule (MSS) taxonomy, map work items to service lines for effort visibility
+
+**Status:** Not started - ready for `/gsd:plan-phase 13`
 
 #### Phase 13: MSS Data Model & Import
 

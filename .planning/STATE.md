@@ -2,25 +2,25 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-15)
+See: .planning/PROJECT.md (updated 2026-01-20)
 
 **Core value:** All generative flows complete successfully with real-time progress feedback.
 **Current focus:** v1.2 MSS Integration — Import and manage Master Service Schedule taxonomy
 
 ## Current Position
 
-Phase: 12 of 17 (JIRA Export Preview)
-Plan: 2/2 in current phase
-Status: Complete
-Last activity: 2026-01-20 — Completed 12-02-PLAN.md (Full Preview Page Integration)
+Phase: 13 of 17 (MSS Data Model & Import)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-20 — v1.1 milestone archived
 
-Progress: ██████████ 100% (v1.1: 12/12 phases COMPLETE)
+Progress: ████████████░░░░░░░░ 70% (12/17 phases complete)
 
 ## Milestones
 
 - **v1.0 Generative Pipeline Fix** — SHIPPED 2026-01-15
 - **v1.1 UX Polish** — SHIPPED 2026-01-20
-- **v1.2 MSS Integration** — Next (Phases 13-17)
+- **v1.2 MSS Integration** — In Progress (Phases 13-17)
 
 ## Accumulated Context
 
@@ -37,6 +37,7 @@ Key decisions from v1.1:
 - Preview tab default in export wizard for data-first UX
 - Nested collapsible tree pattern for hierarchy visualization
 - Tabbed interface for multi-section wizard steps
+- Client-side Blob upload for large file support
 
 ### Deferred Issues
 
@@ -55,24 +56,20 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Completed Phase 12 (JIRA Export Preview) - v1.1 milestone complete
+Stopped at: v1.1 milestone archived, ready for v1.2 planning
 Resume file: None
 
 ## Notes
 
-**v1.1 Delivered:**
-- Navigation & Layout overhaul (Phase 10)
-- Upload client direct fix (Phase 10.1)
-- KPI & Subtask UX improvements (Phase 10.2)
-- Data Display & Hierarchy redesign (Phase 11)
-- JIRA Export Preview with tabbed wizard (Phase 12)
+**v1.2 MSS Integration Scope:**
+- Phase 13: MSS Data Model & Import (DB schema, CSV import)
+- Phase 14: MSS Management UI (CRUD interface)
+- Phase 15: MSS Mapping to Work Items (epics/stories)
+- Phase 16: MSS Dashboard & Reporting (effort visibility)
+- Phase 17: MSS Export Integration (JIRA)
 
-**Next: v1.2 MSS Integration**
-- Phase 13: MSS Data Model & Import
-- Phase 14: MSS Management UI
-- Phase 15: MSS Mapping to Work Items
-- Phase 16: MSS Dashboard & Reporting
-- Phase 17: MSS Export Integration
+**Next Step:**
+Run `/gsd:plan-phase 13` to break down MSS Data Model & Import
 
 **Constraints:**
 - Keep existing shadcn/ui component library
