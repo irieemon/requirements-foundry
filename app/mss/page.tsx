@@ -1,12 +1,19 @@
-import { getMssHierarchy } from "@/server/actions/mss";
+import { getMssHierarchy, getMssStats } from "@/server/actions/mss";
 import { MssHierarchyViewer } from "@/components/mss/mss-hierarchy-viewer";
+import { MssImportDialog } from "@/components/mss/mss-import-dialog";
+import { MssStatsCard } from "@/components/mss/mss-stats-card";
+import { MssClearDialog } from "@/components/mss/mss-clear-dialog";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 
 export default async function MssPage() {
-  const result = await getMssHierarchy();
-  const serviceLines = result.success && result.data ? result.data : [];
+  const [hierarchyResult, statsResult] = await Promise.all([
+    getMssHierarchy(),
+    getMssStats(),
+  ]);
+
+  const serviceLines = hierarchyResult.success && hierarchyResult.data ? hierarchyResult.data : [];
+  const stats = statsResult.success ? statsResult.data : null;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -14,10 +21,10 @@ export default async function MssPage() {
         title="Service Taxonomy"
         description="Manage L2/L3/L4 service hierarchy"
         actions={
-          <Button variant="outline" disabled>
-            <Upload className="mr-2 h-4 w-4" />
-            Import CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <MssImportDialog />
+            <MssClearDialog stats={stats} />
+          </div>
         }
       />
 
@@ -35,7 +42,10 @@ export default async function MssPage() {
               </p>
             </div>
           ) : (
-            <MssHierarchyViewer serviceLines={serviceLines} />
+            <div className="space-y-6">
+              {stats && <MssStatsCard initialStats={stats} />}
+              <MssHierarchyViewer serviceLines={serviceLines} />
+            </div>
           )}
         </div>
       </div>
