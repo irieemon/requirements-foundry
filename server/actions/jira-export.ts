@@ -26,6 +26,8 @@ import type {
   RunOption,
   EpicOption,
   JiraExportRow,
+  PreviewItem,
+  FullPreviewData,
 } from "@/lib/export/jira";
 
 // ─────────────────────────────────────────────────────────────────
@@ -219,4 +221,94 @@ export async function getProjectForExport(projectId: string) {
   }
 
   return project;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// getFullPreviewItems
+// Get all items for full export preview tree display
+// ─────────────────────────────────────────────────────────────────
+
+export async function getFullPreviewItems(
+  projectId: string,
+  config: ExportConfig
+): Promise<FullPreviewData> {
+  try {
+    // Extract data from database
+    const data = await extractExportData(projectId, config.scope);
+
+    if (data.epics.length === 0) {
+      return {
+        items: [],
+        stats: {
+          epicCount: 0,
+          storyCount: 0,
+          subtaskCount: 0,
+          totalRows: 0,
+          estimatedImportTime: "N/A",
+        },
+        validation: {
+          isValid: false,
+          errors: [{ code: "E001", message: "No items to export" }],
+          warnings: [],
+        },
+      };
+    }
+
+    // Normalize all items
+    const normalizedItems = normalizeForExport(data, config.includeSubtasks);
+
+    // Validate
+    const validation = validateExport(normalizedItems, data, config);
+
+    // Calculate stats
+    const stats = calculateStats(normalizedItems, config.includeSubtasks);
+
+    // Count children per parent for display
+    const storyCountByEpic = new Map<string, number>();
+    const subtaskCountByStory = new Map<string, number>();
+
+    for (const item of normalizedItems) {
+      if (item.issueType === "Story" && item.parentTempId) {
+        storyCountByEpic.set(
+          item.parentTempId,
+          (storyCountByEpic.get(item.parentTempId) || 0) + 1
+        );
+      } else if (item.issueType === "Sub-task" && item.parentTempId) {
+        subtaskCountByStory.set(
+          item.parentTempId,
+          (subtaskCountByStory.get(item.parentTempId) || 0) + 1
+        );
+      }
+    }
+
+    // Map to lighter PreviewItem format
+    const items: PreviewItem[] = normalizedItems.map((item) => ({
+      tempId: item.tempId,
+      parentTempId: item.parentTempId,
+      issueType: item.issueType,
+      code: item.code,
+      title: item.title,
+      priority: item.priority || null,
+      effort: item.effort || null,
+      storyCount:
+        item.issueType === "Epic"
+          ? storyCountByEpic.get(item.tempId) || 0
+          : undefined,
+      subtaskCount:
+        item.issueType === "Story"
+          ? subtaskCountByStory.get(item.tempId) || 0
+          : undefined,
+    }));
+
+    return {
+      items,
+      stats,
+      validation,
+    };
+  } catch (error) {
+    console.error("getFullPreviewItems error:", error);
+    throw new Error(
+      `EPREV002: Failed to get preview items: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
 }

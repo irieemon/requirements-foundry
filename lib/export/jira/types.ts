@@ -177,3 +177,26 @@ export interface EpicOption {
   storyCount: number;
   subtaskCount: number;
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Full Preview Types (for JIRA Export Preview Tree)
+// ─────────────────────────────────────────────────────────────────
+
+export interface PreviewItem {
+  tempId: string;
+  parentTempId: string | null;
+  issueType: "Epic" | "Story" | "Sub-task";
+  code: string;
+  title: string;
+  priority: string | null;
+  effort: string | null;
+  // Derived display fields
+  storyCount?: number;
+  subtaskCount?: number;
+}
+
+export interface FullPreviewData {
+  items: PreviewItem[];
+  stats: ExportStats;
+  validation: ValidationResult;
+}

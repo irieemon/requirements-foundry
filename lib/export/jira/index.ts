@@ -23,6 +23,8 @@ export type {
   ExtractedData,
   EpicWithRelations,
   StoryWithSubtasks,
+  PreviewItem,
+  FullPreviewData,
 } from "./types";
 
 export { ERROR_CODES, WARNING_CODES } from "./types";
