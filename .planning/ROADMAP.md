@@ -4,6 +4,7 @@
 
 - ✅ [v1.0 Generative Pipeline Fix](milestones/v1.0-ROADMAP.md) (Phases 1-9) — SHIPPED 2026-01-15
 - 🚧 **v1.1 UX Polish** — Phases 10-12 (in progress)
+- 📋 **v1.2 MSS Integration** — Phases 13-17 (planned)
 
 ## Overview
 
@@ -74,7 +75,7 @@ Plans:
 Plans:
 - [x] 10.2-01: KPI row layout + subtask generation button ✓
 
-#### Phase 11: Data Display & Hierarchy
+#### Phase 11: Data Display & Hierarchy ✓
 
 **Goal**: Visualize cards, epics, stories, subtasks - making relationships clear and intuitive
 **Depends on**: Phase 10
@@ -82,9 +83,9 @@ Plans:
 **Plans**: 3
 
 Plans:
-- [ ] 11-01: Epic Card Redesign - modern card styling, visual hierarchy
-- [ ] 11-02: Story Card Layout - replace tables with expandable cards
-- [ ] 11-03: Subtask Display Polish - compact cards, cleaner story headers
+- [x] 11-01: Epic Card Redesign - modern card styling, visual hierarchy ✓
+- [x] 11-02: Story Card Layout - replace tables with expandable cards ✓
+- [x] 11-03: Subtask Display Polish - compact cards, cleaner story headers ✓
 
 #### Phase 12: JIRA Export Preview
 
@@ -95,6 +96,60 @@ Plans:
 
 Plans:
 - [ ] 12-01: TBD (run /gsd:plan-phase 12 to break down)
+
+### 📋 v1.2 MSS Integration (Planned)
+
+**Milestone Goal:** Import and manage Master Service Schedule (MSS) taxonomy, map work items to service lines for effort visibility
+
+#### Phase 13: MSS Data Model & Import
+
+**Goal**: Create database schema for L2/L3/L4 service hierarchy, CSV import functionality
+**Depends on**: v1.1 complete
+**Research**: Unlikely (internal DB patterns, CSV parsing)
+**Plans**: TBD
+
+Plans:
+- [ ] 13-01: TBD (run /gsd:plan-phase 13 to break down)
+
+#### Phase 14: MSS Management UI
+
+**Goal**: CRUD interface to view, add, edit, delete MSS entries
+**Depends on**: Phase 13
+**Research**: Unlikely (existing CRUD patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 14-01: TBD (run /gsd:plan-phase 14 to break down)
+
+#### Phase 15: MSS Mapping to Work Items
+
+**Goal**: Add MSS selector to epics/stories, store relationships
+**Depends on**: Phase 14
+**Research**: Unlikely (existing component patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 15-01: TBD (run /gsd:plan-phase 15 to break down)
+
+#### Phase 16: MSS Dashboard & Reporting
+
+**Goal**: View work items grouped by service line, effort summaries
+**Depends on**: Phase 15
+**Research**: Unlikely (internal aggregation)
+**Plans**: TBD
+
+Plans:
+- [ ] 16-01: TBD (run /gsd:plan-phase 16 to break down)
+
+#### Phase 17: MSS Export Integration
+
+**Goal**: Include MSS mappings in JIRA export
+**Depends on**: Phase 16
+**Research**: Unlikely (extending existing JIRA export)
+**Plans**: TBD
+
+Plans:
+- [ ] 17-01: TBD (run /gsd:plan-phase 17 to break down)
 
 ## Progress
 
@@ -112,5 +167,10 @@ Plans:
 | 10. Navigation & Layout | v1.1 | 3/3 | Complete | 2026-01-15 |
 | 10.1 Upload Client Direct | v1.1 | 1/1 | Complete | 2026-01-16 |
 | 10.2 KPI & Subtask UX | v1.1 | 1/1 | Complete | 2026-01-16 |
-| 11. Data Display & Hierarchy | v1.1 | 0/3 | Not started | - |
+| 11. Data Display & Hierarchy | v1.1 | 3/3 | Complete | 2026-01-20 |
 | 12. JIRA Export Preview | v1.1 | 0/? | Not started | - |
+| 13. MSS Data Model & Import | v1.2 | 0/? | Not started | - |
+| 14. MSS Management UI | v1.2 | 0/? | Not started | - |
+| 15. MSS Mapping to Work Items | v1.2 | 0/? | Not started | - |
+| 16. MSS Dashboard & Reporting | v1.2 | 0/? | Not started | - |
+| 17. MSS Export Integration | v1.2 | 0/? | Not started | - |

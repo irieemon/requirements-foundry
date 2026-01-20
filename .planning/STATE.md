@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-15)
 
 ## Current Position
 
-Phase: 11 of 12 (Data Display & Hierarchy)
+Phase: 12 of 17 (JIRA Export Preview)
 Plan: 0/? in current phase
 Status: Ready to plan
-Last activity: 2026-01-16 — Completed Phase 10.2 (KPI & Subtask UX)
+Last activity: 2026-01-20 — Completed Phase 11 (Data Display & Hierarchy), created v1.2 milestone
 
-Progress: ████████░░ 80%
+Progress: ████████░░ 65% (v1.1: 11/12 phases)
 
 ## Accumulated Context
 
@@ -38,11 +38,12 @@ None.
 ## Roadmap Evolution
 
 - Milestone v1.1 created: UX Polish, 3 phases (Phase 10-12)
+- Milestone v1.2 created: MSS Integration, 5 phases (Phase 13-17)
 
 ## Session Continuity
 
-Last session: 2026-01-16
-Stopped at: Planning Phase 11 (Data Display & Hierarchy)
+Last session: 2026-01-20
+Stopped at: Created v1.2 MSS Integration milestone
 Resume file: None
 
 ## Notes
