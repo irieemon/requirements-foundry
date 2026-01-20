@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/layout/empty-state";
-import { StoryTable } from "./story-table";
+import { StoryCard } from "./story-card";
 import { FileText } from "lucide-react";
 
 interface Story {
@@ -16,6 +16,7 @@ interface Story {
   technicalNotes: string | null;
   priority: string | null;
   effort: string | null;
+  _count?: { subtasks: number };
 }
 
 interface Epic {
@@ -74,7 +75,15 @@ export function StoriesSection({ epics }: StoriesSectionProps) {
             <CardDescription>{epic._count.stories} stories</CardDescription>
           </CardHeader>
           <CardContent>
-            <StoryTable stories={epic.stories} />
+            <div className="space-y-3">
+              {epic.stories.map(story => (
+                <StoryCard
+                  key={story.id}
+                  story={story}
+                  subtaskCount={story._count?.subtasks || 0}
+                />
+              ))}
+            </div>
           </CardContent>
         </Card>
       ))}
