@@ -16,7 +16,7 @@ import {
 // ============================================
 
 export interface AIProvider {
-  generateEpics(cards: CardData[], projectContext?: string): Promise<GenerationResult<EpicData[]>>;
+  generateEpics(cards: CardData[], projectContext?: string, mssContext?: string): Promise<GenerationResult<EpicData[]>>;
   generateStories(
     epic: EpicData,
     mode: GenerationMode,
@@ -66,7 +66,7 @@ class AnthropicProvider implements AIProvider {
     return true;
   }
 
-  async generateEpics(cards: CardData[], projectContext?: string): Promise<GenerationResult<EpicData[]>> {
+  async generateEpics(cards: CardData[], projectContext?: string, mssContext?: string): Promise<GenerationResult<EpicData[]>> {
     try {
       const cardsText = cards
         .map(
@@ -82,9 +82,23 @@ ${c.priority ? `Priority: ${c.priority}` : ""}
         )
         .join("\n\n---\n\n");
 
+      // Build MSS section if context provided
+      const mssSection = mssContext
+        ? `
+SERVICE LINE TAXONOMY (L2 Service Line → L3 Service Area):
+${mssContext}
+
+For each epic, assign the most appropriate L3 service area code (e.g., "CLD", "DBA") based on the epic's content.
+If no service area clearly applies, leave mssServiceAreaCode empty.
+`
+        : "";
+
+      // Include mssServiceAreaCode in JSON format only if MSS context is provided
+      const mssJsonField = mssContext ? `\n    "mssServiceAreaCode": "CLD",` : "";
+
       const prompt = `You are a product requirements analyst. Analyze the following use case cards and generate a set of Epics that cover the key themes and initiatives.
 
-${projectContext ? `Project Context: ${projectContext}\n\n` : ""}
+${projectContext ? `Project Context: ${projectContext}\n\n` : ""}${mssSection}
 
 USE CASE CARDS:
 ${cardsText}
@@ -96,7 +110,7 @@ Generate Epics in the following JSON format. Each epic should:
 - Identify dependencies between epics
 - Estimate effort (S/M/L)
 - Assess impact (high/medium/low)
-- Suggest priority (1 = highest)
+- Suggest priority (1 = highest)${mssContext ? "\n- Assign the most appropriate L3 service area code from the taxonomy" : ""}
 
 Return ONLY valid JSON array:
 [
@@ -111,7 +125,7 @@ Return ONLY valid JSON array:
     "effort": "M",
     "impact": "high",
     "priority": 1,
-    "cardIds": []
+    "cardIds": []${mssJsonField}
   }
 ]`;
 
@@ -304,7 +318,7 @@ class MockProvider implements AIProvider {
     return true;
   }
 
-  async generateEpics(cards: CardData[]): Promise<GenerationResult<EpicData[]>> {
+  async generateEpics(cards: CardData[], _projectContext?: string, _mssContext?: string): Promise<GenerationResult<EpicData[]>> {
     // Simulate processing delay
     await sleep(1500);
 
@@ -317,6 +331,9 @@ class MockProvider implements AIProvider {
       "Performance",
       "Automation",
     ];
+
+    // Mock MSS codes for testing (only if mssContext provided)
+    const mockMssCodes = ["CLD", "DBA", "SEC", "NET", "APP", "INF"];
 
     const epics: EpicData[] = [];
     const epicCount = Math.min(Math.max(2, Math.ceil(cards.length / 2)), 6);
@@ -341,6 +358,7 @@ class MockProvider implements AIProvider {
         impact: ["high", "medium", "high"][i % 3],
         priority: i + 1,
         cardIds: relatedCards.map((_, idx) => `card_${idx}`),
+        mssServiceAreaCode: _mssContext ? mockMssCodes[i % mockMssCodes.length] : undefined,
       });
     }
 

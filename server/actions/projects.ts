@@ -53,6 +53,9 @@ export async function getProject(id: string) {
         orderBy: { priority: "asc" },
         include: {
           _count: { select: { stories: true } },
+          mssServiceArea: {
+            select: { id: true, code: true, name: true },
+          },
           stories: {
             orderBy: { code: "asc" },
             select: {
@@ -65,6 +68,9 @@ export async function getProject(id: string) {
               technicalNotes: true,
               priority: true,
               effort: true,
+              mssServiceArea: {
+                select: { id: true, code: true, name: true },
+              },
               subtasks: {
                 orderBy: { code: "asc" },
                 select: {

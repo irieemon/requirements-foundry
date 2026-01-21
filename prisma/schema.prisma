@@ -140,12 +140,17 @@ model Epic {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
+  // MSS (Master Service Schedule) assignment - L3 Service Area
+  mssServiceAreaId   String?
+  mssServiceArea     MssServiceArea? @relation(fields: [mssServiceAreaId], references: [id], onDelete: SetNull)
+
   stories  Story[]
   runEpics RunEpic[]
 
   @@unique([projectId, code])
   @@index([projectId])
   @@index([runId])
+  @@index([mssServiceAreaId])
 }
 
 model Story {
@@ -163,12 +168,17 @@ model Story {
   runId              String?   // which run generated this
   createdAt          DateTime  @default(now())
 
+  // MSS (Master Service Schedule) assignment - L3 Service Area (inherits from epic or override)
+  mssServiceAreaId   String?
+  mssServiceArea     MssServiceArea? @relation(fields: [mssServiceAreaId], references: [id], onDelete: SetNull)
+
   subtasks   Subtask[]
   runStories RunStory[]
 
   @@unique([epicId, code])
   @@index([epicId])
   @@index([runId])
+  @@index([mssServiceAreaId])
 }
 
 model Subtask {
@@ -416,6 +426,10 @@ model MssServiceArea {
   updatedAt     DateTime       @updatedAt
 
   activities MssActivity[]
+
+  // Work items assigned to this service area
+  epics   Epic[]
+  stories Story[]
 
   @@unique([serviceLineId, code])
   @@index([serviceLineId])

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getAIProvider, hasAnthropicKey } from "@/lib/ai/provider";
 import { RunType, RunStatus, GenerationMode, PersonaSet, CardData } from "@/lib/types";
+import { getMssHierarchy, getMssServiceAreaByCode } from "./mss";
 
 export async function generateEpicsForProject(projectId: string) {
   // Create run record
@@ -44,14 +45,31 @@ export async function generateEpicsForProject(projectId: string) {
     // Get project for context
     const project = await db.project.findUnique({ where: { id: projectId } });
 
+    // Fetch MSS hierarchy for context
+    const mssResult = await getMssHierarchy();
+    let mssContext = "";
+    if (mssResult.success && mssResult.data && mssResult.data.length > 0) {
+      mssContext = mssResult.data
+        .map(
+          (l2) =>
+            `${l2.code} - ${l2.name}:\n${l2.serviceAreas
+              .map((l3) => `  ${l3.code} - ${l3.name}`)
+              .join("\n")}`
+        )
+        .join("\n\n");
+    }
+
     // Generate epics
     const provider = getAIProvider();
     const isRealAI = hasAnthropicKey();
 
     await appendLog(run.id, `Using ${isRealAI ? "Anthropic API" : "Mock Provider"}`);
     await appendLog(run.id, `Processing ${cards.length} cards...`);
+    if (mssContext) {
+      await appendLog(run.id, `MSS taxonomy loaded - auto-assignment enabled`);
+    }
 
-    const result = await provider.generateEpics(cardData, project?.description || undefined);
+    const result = await provider.generateEpics(cardData, project?.description || undefined, mssContext || undefined);
 
     if (!result.success || !result.data) {
       throw new Error(result.error || "Generation failed");
@@ -64,6 +82,16 @@ export async function generateEpicsForProject(projectId: string) {
 
     // Create new epics
     for (const epic of result.data) {
+      // Resolve MSS service area code to ID if provided
+      let mssServiceAreaId: string | null = null;
+      if (epic.mssServiceAreaCode) {
+        const mssArea = await getMssServiceAreaByCode(epic.mssServiceAreaCode);
+        mssServiceAreaId = mssArea?.id ?? null;
+        if (mssArea) {
+          await appendLog(run.id, `${epic.code}: assigned to ${mssArea.code} (${mssArea.name})`);
+        }
+      }
+
       await db.epic.create({
         data: {
           projectId,
@@ -79,6 +107,7 @@ export async function generateEpicsForProject(projectId: string) {
           priority: epic.priority || null,
           cardIds: epic.cardIds ? JSON.stringify(epic.cardIds) : null,
           runId: run.id,
+          mssServiceAreaId,
         },
       });
     }

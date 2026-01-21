@@ -8,6 +8,7 @@ import type {
   MssServiceLineInput,
   MssServiceAreaInput,
   MssActivityInput,
+  MssAssignmentResult,
 } from "@/lib/mss/types";
 import { Prisma } from "@prisma/client";
 
@@ -427,5 +428,112 @@ export async function getActivity(id: string) {
   } catch (error) {
     console.error("Failed to get activity:", error);
     return { success: false as const, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+// ============================================
+// MSS Assignment Operations (Work Item Integration)
+// ============================================
+
+/**
+ * Update MSS assignment for an Epic (assigns L3 Service Area)
+ */
+export async function updateEpicMss(
+  epicId: string,
+  mssServiceAreaId: string | null
+): Promise<MssAssignmentResult> {
+  try {
+    // Validate epic exists
+    const epic = await db.epic.findUnique({ where: { id: epicId } });
+    if (!epic) {
+      return { success: false, error: "Epic not found" };
+    }
+
+    // Validate service area exists if provided
+    if (mssServiceAreaId !== null) {
+      const serviceArea = await db.mssServiceArea.findUnique({
+        where: { id: mssServiceAreaId },
+      });
+      if (!serviceArea) {
+        return { success: false, error: "Service Area not found" };
+      }
+    }
+
+    // Update epic's MSS assignment
+    await db.epic.update({
+      where: { id: epicId },
+      data: { mssServiceAreaId },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update epic MSS:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Update MSS assignment for a Story (assigns L3 Service Area)
+ */
+export async function updateStoryMss(
+  storyId: string,
+  mssServiceAreaId: string | null
+): Promise<MssAssignmentResult> {
+  try {
+    // Validate story exists
+    const story = await db.story.findUnique({ where: { id: storyId } });
+    if (!story) {
+      return { success: false, error: "Story not found" };
+    }
+
+    // Validate service area exists if provided
+    if (mssServiceAreaId !== null) {
+      const serviceArea = await db.mssServiceArea.findUnique({
+        where: { id: mssServiceAreaId },
+      });
+      if (!serviceArea) {
+        return { success: false, error: "Service Area not found" };
+      }
+    }
+
+    // Update story's MSS assignment
+    await db.story.update({
+      where: { id: storyId },
+      data: { mssServiceAreaId },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update story MSS:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Look up an MSS Service Area by code (case-insensitive)
+ * Used by AI integration to resolve code → ID
+ */
+export async function getMssServiceAreaByCode(
+  code: string
+): Promise<{ id: string; name: string; code: string } | null> {
+  try {
+    // Case-insensitive search
+    const serviceArea = await db.mssServiceArea.findFirst({
+      where: {
+        code: { equals: code, mode: "insensitive" },
+      },
+      select: { id: true, name: true, code: true },
+    });
+
+    return serviceArea;
+  } catch (error) {
+    console.error("Failed to get MSS service area by code:", error);
+    return null;
   }
 }

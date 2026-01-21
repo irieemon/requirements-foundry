@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { MssSelector } from "@/components/mss/mss-selector";
 import { BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,10 +15,17 @@ export interface EpicCardProps {
     effort: string | null;
     impact: string | null;
     priority: number | null;
+    mssServiceArea?: {
+      id: string;
+      code: string;
+      name: string;
+    } | null;
     _count: {
       stories: number;
     };
   };
+  /** Callback when MSS assignment changes. If not provided, selector is read-only. */
+  onMssChange?: (epicId: string, mssServiceAreaId: string | null) => void;
   className?: string;
 }
 
@@ -47,7 +55,7 @@ function getEffortLabel(effort: string | null): string | null {
   }
 }
 
-export function EpicCard({ epic, className }: EpicCardProps) {
+export function EpicCard({ epic, onMssChange, className }: EpicCardProps) {
   return (
     <div
       className={cn(
@@ -88,7 +96,7 @@ export function EpicCard({ epic, className }: EpicCardProps) {
       {/* Spacer to push footer down */}
       {!epic.description && <div className="flex-grow" />}
 
-      {/* Footer: Impact & Effort badges */}
+      {/* Footer: Impact, Effort & MSS badges */}
       <div className="flex flex-wrap gap-2 mt-auto pt-2">
         {epic.impact && (
           <Badge
@@ -103,6 +111,11 @@ export function EpicCard({ epic, className }: EpicCardProps) {
             {getEffortLabel(epic.effort)}
           </Badge>
         )}
+        <MssSelector
+          value={epic.mssServiceArea?.id ?? null}
+          onSelect={(id) => onMssChange?.(epic.id, id)}
+          disabled={!onMssChange}
+        />
       </div>
     </div>
   );

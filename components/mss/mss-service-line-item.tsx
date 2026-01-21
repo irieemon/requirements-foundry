@@ -8,16 +8,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ChevronRight, ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Pencil, Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ServiceLineWithChildren } from "./mss-hierarchy-viewer";
 import type { MssServiceArea, MssActivity } from "@prisma/client";
+import { MssEntryDialog } from "./mss-entry-dialog";
+import { MssEditDialog } from "./mss-edit-dialog";
+import { MssDeleteDialog } from "./mss-delete-dialog";
 
 interface MssServiceLineItemProps {
   serviceLine: ServiceLineWithChildren;
+  onRefresh: () => void;
 }
 
-export function MssServiceLineItem({ serviceLine }: MssServiceLineItemProps) {
+export function MssServiceLineItem({ serviceLine, onRefresh }: MssServiceLineItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasChildren = serviceLine.serviceAreas.length > 0;
 
@@ -73,12 +77,53 @@ export function MssServiceLineItem({ serviceLine }: MssServiceLineItemProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          <MssEntryDialog
+            level="L3"
+            parentId={serviceLine.id}
+            parentName={serviceLine.name}
+            trigger={
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            }
+            onSuccess={onRefresh}
+          />
+          <MssEditDialog
+            level="L2"
+            item={{
+              id: serviceLine.id,
+              code: serviceLine.code,
+              name: serviceLine.name,
+              description: serviceLine.description,
+            }}
+            trigger={
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            }
+            onSuccess={onRefresh}
+          />
+          <MssDeleteDialog
+            level="L2"
+            item={{
+              id: serviceLine.id,
+              code: serviceLine.code,
+              name: serviceLine.name,
+            }}
+            cascadeInfo={{
+              serviceAreaCount: serviceLine.serviceAreas.length,
+              activityCount: serviceLine.serviceAreas.reduce(
+                (sum, sa) => sum + sa.activities.length,
+                0
+              ),
+            }}
+            trigger={
+              <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            }
+            onSuccess={onRefresh}
+          />
         </div>
       </div>
 
@@ -89,6 +134,7 @@ export function MssServiceLineItem({ serviceLine }: MssServiceLineItemProps) {
             <ServiceAreaItem
               key={serviceArea.id}
               serviceArea={serviceArea}
+              onRefresh={onRefresh}
             />
           ))}
         </div>
@@ -99,9 +145,10 @@ export function MssServiceLineItem({ serviceLine }: MssServiceLineItemProps) {
 
 interface ServiceAreaItemProps {
   serviceArea: MssServiceArea & { activities: MssActivity[] };
+  onRefresh: () => void;
 }
 
-function ServiceAreaItem({ serviceArea }: ServiceAreaItemProps) {
+function ServiceAreaItem({ serviceArea, onRefresh }: ServiceAreaItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasChildren = serviceArea.activities.length > 0;
 
@@ -157,12 +204,49 @@ function ServiceAreaItem({ serviceArea }: ServiceAreaItemProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          <MssEntryDialog
+            level="L4"
+            parentId={serviceArea.id}
+            parentName={serviceArea.name}
+            trigger={
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            }
+            onSuccess={onRefresh}
+          />
+          <MssEditDialog
+            level="L3"
+            item={{
+              id: serviceArea.id,
+              code: serviceArea.code,
+              name: serviceArea.name,
+              description: serviceArea.description,
+            }}
+            trigger={
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            }
+            onSuccess={onRefresh}
+          />
+          <MssDeleteDialog
+            level="L3"
+            item={{
+              id: serviceArea.id,
+              code: serviceArea.code,
+              name: serviceArea.name,
+            }}
+            cascadeInfo={{
+              activityCount: serviceArea.activities.length,
+            }}
+            trigger={
+              <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            }
+            onSuccess={onRefresh}
+          />
         </div>
       </div>
 
@@ -170,7 +254,7 @@ function ServiceAreaItem({ serviceArea }: ServiceAreaItemProps) {
       {isExpanded && serviceArea.activities.length > 0 && (
         <div className="border-t border-border/30">
           {serviceArea.activities.map((activity) => (
-            <ActivityItem key={activity.id} activity={activity} />
+            <ActivityItem key={activity.id} activity={activity} onRefresh={onRefresh} />
           ))}
         </div>
       )}
@@ -180,9 +264,10 @@ function ServiceAreaItem({ serviceArea }: ServiceAreaItemProps) {
 
 interface ActivityItemProps {
   activity: MssActivity;
+  onRefresh: () => void;
 }
 
-function ActivityItem({ activity }: ActivityItemProps) {
+function ActivityItem({ activity, onRefresh }: ActivityItemProps) {
   return (
     <div className="flex items-center gap-2 pl-16 pr-4 py-2 hover:bg-muted/50 transition-colors bg-muted/30">
       {/* Spacer for alignment */}
@@ -214,12 +299,35 @@ function ActivityItem({ activity }: ActivityItemProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-1 shrink-0">
-        <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+        <MssEditDialog
+          level="L4"
+          item={{
+            id: activity.id,
+            code: activity.code,
+            name: activity.name,
+            description: activity.description,
+          }}
+          trigger={
+            <Button variant="ghost" size="icon" className="h-7 w-7">
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          }
+          onSuccess={onRefresh}
+        />
+        <MssDeleteDialog
+          level="L4"
+          item={{
+            id: activity.id,
+            code: activity.code,
+            name: activity.name,
+          }}
+          trigger={
+            <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          }
+          onSuccess={onRefresh}
+        />
       </div>
     </div>
   );

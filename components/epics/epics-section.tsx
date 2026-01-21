@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
 } from "@/components/batch-stories";
 import { PageActions, type ActionItem } from "@/components/layout/page-actions";
 import { useActiveBatchStoryRun } from "@/hooks/use-batch-story-progress";
+import { updateEpicMss } from "@/server/actions/mss";
 import { Download, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -62,6 +63,22 @@ export function EpicsSection({ projectId, epics, cardCount }: EpicsSectionProps)
   const handleProgressClose = () => {
     setActiveRunId(null);
   };
+
+  // Handle MSS assignment change for an epic
+  const handleMssChange = useCallback(
+    async (epicId: string, mssServiceAreaId: string | null) => {
+      const result = await updateEpicMss(epicId, mssServiceAreaId);
+      if (result.success) {
+        toast.success("MSS assignment updated");
+        router.refresh();
+      } else {
+        toast.error("Failed to update MSS", {
+          description: result.error,
+        });
+      }
+    },
+    [router]
+  );
 
   // Build secondary actions for the responsive action bar
   const buildSecondaryActions = (): ActionItem[] => {
@@ -156,7 +173,7 @@ export function EpicsSection({ projectId, epics, cardCount }: EpicsSectionProps)
       />
 
       {/* Epic Grid */}
-      <EpicGrid projectId={projectId} epics={epics} />
+      <EpicGrid projectId={projectId} epics={epics} onMssChange={handleMssChange} />
     </div>
   );
 }

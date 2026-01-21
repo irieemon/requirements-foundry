@@ -8,9 +8,11 @@ import { EpicCard, type EpicCardProps } from "./epic-card";
 export interface EpicGridProps {
   projectId: string;
   epics: EpicCardProps["epic"][];
+  /** Callback when MSS assignment changes for an epic */
+  onMssChange?: (epicId: string, mssServiceAreaId: string | null) => void;
 }
 
-export function EpicGrid({ projectId, epics }: EpicGridProps) {
+export function EpicGrid({ projectId, epics, onMssChange }: EpicGridProps) {
   if (epics.length === 0) {
     return (
       <EmptyState
@@ -26,7 +28,7 @@ export function EpicGrid({ projectId, epics }: EpicGridProps) {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {epics.map((epic) => (
         <Link key={epic.id} href={`/projects/${projectId}/epics/${epic.id}`}>
-          <EpicCard epic={epic} />
+          <EpicCard epic={epic} onMssChange={onMssChange} />
         </Link>
       ))}
     </div>

@@ -223,6 +223,7 @@ export interface EpicData {
   impact?: string;
   priority?: number;
   cardIds?: string[];
+  mssServiceAreaCode?: string;  // L3 MSS Service Area code for categorization
 }
 
 // ============================================

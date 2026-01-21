@@ -94,3 +94,15 @@ export interface MssActivityInput {
   name: string;
   description?: string;
 }
+
+// ============================================
+// MSS Assignment Types (Work Item Integration)
+// ============================================
+
+/**
+ * Result of updating MSS assignment on a work item (epic/story)
+ */
+export interface MssAssignmentResult {
+  success: boolean;
+  error?: string;
+}

@@ -7,8 +7,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { MssSelector } from "@/components/mss/mss-selector";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ListTodo, User } from "lucide-react";
+
+interface MssServiceArea {
+  id: string;
+  code: string;
+  name: string;
+}
 
 export interface StoryCardProps {
   story: {
@@ -21,7 +28,12 @@ export interface StoryCardProps {
     technicalNotes: string | null;
     priority: string | null;
     effort: string | null;
+    mssServiceArea?: MssServiceArea | null;
   };
+  /** Epic's MSS service area (for inheritance display) */
+  epicMssServiceArea?: MssServiceArea | null;
+  /** Callback when MSS assignment changes */
+  onMssChange?: (storyId: string, mssServiceAreaId: string | null) => void;
   subtaskCount?: number;
 }
 
@@ -49,9 +61,20 @@ function parseAcceptanceCriteria(ac: string | null): string[] {
   }
 }
 
-export function StoryCard({ story, subtaskCount = 0 }: StoryCardProps) {
+export function StoryCard({
+  story,
+  epicMssServiceArea,
+  onMssChange,
+  subtaskCount = 0,
+}: StoryCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const criteria = parseAcceptanceCriteria(story.acceptanceCriteria);
+
+  // Determine effective MSS (story's own or inherited from epic)
+  const effectiveMssId = story.mssServiceArea?.id ?? epicMssServiceArea?.id ?? null;
+  // Check if story has its own MSS that differs from epic
+  const hasOwnMss = story.mssServiceArea !== null && story.mssServiceArea !== undefined;
+  const isOverridden = hasOwnMss && epicMssServiceArea && story.mssServiceArea?.id !== epicMssServiceArea.id;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -102,7 +125,7 @@ export function StoryCard({ story, subtaskCount = 0 }: StoryCardProps) {
             </div>
           </div>
 
-          {/* Secondary row: Persona tag + Subtask count */}
+          {/* Secondary row: Persona tag + Subtask count + MSS */}
           <div className="flex items-center gap-2 mt-2 pl-[52px]">
             {story.persona && (
               <Badge variant="outline" className="text-xs text-muted-foreground">
@@ -116,6 +139,13 @@ export function StoryCard({ story, subtaskCount = 0 }: StoryCardProps) {
                 {subtaskCount} subtask{subtaskCount !== 1 ? "s" : ""}
               </Badge>
             )}
+            <div className={cn("flex items-center gap-1", isOverridden && "ring-1 ring-primary/30 rounded-full")}>
+              <MssSelector
+                value={effectiveMssId}
+                onSelect={(id) => onMssChange?.(story.id, id)}
+                disabled={!onMssChange}
+              />
+            </div>
           </div>
         </div>
       </CollapsibleTrigger>
