@@ -623,7 +623,7 @@ export function BatchStoryConfigDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px]">
+      <DialogContent className="sm:max-w-[520px] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" aria-hidden="true" />
@@ -636,7 +636,7 @@ export function BatchStoryConfigDialog({
 
         <WizardStepper currentStep={currentStep} />
 
-        <div className="min-h-[300px]">
+        <div className="min-h-[300px] overflow-hidden">
           {currentStep === 1 && (
             <ScopeStep
               epics={epics}
