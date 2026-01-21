@@ -207,6 +207,13 @@ export function MssImportDialog() {
 
       if (result.success) {
         const { data } = result;
+        const total = data.serviceLines + data.serviceAreas + data.activities;
+
+        if (total === 0) {
+          setError("Import completed but no data was saved. Check that your CSV has valid L2/L3/L4 data.");
+          return;
+        }
+
         toast.success(
           `Imported ${data.serviceLines} service lines, ${data.serviceAreas} service areas, and ${data.activities} activities`
         );

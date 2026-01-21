@@ -20,7 +20,14 @@ export async function importMssFromCSV(csvContent: string): Promise<
 > {
   try {
     // Parse CSV
-    const { rows, autoMapping } = parseMssCSV(csvContent);
+    const { rows, autoMapping, headers } = parseMssCSV(csvContent);
+
+    console.log("[MSS Import] Headers detected:", headers);
+    console.log("[MSS Import] Column mapping:", autoMapping);
+    console.log("[MSS Import] Rows parsed:", rows.length);
+    if (rows.length > 0) {
+      console.log("[MSS Import] First row sample:", rows[0]);
+    }
 
     if (!autoMapping) {
       return {
