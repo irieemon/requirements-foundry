@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-20)
 
 ## Current Position
 
-Phase: 15 of 17 (MSS Mapping to Work Items) — In Progress
-Plan: 01 complete, 02+ pending
-Status: Schema and AI integration complete, UI for manual assignment next
-Last activity: 2026-01-20 — Phase 15 Plan 01 completed
+Phase: 16 of 17 (MSS Dashboard & Reporting) — Not Started
+Plan: None
+Status: Phase 15 complete, ready for MSS dashboard
+Last activity: 2026-01-20 — Phase 15 Plan 02 completed
 
-Progress: ██████████████░░░░░░ 82% (14/17 phases complete)
+Progress: ███████████████░░░░░ 88% (15/17 phases complete)
 
 ## Milestones
 
@@ -69,7 +69,7 @@ Resume file: None
 - Phase 17: MSS Export Integration (JIRA)
 
 **Next Step:**
-Phase 15 Plan 02: UI for manual MSS assignment on epics/stories (dropdown selectors)
+Phase 16: MSS Dashboard & Reporting (coverage metrics, grouping by service line)
 
 **Constraints:**
 - Keep existing shadcn/ui component library
