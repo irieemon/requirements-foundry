@@ -241,7 +241,7 @@ export function MssImportDialog() {
           Import CSV
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Import Service Taxonomy</DialogTitle>
           <DialogDescription>
@@ -250,7 +250,7 @@ export function MssImportDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
           {/* File Input */}
           <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:border-primary/50 transition-colors">
             <input
@@ -303,35 +303,27 @@ export function MssImportDialog() {
                 </span>
               </div>
 
-              <div className="border rounded-md overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-medium">L2 Code</th>
-                        <th className="px-3 py-2 text-left font-medium">L2 Name</th>
-                        <th className="px-3 py-2 text-left font-medium">L3 Code</th>
-                        <th className="px-3 py-2 text-left font-medium">L3 Name</th>
-                        <th className="px-3 py-2 text-left font-medium">L4 Code</th>
-                        <th className="px-3 py-2 text-left font-medium">L4 Name</th>
+              <div className="border rounded-md overflow-hidden max-h-[200px] overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">Service Line (L2)</th>
+                      <th className="px-3 py-2 text-left font-medium">Service Area (L3)</th>
+                      <th className="px-3 py-2 text-left font-medium">Activity (L4)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previewData.map((row, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-3 py-2">{row.l2Name}</td>
+                        <td className="px-3 py-2">{row.l3Name}</td>
+                        <td className="px-3 py-2">{row.l4Name}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {previewData.map((row, i) => (
-                        <tr key={i} className="border-t">
-                          <td className="px-3 py-2 font-mono">{row.l2Code}</td>
-                          <td className="px-3 py-2">{row.l2Name}</td>
-                          <td className="px-3 py-2 font-mono">{row.l3Code}</td>
-                          <td className="px-3 py-2">{row.l3Name}</td>
-                          <td className="px-3 py-2 font-mono">{row.l4Code}</td>
-                          <td className="px-3 py-2">{row.l4Name}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
                 {rowCount > 5 && (
-                  <div className="px-3 py-2 bg-muted/30 text-xs text-muted-foreground text-center border-t">
+                  <div className="px-3 py-2 bg-muted/30 text-xs text-muted-foreground text-center border-t sticky bottom-0">
                     ... and {rowCount - 5} more rows
                   </div>
                 )}
