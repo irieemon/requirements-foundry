@@ -57,6 +57,9 @@ export async function generateEpicsForProject(projectId: string) {
               .join("\n")}`
         )
         .join("\n\n");
+      await appendLog(run.id, `[DEBUG] MSS hierarchy loaded: ${mssResult.data.length} L2s, context length: ${mssContext.length}`);
+    } else {
+      await appendLog(run.id, `[DEBUG] MSS hierarchy empty or failed: ${JSON.stringify(mssResult)}`);
     }
 
     // Generate epics
@@ -77,6 +80,12 @@ export async function generateEpicsForProject(projectId: string) {
 
     await appendLog(run.id, `Generated ${result.data.length} epics`);
 
+    // Debug: Log first epic's MSS code
+    if (result.data.length > 0) {
+      const firstEpic = result.data[0];
+      await appendLog(run.id, `[DEBUG] First epic mssServiceAreaCode: "${firstEpic.mssServiceAreaCode || 'undefined'}"`);
+    }
+
     // Delete existing epics for this project (regeneration)
     await db.epic.deleteMany({ where: { projectId } });
 
@@ -89,7 +98,11 @@ export async function generateEpicsForProject(projectId: string) {
         mssServiceAreaId = mssArea?.id ?? null;
         if (mssArea) {
           await appendLog(run.id, `${epic.code}: assigned to ${mssArea.code} (${mssArea.name})`);
+        } else {
+          await appendLog(run.id, `[DEBUG] ${epic.code}: code "${epic.mssServiceAreaCode}" not found in DB`);
         }
+      } else {
+        await appendLog(run.id, `[DEBUG] ${epic.code}: no mssServiceAreaCode in AI response`);
       }
 
       await db.epic.create({
