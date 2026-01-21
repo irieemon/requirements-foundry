@@ -192,34 +192,36 @@ function ScopeStep({
             {allSelected ? "Deselect All" : "Select All"}
           </Button>
         </div>
-        <ScrollArea className="h-[200px] border rounded-lg">
-          <div className="p-3 space-y-2">
-            {epics.map((epic) => (
-              <label
-                key={epic.id}
-                className={cn(
-                  "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors overflow-hidden",
-                  "hover:bg-muted/50",
-                  selectedEpicIds.includes(epic.id) && "bg-primary/5"
-                )}
-              >
-                <Checkbox
-                  checked={selectedEpicIds.includes(epic.id)}
-                  onCheckedChange={() => toggleEpic(epic.id)}
-                  className="shrink-0"
-                />
-                <span className="flex-1 min-w-0 text-sm font-medium truncate">
-                  {epic.code}: {epic.title}
-                </span>
-                {epic.storyCount > 0 && (
-                  <Badge variant="secondary" className="shrink-0">
-                    {epic.storyCount} stories
-                  </Badge>
-                )}
-              </label>
-            ))}
-          </div>
-        </ScrollArea>
+        <div className="border rounded-lg overflow-hidden">
+          <ScrollArea className="h-[200px]">
+            <div className="p-3 space-y-2">
+              {epics.map((epic) => (
+                <label
+                  key={epic.id}
+                  className={cn(
+                    "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors",
+                    "hover:bg-muted/50",
+                    selectedEpicIds.includes(epic.id) && "bg-primary/5"
+                  )}
+                >
+                  <Checkbox
+                    checked={selectedEpicIds.includes(epic.id)}
+                    onCheckedChange={() => toggleEpic(epic.id)}
+                    className="shrink-0"
+                  />
+                  <span className="text-sm font-medium truncate">
+                    {epic.code}: {epic.title}
+                  </span>
+                  {epic.storyCount > 0 && (
+                    <Badge variant="secondary" className="shrink-0 ml-auto">
+                      {epic.storyCount} stories
+                    </Badge>
+                  )}
+                </label>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
         <p className="text-xs text-muted-foreground">
           {selectedEpicIds.length} of {epics.length} epics selected
         </p>
