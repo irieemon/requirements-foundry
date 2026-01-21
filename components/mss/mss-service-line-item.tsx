@@ -48,13 +48,13 @@ export function MssServiceLineItem({ serviceLine }: MssServiceLineItemProps) {
         </span>
 
         {/* Name and description */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 truncate">
           <span className="font-semibold">{serviceLine.name}</span>
           {serviceLine.description && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="ml-2 text-sm text-muted-foreground truncate">
+                  <span className="ml-2 text-sm text-muted-foreground">
                     — {serviceLine.description}
                   </span>
                 </TooltipTrigger>
@@ -132,13 +132,13 @@ function ServiceAreaItem({ serviceArea }: ServiceAreaItemProps) {
         </span>
 
         {/* Name and description */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 truncate">
           <span className="font-medium">{serviceArea.name}</span>
           {serviceArea.description && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="ml-2 text-sm text-muted-foreground truncate">
+                  <span className="ml-2 text-sm text-muted-foreground">
                     — {serviceArea.description}
                   </span>
                 </TooltipTrigger>
@@ -194,13 +194,13 @@ function ActivityItem({ activity }: ActivityItemProps) {
       </span>
 
       {/* Name and description */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 truncate">
         <span>{activity.name}</span>
         {activity.description && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="ml-2 text-sm text-muted-foreground truncate">
+                <span className="ml-2 text-sm text-muted-foreground">
                   — {activity.description}
                 </span>
               </TooltipTrigger>

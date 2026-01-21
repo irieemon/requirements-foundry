@@ -45,7 +45,7 @@ export function MssHierarchyViewer({ serviceLines }: MssHierarchyViewerProps) {
       </div>
 
       {/* Hierarchy */}
-      <Card className="divide-y">
+      <Card className="divide-y overflow-hidden">
         {serviceLines.map((serviceLine) => (
           <MssServiceLineItem key={serviceLine.id} serviceLine={serviceLine} />
         ))}
