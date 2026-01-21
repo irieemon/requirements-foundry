@@ -88,11 +88,12 @@ Plans:
 
 **Goal**: Add MSS selector to epics/stories, store relationships
 **Depends on**: Phase 14
-**Research**: Unlikely (existing component patterns)
-**Plans**: TBD
+**Research**: No (existing patterns)
+**Plans**: 2
 
 Plans:
-- [ ] 15-01: TBD (run /gsd:plan-phase 15 to break down)
+- [ ] 15-01: Schema & AI Integration (mssServiceAreaId FK, AI auto-assignment)
+- [ ] 15-02: UI Integration (MSS selector, epic/story card display)
 
 #### Phase 16: MSS Dashboard & Reporting
 
