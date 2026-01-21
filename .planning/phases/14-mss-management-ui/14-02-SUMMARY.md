@@ -52,11 +52,19 @@
 - [x] Import dialog accepts CSV and shows preview
 - [x] Stats card displays accurate counts
 - [x] Clear dialog confirms before deleting
-- [ ] **Human verification pending** - test full import/clear flow
+- [x] **Human verified** - full import/clear flow tested and approved
+
+## Additional Fixes Applied
+
+During human verification, several issues were discovered and fixed:
+
+1. **CSV format compatibility** - Updated column detection patterns to support "Service (L2)", "Services (L3)", "Services (L4)" column naming from CXM_MSS.csv
+2. **BOM and empty row handling** - Added UTF-8 BOM stripping and empty first row detection
+3. **Hierarchical CSV support** - Implemented L2 fill-forward for hierarchical format where L2 only appears on first row of group
+4. **2-level hierarchy support** - When L4 column is empty, uses L3 values as L4 (fallback)
+5. **Preview dialog sizing** - Fixed import button being pushed below fold by adding max-height and scroll to preview
+6. **Text overflow** - Fixed description text going off card in hierarchy viewer by moving `truncate` to container
 
 ## Next Steps
 
-Awaiting human verification of the end-to-end flow:
-1. Import CSV file with test data
-2. Verify stats update
-3. Verify clear functionality works
+Plan 02 complete. Proceed to Plan 03: Create/Edit/Delete dialogs for individual entries.
