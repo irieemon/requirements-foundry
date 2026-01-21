@@ -198,7 +198,7 @@ function ScopeStep({
               <label
                 key={epic.id}
                 className={cn(
-                  "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors",
+                  "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors overflow-hidden",
                   "hover:bg-muted/50",
                   selectedEpicIds.includes(epic.id) && "bg-primary/5"
                 )}
@@ -206,12 +206,11 @@ function ScopeStep({
                 <Checkbox
                   checked={selectedEpicIds.includes(epic.id)}
                   onCheckedChange={() => toggleEpic(epic.id)}
+                  className="shrink-0"
                 />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {epic.code}: {epic.title}
-                  </p>
-                </div>
+                <span className="flex-1 min-w-0 text-sm font-medium truncate">
+                  {epic.code}: {epic.title}
+                </span>
                 {epic.storyCount > 0 && (
                   <Badge variant="secondary" className="shrink-0">
                     {epic.storyCount} stories
