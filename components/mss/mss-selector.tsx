@@ -209,8 +209,8 @@ export function MssSelector({
           {/* Grouped options */}
           {filteredHierarchy.map((line) => (
             <DropdownMenuGroup key={line.id}>
-              <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
-                {line.code} - {line.name}
+              <DropdownMenuLabel className="text-xs font-medium text-muted-foreground sticky top-0 bg-popover">
+                {line.name}
               </DropdownMenuLabel>
               {line.serviceAreas.map((area) => (
                 <DropdownMenuItem
@@ -220,11 +220,10 @@ export function MssSelector({
                 >
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
+                      "mr-2 h-4 w-4 flex-shrink-0",
                       value === area.id ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  <span className="font-mono text-xs mr-2">{area.code}</span>
                   <span className="truncate">{area.name}</span>
                 </DropdownMenuItem>
               ))}
