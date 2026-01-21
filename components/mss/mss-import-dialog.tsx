@@ -103,16 +103,15 @@ export function MssImportDialog() {
     const l4CodeIdx = findColumn([/l4.*code/i, /activity.*code/i, /services?\s*\(l4\)/i]);
     const l4NameIdx = findColumn([/l4.*name/i, /activity.*name/i, /activity$/i, /services?\s*\(l4\)/i]);
 
+    // L2 and L3 are required, L4 is optional (will use L3 if missing)
     const missingColumns = [];
     if (l2CodeIdx === -1) missingColumns.push("L2 Code");
     if (l2NameIdx === -1) missingColumns.push("L2 Name");
     if (l3CodeIdx === -1) missingColumns.push("L3 Code");
     if (l3NameIdx === -1) missingColumns.push("L3 Name");
-    if (l4CodeIdx === -1) missingColumns.push("L4 Code");
-    if (l4NameIdx === -1) missingColumns.push("L4 Name");
 
     if (missingColumns.length > 0) {
-      setError(`Could not detect columns: ${missingColumns.join(", ")}. Expected column names like 'L2 Code', 'L2 Name', etc.`);
+      setError(`Could not detect columns: ${missingColumns.join(", ")}. Expected column names like 'L2 Code', 'L2 Name', 'L3 Code', 'L3 Name', etc.`);
       return;
     }
 
@@ -120,28 +119,54 @@ export function MssImportDialog() {
     const previewRows: PreviewRow[] = [];
     let validRowCount = 0;
 
+    // Track last L2 for fill-forward in hierarchical format
+    let lastL2Code = "";
+    let lastL2Name = "";
+
+    const minIdx = Math.max(l2CodeIdx, l2NameIdx, l3CodeIdx, l3NameIdx);
+
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSVLine(lines[i]);
-      if (values.length < Math.max(l2CodeIdx, l2NameIdx, l3CodeIdx, l3NameIdx, l4CodeIdx, l4NameIdx) + 1) {
+      if (values.length < minIdx + 1) {
         continue;
       }
 
-      const l2Code = values[l2CodeIdx]?.trim();
-      const l3Code = values[l3CodeIdx]?.trim();
-      const l4Code = values[l4CodeIdx]?.trim();
+      // Get values with fill-forward for L2
+      let l2Code = values[l2CodeIdx]?.trim() || "";
+      let l2Name = values[l2NameIdx]?.trim() || "";
+      const l3Code = values[l3CodeIdx]?.trim() || "";
+      const l3Name = values[l3NameIdx]?.trim() || "";
 
-      if (!l2Code || !l3Code || !l4Code) continue;
+      // Fill forward L2 from previous row if empty
+      if (!l2Code && lastL2Code) {
+        l2Code = lastL2Code;
+        l2Name = lastL2Name;
+      } else if (l2Code) {
+        lastL2Code = l2Code;
+        lastL2Name = l2Name || l2Code;
+      }
+
+      // Skip if no L2 or L3
+      if (!l2Code || !l3Code) continue;
+
+      // L4 - use L3 if empty
+      let l4Code = l4CodeIdx !== -1 ? values[l4CodeIdx]?.trim() || "" : "";
+      let l4Name = l4NameIdx !== -1 ? values[l4NameIdx]?.trim() || "" : "";
+      if (!l4Code) {
+        l4Code = l3Code;
+        l4Name = l3Name;
+      }
 
       validRowCount++;
 
       if (previewRows.length < 5) {
         previewRows.push({
           l2Code,
-          l2Name: values[l2NameIdx]?.trim() || l2Code,
+          l2Name: l2Name || l2Code,
           l3Code,
-          l3Name: values[l3NameIdx]?.trim() || l3Code,
+          l3Name: l3Name || l3Code,
           l4Code,
-          l4Name: values[l4NameIdx]?.trim() || l4Code,
+          l4Name: l4Name || l4Code,
         });
       }
     }

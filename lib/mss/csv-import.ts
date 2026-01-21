@@ -97,27 +97,57 @@ export function parseMssCSV(
 
   const rows: MssImportRow[] = [];
 
-  for (const row of result.data) {
-    // All level codes must be present for a valid row
-    const l2Code = row[autoMapping.l2Code]?.trim();
-    const l3Code = row[autoMapping.l3Code]?.trim();
-    const l4Code = row[autoMapping.l4Code]?.trim();
+  // Track last seen L2 values for hierarchical fill-forward
+  let lastL2Code = "";
+  let lastL2Name = "";
+  let lastL2Description = "";
 
-    if (!l2Code || !l3Code || !l4Code) {
-      continue; // Skip rows with missing codes
+  for (const row of result.data) {
+    // Get raw values from row
+    let l2Code = row[autoMapping.l2Code]?.trim() || "";
+    let l2Name = row[autoMapping.l2Name]?.trim() || "";
+    const l3Code = row[autoMapping.l3Code]?.trim() || "";
+    const l3Name = row[autoMapping.l3Name]?.trim() || "";
+    let l4Code = row[autoMapping.l4Code]?.trim() || "";
+    let l4Name = row[autoMapping.l4Name]?.trim() || "";
+
+    // Fill forward L2 from previous row if empty (hierarchical format)
+    if (!l2Code && lastL2Code) {
+      l2Code = lastL2Code;
+      l2Name = lastL2Name;
+    } else if (l2Code) {
+      // Update last seen L2
+      lastL2Code = l2Code;
+      lastL2Name = l2Name || l2Code;
+      if (autoMapping.l2Description && row[autoMapping.l2Description]) {
+        lastL2Description = row[autoMapping.l2Description].trim();
+      }
+    }
+
+    // Skip if we still don't have L2 or L3
+    if (!l2Code || !l3Code) {
+      continue;
+    }
+
+    // If L4 is empty, use L3 as L4 (2-level hierarchy support)
+    if (!l4Code) {
+      l4Code = l3Code;
+      l4Name = l3Name;
     }
 
     const importRow: MssImportRow = {
       l2Code,
-      l2Name: row[autoMapping.l2Name]?.trim() || l2Code,
+      l2Name: l2Name || l2Code,
       l3Code,
-      l3Name: row[autoMapping.l3Name]?.trim() || l3Code,
+      l3Name: l3Name || l3Code,
       l4Code,
-      l4Name: row[autoMapping.l4Name]?.trim() || l4Code,
+      l4Name: l4Name || l4Code,
     };
 
     // Add optional descriptions
-    if (autoMapping.l2Description && row[autoMapping.l2Description]) {
+    if (l2Code === lastL2Code && lastL2Description) {
+      importRow.l2Description = lastL2Description;
+    } else if (autoMapping.l2Description && row[autoMapping.l2Description]) {
       importRow.l2Description = row[autoMapping.l2Description].trim();
     }
     if (autoMapping.l3Description && row[autoMapping.l3Description]) {
