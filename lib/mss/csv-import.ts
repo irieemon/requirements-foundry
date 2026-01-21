@@ -14,20 +14,20 @@ export function autoDetectMssColumns(headers: string[]): MssColumnMapping | null
   const mapping: Partial<MssColumnMapping> = {};
 
   const patterns: Record<keyof MssColumnMapping, RegExp[]> = {
-    // L2 Service Line patterns
-    l2Code: [/l2.*code/i, /service.*line.*code/i, /sl.*code/i],
-    l2Name: [/l2.*name/i, /service.*line.*name/i, /sl.*name/i, /service.*line$/i],
-    l2Description: [/l2.*desc/i, /service.*line.*desc/i, /sl.*desc/i],
+    // L2 Service Line patterns - also match "Service (L2)" format
+    l2Code: [/l2.*code/i, /service.*line.*code/i, /sl.*code/i, /service\s*\(l2\)/i],
+    l2Name: [/l2.*name/i, /service.*line.*name/i, /sl.*name/i, /service.*line$/i, /service\s*\(l2\)/i],
+    l2Description: [/l2.*desc/i, /service.*line.*desc/i, /sl.*desc/i, /service\s+def/i],
 
-    // L3 Service Area patterns
-    l3Code: [/l3.*code/i, /service.*area.*code/i, /sa.*code/i],
-    l3Name: [/l3.*name/i, /service.*area.*name/i, /sa.*name/i, /service.*area$/i],
-    l3Description: [/l3.*desc/i, /service.*area.*desc/i, /sa.*desc/i],
+    // L3 Service Area patterns - also match "Services (L3)" format
+    l3Code: [/l3.*code/i, /service.*area.*code/i, /sa.*code/i, /services?\s*\(l3\)/i],
+    l3Name: [/l3.*name/i, /service.*area.*name/i, /sa.*name/i, /service.*area$/i, /services?\s*\(l3\)/i],
+    l3Description: [/l3.*desc/i, /service.*area.*desc/i, /sa.*desc/i, /services?\s*\(l3\)\s*def/i],
 
-    // L4 Activity patterns
-    l4Code: [/l4.*code/i, /activity.*code/i, /act.*code/i],
-    l4Name: [/l4.*name/i, /activity.*name/i, /act.*name/i, /activity$/i],
-    l4Description: [/l4.*desc/i, /activity.*desc/i, /act.*desc/i],
+    // L4 Activity patterns - also match "Services (L4)" format
+    l4Code: [/l4.*code/i, /activity.*code/i, /act.*code/i, /services?\s*\(l4\)/i],
+    l4Name: [/l4.*name/i, /activity.*name/i, /act.*name/i, /activity$/i, /services?\s*\(l4\)/i],
+    l4Description: [/l4.*desc/i, /activity.*desc/i, /act.*desc/i, /services?\s*\(l4\)\s*def/i],
   };
 
   for (const header of headers) {
@@ -69,7 +69,16 @@ export function parseMssCSV(
   csvContent: string,
   mapping?: MssColumnMapping
 ): MssParsedCSV {
-  const result = Papa.parse<Record<string, string>>(csvContent, {
+  // Strip BOM if present
+  let cleanContent = csvContent.replace(/^\uFEFF/, "");
+
+  // Check if first row is empty (all commas) and skip it
+  const lines = cleanContent.split(/\r?\n/);
+  if (lines.length > 0 && /^,*$/.test(lines[0].trim())) {
+    cleanContent = lines.slice(1).join("\n");
+  }
+
+  const result = Papa.parse<Record<string, string>>(cleanContent, {
     header: true,
     skipEmptyLines: true,
     transformHeader: (header) => header.trim(),

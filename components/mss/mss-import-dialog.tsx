@@ -65,7 +65,17 @@ export function MssImportDialog() {
   };
 
   const parsePreview = (content: string) => {
-    const lines = content.split(/\r?\n/).filter(line => line.trim());
+    // Strip BOM if present
+    let cleanContent = content.replace(/^\uFEFF/, "");
+
+    // Split into lines and filter empty
+    let lines = cleanContent.split(/\r?\n/).filter(line => line.trim());
+
+    // Skip first row if it's empty (all commas)
+    if (lines.length > 0 && /^,*$/.test(lines[0].replace(/"/g, "").trim())) {
+      lines = lines.slice(1);
+    }
+
     if (lines.length < 2) {
       setError("CSV file appears to be empty or has no data rows");
       return;
@@ -74,7 +84,7 @@ export function MssImportDialog() {
     const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
     setDetectedColumns(headers);
 
-    // Simple column detection patterns
+    // Simple column detection patterns - match various MSS CSV formats
     const findColumn = (patterns: RegExp[]) => {
       for (const header of headers) {
         const normalized = header.toLowerCase();
@@ -85,12 +95,13 @@ export function MssImportDialog() {
       return -1;
     };
 
-    const l2CodeIdx = findColumn([/l2.*code/i, /service.*line.*code/i]);
-    const l2NameIdx = findColumn([/l2.*name/i, /service.*line.*name/i, /service.*line$/i]);
-    const l3CodeIdx = findColumn([/l3.*code/i, /service.*area.*code/i]);
-    const l3NameIdx = findColumn([/l3.*name/i, /service.*area.*name/i, /service.*area$/i]);
-    const l4CodeIdx = findColumn([/l4.*code/i, /activity.*code/i]);
-    const l4NameIdx = findColumn([/l4.*name/i, /activity.*name/i, /activity$/i]);
+    // Patterns support: "L2 Code", "Service Line", "Service (L2)" formats
+    const l2CodeIdx = findColumn([/l2.*code/i, /service.*line.*code/i, /service\s*\(l2\)/i]);
+    const l2NameIdx = findColumn([/l2.*name/i, /service.*line.*name/i, /service.*line$/i, /service\s*\(l2\)/i]);
+    const l3CodeIdx = findColumn([/l3.*code/i, /service.*area.*code/i, /services?\s*\(l3\)/i]);
+    const l3NameIdx = findColumn([/l3.*name/i, /service.*area.*name/i, /service.*area$/i, /services?\s*\(l3\)/i]);
+    const l4CodeIdx = findColumn([/l4.*code/i, /activity.*code/i, /services?\s*\(l4\)/i]);
+    const l4NameIdx = findColumn([/l4.*name/i, /activity.*name/i, /activity$/i, /services?\s*\(l4\)/i]);
 
     const missingColumns = [];
     if (l2CodeIdx === -1) missingColumns.push("L2 Code");
