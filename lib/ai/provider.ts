@@ -83,18 +83,24 @@ ${c.priority ? `Priority: ${c.priority}` : ""}
         .join("\n\n---\n\n");
 
       // Build MSS section if context provided
+      // Extract first L3 code as example for the prompt
+      const exampleCode = mssContext
+        ? mssContext.match(/^\s{2}([^\s-][^-]*?)\s*-/m)?.[1]?.trim() || "Service Area Name"
+        : "";
+
       const mssSection = mssContext
         ? `
 SERVICE LINE TAXONOMY (L2 Service Line → L3 Service Area):
 ${mssContext}
 
-For each epic, assign the most appropriate L3 service area code (e.g., "CLD", "DBA") based on the epic's content.
+For each epic, assign the most appropriate L3 service area code EXACTLY as shown above (e.g., "${exampleCode}") based on the epic's content.
+The mssServiceAreaCode must match one of the L3 codes listed above exactly (case-insensitive).
 If no service area clearly applies, leave mssServiceAreaCode empty.
 `
         : "";
 
       // Include mssServiceAreaCode in JSON format only if MSS context is provided
-      const mssJsonField = mssContext ? `\n    "mssServiceAreaCode": "CLD",` : "";
+      const mssJsonField = mssContext ? `\n    "mssServiceAreaCode": "${exampleCode}",` : "";
 
       const prompt = `You are a product requirements analyst. Analyze the following use case cards and generate a set of Epics that cover the key themes and initiatives.
 
@@ -332,8 +338,19 @@ class MockProvider implements AIProvider {
       "Automation",
     ];
 
-    // Mock MSS codes for testing (only if mssContext provided)
-    const mockMssCodes = ["CLD", "DBA", "SEC", "NET", "APP", "INF"];
+    // Extract actual MSS codes from context (if provided)
+    // Context format: "  CodeName - Description" per line
+    const mockMssCodes: string[] = [];
+    if (_mssContext) {
+      const codeMatches = _mssContext.matchAll(/^\s{2}([^\s-][^-]*?)\s*-/gm);
+      for (const match of codeMatches) {
+        if (match[1]) mockMssCodes.push(match[1].trim());
+      }
+    }
+    // Fallback if no codes extracted
+    if (mockMssCodes.length === 0) {
+      mockMssCodes.push("Technology Strategy", "Commerce Technology", "Experience & Service Design");
+    }
 
     const epics: EpicData[] = [];
     const epicCount = Math.min(Math.max(2, Math.ceil(cards.length / 2)), 6);
