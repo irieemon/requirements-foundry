@@ -5,6 +5,8 @@
 - ✅ [v1.0 Generative Pipeline Fix](milestones/v1.0-ROADMAP.md) (Phases 1-9) — SHIPPED 2026-01-15
 - ✅ [v1.1 UX Polish](milestones/v1.1-ROADMAP.md) (Phases 10-12) — SHIPPED 2026-01-20
 - ✅ [v1.2 MSS Integration](milestones/v1.2-ROADMAP.md) (Phases 13-17) — SHIPPED 2026-01-27
+- 🚧 **v1.3 Contextual Upload** - Phases 18-20 (in progress)
+
 ## Overview
 
 This roadmap addressed three regressed generative flows: card analysis (frozen progress), epic generation (no progress indicator), and story generation (silent timeout failures). All flows now work with real-time progress feedback, plus subtask generation and performance optimizations.
@@ -77,6 +79,40 @@ See [v1.2 archive](milestones/v1.2-ROADMAP.md) for full details.
 
 </details>
 
+### 🚧 v1.3 Contextual Upload (In Progress)
+
+**Milestone Goal:** Enhance document analysis with user-provided project context and AI-driven clarifying questions
+
+#### Phase 18: Context Schema & Upload Form
+
+**Goal**: Add structured context fields during document upload including project basics, document classification, and notes
+**Depends on**: Phase 17 (v1.2 complete)
+**Research**: Unlikely (internal patterns, existing form components)
+**Plans**: TBD
+
+Plans:
+- [ ] 18-01: TBD (run /gsd:plan-phase 18 to break down)
+
+#### Phase 19: AI Question Generation
+
+**Goal**: After upload and initial context, AI reviews documents and generates one-shot clarifying questions for user to answer
+**Depends on**: Phase 18
+**Research**: Unlikely (existing Claude/LLM integration patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 19-01: TBD (run /gsd:plan-phase 19 to break down)
+
+#### Phase 20: Context Integration
+
+**Goal**: Card analysis receives full context (user-provided + AI Q&A answers) to produce better-informed requirements
+**Depends on**: Phase 19
+**Research**: Unlikely (extending existing card analysis flow)
+**Plans**: TBD
+
+Plans:
+- [ ] 20-01: TBD (run /gsd:plan-phase 20 to break down)
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -100,3 +136,6 @@ See [v1.2 archive](milestones/v1.2-ROADMAP.md) for full details.
 | 15. MSS Mapping to Work Items | v1.2 | 2/2 | Complete | 2026-01-20 |
 | 16. MSS Dashboard & Reporting | v1.2 | 1/1 | Complete | 2026-01-20 |
 | 17. MSS Export Integration | v1.2 | 1/1 | Complete | 2026-01-27 |
+| 18. Context Schema & Upload Form | v1.3 | 0/? | Not started | - |
+| 19. AI Question Generation | v1.3 | 0/? | Not started | - |
+| 20. Context Integration | v1.3 | 0/? | Not started | - |

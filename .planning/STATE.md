@@ -5,22 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-27)
 
 **Core value:** All generative flows complete successfully with real-time progress feedback.
-**Current focus:** Planning next milestone
+**Current focus:** v1.3 Contextual Upload - enhancing document analysis with user context and AI questions
 
 ## Current Position
 
-Phase: 17 of 17 (all phases complete)
-Plan: N/A
-Status: Ready for next milestone planning
-Last activity: 2026-01-27 — v1.2 milestone archived
+Phase: 18 of 20 (Context Schema & Upload Form)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-27 — Milestone v1.3 created
 
-Progress: ████████████████████ 100% (17/17 phases complete)
+Progress: ░░░░░░░░░░░░░░░░░░░░ 0%
 
 ## Milestones
 
 - **v1.0 Generative Pipeline Fix** — SHIPPED 2026-01-15
 - **v1.1 UX Polish** — SHIPPED 2026-01-20
 - **v1.2 MSS Integration** — SHIPPED 2026-01-27 (Phases 13-17)
+- **v1.3 Contextual Upload** — IN PROGRESS (Phases 18-20)
 
 ## Accumulated Context
 
@@ -47,25 +48,30 @@ None.
 - Milestone v1.0 shipped: 2026-01-15
 - Milestone v1.1 shipped: 2026-01-20
 - Milestone v1.2 shipped: 2026-01-27
+- Milestone v1.3 created: Contextual Upload, 3 phases (Phase 18-20)
 
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: v1.2 milestone complete
+Stopped at: Milestone v1.3 initialization
 Resume file: None
 
 ## Notes
 
-**v1.2 MSS Integration Shipped:**
-- L2/L3/L4 taxonomy schema with CSV import
-- Full CRUD management UI with hierarchy viewer
-- MSS selector on epics/stories with AI auto-assignment
-- Dashboard with coverage metrics and service line breakdown
-- JIRA export integration with inheritance support
+**v1.3 Contextual Upload Focus:**
+- Upload context form with structured fields (project basics, doc classification, notes)
+- AI clarifying questions generated after document review
+- Context-enhanced card analysis for better-informed requirements
 
-**Next Step:**
-Run /gsd:discuss-milestone to plan v1.3
+**User flow:**
+1. User uploads documents
+2. Context form appears with structured fields + notes
+3. AI reviews docs + context, generates clarifying questions
+4. User answers questions (one-shot)
+5. Card analysis proceeds with full context
 
 **Constraints:**
 - Keep existing shadcn/ui component library
 - Maintain all existing functionality
+- Context gathering happens during upload flow (not separate step)
+- AI questions are one-shot (not interactive chat)
