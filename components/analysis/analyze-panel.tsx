@@ -6,12 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Loader2, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import { Sparkles, Loader2, FileText, AlertCircle, CheckCircle, MessageCircleQuestion, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { RunProgressPanel } from "./run-progress-panel";
 import { useActiveRun } from "@/hooks/use-run-progress";
 import { analyzeProject, getPendingUploadCount } from "@/server/actions/analysis";
+import { getQuestionsForUpload, type QuestionStatus } from "@/server/actions/questions";
 import { AnalysisStatus, ExtractionStatus } from "@/lib/types";
+import { QuestionsPanel } from "@/components/uploads/questions-panel";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // ============================================
 // Types
@@ -25,6 +28,18 @@ interface Upload {
   wordCount: number | null;
   hasImages: boolean;
   _count: { cards: number };
+  context?: {
+    id: string;
+    aiQuestions: string | null;
+    aiAnswers: string | null;
+  } | null;
+}
+
+interface UploadQuestionStatus {
+  uploadId: string;
+  filename: string;
+  hasContext: boolean;
+  status: QuestionStatus;
 }
 
 interface AnalyzePanelProps {
@@ -106,6 +121,11 @@ export function AnalyzePanel({ projectId, uploads }: AnalyzePanelProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
 
+  // Questions integration
+  const [uploadsWithPendingQuestions, setUploadsWithPendingQuestions] = useState<UploadQuestionStatus[]>([]);
+  const [questionsExpanded, setQuestionsExpanded] = useState(false);
+  const [activeQuestionUploadId, setActiveQuestionUploadId] = useState<string | null>(null);
+
   // Check for any existing active run (with stale recovery detection)
   const { activeRunId, isChecking, recoveredFromStale, previousRunId } = useActiveRun(projectId);
 
@@ -124,6 +144,54 @@ export function AnalyzePanel({ projectId, uploads }: AnalyzePanelProps) {
       });
     }
   }, [recoveredFromStale, previousRunId]);
+
+  // Check question status for uploads with context
+  useEffect(() => {
+    async function checkQuestionStatus() {
+      const pendingQuestionUploads: UploadQuestionStatus[] = [];
+
+      // Only check pending uploads that have context
+      const uploadsToCheck = uploads.filter(
+        (u) =>
+          u.extractionStatus === ExtractionStatus.EXTRACTED &&
+          (u.analysisStatus === AnalysisStatus.PENDING ||
+            u.analysisStatus === AnalysisStatus.FAILED) &&
+          u.context // Has context data
+      );
+
+      for (const upload of uploadsToCheck) {
+        try {
+          const result = await getQuestionsForUpload(upload.id);
+
+          // Track uploads that have context and could benefit from questions
+          // Status is pending-questions or pending-answers (not complete)
+          if (result.status === "pending-questions" || result.status === "pending-answers") {
+            pendingQuestionUploads.push({
+              uploadId: upload.id,
+              filename: upload.filename || "Uploaded file",
+              hasContext: !!upload.context,
+              status: result.status,
+            });
+          }
+        } catch {
+          // Ignore errors, just don't show questions panel
+        }
+      }
+
+      setUploadsWithPendingQuestions(pendingQuestionUploads);
+
+      // Auto-expand if there are pending questions
+      if (pendingQuestionUploads.length > 0 && !questionsExpanded) {
+        setQuestionsExpanded(true);
+        // Set first upload as active if none selected
+        if (!activeQuestionUploadId) {
+          setActiveQuestionUploadId(pendingQuestionUploads[0].uploadId);
+        }
+      }
+    }
+
+    checkQuestionStatus();
+  }, [uploads, questionsExpanded, activeQuestionUploadId]);
 
   // Filter to only show extracted uploads
   const extractedUploads = uploads.filter(
@@ -188,6 +256,30 @@ export function AnalyzePanel({ projectId, uploads }: AnalyzePanelProps) {
   // Close progress panel
   const handleCloseProgress = () => {
     setCurrentRunId(null);
+  };
+
+  // Handle question completion for an upload
+  const handleQuestionComplete = (uploadId: string) => {
+    setUploadsWithPendingQuestions((prev) =>
+      prev.filter((u) => u.uploadId !== uploadId)
+    );
+    // Move to next upload if this was active
+    if (activeQuestionUploadId === uploadId) {
+      const remaining = uploadsWithPendingQuestions.filter((u) => u.uploadId !== uploadId);
+      setActiveQuestionUploadId(remaining.length > 0 ? remaining[0].uploadId : null);
+    }
+  };
+
+  // Handle question skip for an upload
+  const handleQuestionSkip = (uploadId: string) => {
+    setUploadsWithPendingQuestions((prev) =>
+      prev.filter((u) => u.uploadId !== uploadId)
+    );
+    // Move to next upload if this was active
+    if (activeQuestionUploadId === uploadId) {
+      const remaining = uploadsWithPendingQuestions.filter((u) => u.uploadId !== uploadId);
+      setActiveQuestionUploadId(remaining.length > 0 ? remaining[0].uploadId : null);
+    }
   };
 
   // Show loading state while checking for active run
@@ -273,6 +365,70 @@ export function AnalyzePanel({ projectId, uploads }: AnalyzePanelProps) {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Questions Panel - show when uploads have pending questions */}
+        {uploadsWithPendingQuestions.length > 0 && (
+          <Collapsible open={questionsExpanded} onOpenChange={setQuestionsExpanded}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-left transition-colors hover:bg-primary/10"
+              >
+                {questionsExpanded ? (
+                  <ChevronDown className="h-4 w-4 text-primary" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-primary" />
+                )}
+                <MessageCircleQuestion className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">
+                  {uploadsWithPendingQuestions.length} upload
+                  {uploadsWithPendingQuestions.length !== 1 ? "s" : ""} can benefit from clarifying questions
+                </span>
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  Optional
+                </Badge>
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3 space-y-3">
+              {/* Upload tabs if multiple */}
+              {uploadsWithPendingQuestions.length > 1 && (
+                <div className="flex gap-2 flex-wrap">
+                  {uploadsWithPendingQuestions.map((upload) => (
+                    <Button
+                      key={upload.uploadId}
+                      variant={activeQuestionUploadId === upload.uploadId ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setActiveQuestionUploadId(upload.uploadId)}
+                      className="text-xs"
+                    >
+                      {upload.filename}
+                      {upload.status === "pending-answers" && (
+                        <Badge variant="secondary" className="ml-1 text-[10px]">
+                          Has questions
+                        </Badge>
+                      )}
+                    </Button>
+                  ))}
+                </div>
+              )}
+
+              {/* Active upload's questions panel */}
+              {activeQuestionUploadId && (
+                <QuestionsPanel
+                  key={activeQuestionUploadId}
+                  uploadId={activeQuestionUploadId}
+                  uploadFilename={
+                    uploadsWithPendingQuestions.find((u) => u.uploadId === activeQuestionUploadId)
+                      ?.filename || "Upload"
+                  }
+                  hasContext={true}
+                  onComplete={() => handleQuestionComplete(activeQuestionUploadId)}
+                  onSkip={() => handleQuestionSkip(activeQuestionUploadId)}
+                />
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
         {/* Selection controls */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">

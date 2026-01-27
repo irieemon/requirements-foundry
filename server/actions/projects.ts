@@ -44,6 +44,13 @@ export async function getProject(id: string) {
           hasImages: true,
           createdAt: true,
           _count: { select: { cards: true } },
+          context: {
+            select: {
+              id: true,
+              aiQuestions: true,
+              aiAnswers: true,
+            },
+          },
         },
       },
       cards: {
