@@ -6,6 +6,7 @@ import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Upload as UploadIcon,
   Loader2,
@@ -20,6 +21,8 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getAcceptString } from "@/lib/documents/types";
+import { UploadContextForm } from "@/components/uploads/upload-context-form";
+import type { UploadContextFormData } from "@/lib/uploads/context-schema";
 
 // ============================================
 // Types
@@ -50,6 +53,7 @@ interface ProcessUploadRequest {
   filename: string;
   fileType: string;
   fileSize: number;
+  context?: UploadContextFormData;
 }
 
 interface MultiFileUploadProps {
@@ -89,6 +93,8 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [showContextForm, setShowContextForm] = useState(false);
+  const [contextData, setContextData] = useState<UploadContextFormData | null>(null);
 
   const acceptString = getAcceptString();
 
@@ -103,7 +109,14 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
       id: generateId(),
       status: "pending",
     }));
-    setFiles((prev) => [...prev, ...newFileItems]);
+    setFiles((prev) => {
+      const updated = [...prev, ...newFileItems];
+      // Show context form when first files are added
+      if (prev.length === 0 && updated.length > 0) {
+        setShowContextForm(true);
+      }
+      return updated;
+    });
   }, []);
 
   const removeFile = useCallback((id: string) => {
@@ -113,6 +126,8 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
   const clearFiles = useCallback(() => {
     setFiles([]);
     setProgress(0);
+    setShowContextForm(false);
+    setContextData(null);
   }, []);
 
   // ============================================
@@ -194,6 +209,7 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
           filename: file.name,
           fileType: file.type || "application/octet-stream",
           fileSize: file.size,
+          ...(contextData && Object.keys(contextData).length > 0 && { context: contextData }),
         };
 
         const response = await fetch("/api/uploads", {
@@ -262,12 +278,29 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
   };
 
   // ============================================
+  // Context Form Handlers
+  // ============================================
+
+  const handleContextSubmit = useCallback((data: UploadContextFormData) => {
+    setContextData(data);
+    setShowContextForm(false);
+    // Auto-start upload after context is provided
+    // We'll trigger upload in useEffect or let user click button
+  }, []);
+
+  const handleContextSkip = useCallback(() => {
+    setContextData(null);
+    setShowContextForm(false);
+  }, []);
+
+  // ============================================
   // Render
   // ============================================
 
   const pendingCount = files.filter((f) => f.status === "pending").length;
   const successCount = files.filter((f) => f.status === "success").length;
   const errorCount = files.filter((f) => f.status === "error").length;
+  const contextReady = !showContextForm; // Context form completed or skipped
 
   return (
     <div className="space-y-4">
@@ -411,9 +444,26 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
         </div>
       )}
 
-      {/* Upload Button */}
-      {files.length > 0 && pendingCount > 0 && (
-        <div className="flex items-center justify-end pt-2 border-t">
+      {/* Context Form - shown after files selected, before upload */}
+      {files.length > 0 && pendingCount > 0 && showContextForm && !uploading && (
+        <Card>
+          <CardContent className="pt-4">
+            <UploadContextForm
+              onSubmit={handleContextSubmit}
+              onSkip={handleContextSkip}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Upload Button - shown after context form is completed/skipped */}
+      {files.length > 0 && pendingCount > 0 && contextReady && (
+        <div className="flex items-center justify-end gap-2 pt-2 border-t">
+          {contextData && Object.keys(contextData).length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              ✓ Context provided
+            </span>
+          )}
           <Button onClick={handleUpload} disabled={uploading || pendingCount === 0}>
             {uploading ? (
               <>

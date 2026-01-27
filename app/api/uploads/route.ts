@@ -21,6 +21,17 @@ export const maxDuration = 30;
 // Types
 // ============================================
 
+interface UploadContextData {
+  projectType?: string;
+  businessDomain?: string;
+  targetAudience?: string;
+  documentType?: string;
+  confidentiality?: string;
+  sourceSystem?: string;
+  notes?: string;
+  keyTerms?: string;
+}
+
 interface UploadRequest {
   projectId: string;
   blobUrl: string;
@@ -28,6 +39,7 @@ interface UploadRequest {
   filename: string;
   fileType: string;
   fileSize: number;
+  context?: UploadContextData;
 }
 
 interface UploadResult {
@@ -54,7 +66,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
   try {
     // Parse JSON body (not FormData - file is already in Blob)
     const body = (await request.json()) as UploadRequest;
-    const { projectId, blobUrl, blobPathname, filename, fileType, fileSize } = body;
+    const { projectId, blobUrl, blobPathname, filename, fileType, fileSize, context } = body;
 
     // Validate required fields
     if (!projectId || !blobUrl || !filename) {
@@ -188,6 +200,23 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
           height: img.height,
           description: img.description,
         })),
+      });
+    }
+
+    // Store upload context if provided
+    if (context && Object.keys(context).length > 0) {
+      await db.uploadContext.create({
+        data: {
+          uploadId: upload.id,
+          projectType: context.projectType,
+          businessDomain: context.businessDomain,
+          targetAudience: context.targetAudience,
+          documentType: context.documentType,
+          confidentiality: context.confidentiality,
+          sourceSystem: context.sourceSystem,
+          notes: context.notes,
+          keyTerms: context.keyTerms,
+        },
       });
     }
 
