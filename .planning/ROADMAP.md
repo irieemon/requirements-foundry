@@ -98,10 +98,11 @@ Plans:
 **Goal**: After upload and initial context, AI reviews documents and generates one-shot clarifying questions for user to answer
 **Depends on**: Phase 18
 **Research**: Unlikely (existing Claude/LLM integration patterns)
-**Plans**: TBD
+**Plans**: 2 planned
 
 Plans:
-- [ ] 19-01: TBD (run /gsd:plan-phase 19 to break down)
+- [ ] 19-01: Data Model & AI Service — UploadContext extension, question generator, server actions
+- [ ] 19-02: UI Components & Flow Integration — Question display component, upload/analysis flow changes
 
 #### Phase 20: Context Integration
 
@@ -137,5 +138,5 @@ Plans:
 | 16. MSS Dashboard & Reporting | v1.2 | 1/1 | Complete | 2026-01-20 |
 | 17. MSS Export Integration | v1.2 | 1/1 | Complete | 2026-01-27 |
 | 18. Context Schema & Upload Form | v1.3 | 1/1 | Complete | 2026-01-27 |
-| 19. AI Question Generation | v1.3 | 0/? | Not started | - |
+| 19. AI Question Generation | v1.3 | 0/2 | Planned | - |
 | 20. Context Integration | v1.3 | 0/? | Not started | - |
