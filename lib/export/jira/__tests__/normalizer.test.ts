@@ -24,6 +24,7 @@ function createMockSubtask(id: string, code: string) {
     effort: "S" as const,
     sortOrder: 0,
     storyId: "story-1",
+    runId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -42,8 +43,10 @@ function createMockStory(id: string, code: string, subtasks: ReturnType<typeof c
     effort: "M" as const,
     sortOrder: 0,
     epicId: "epic-1",
+    runId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    mssServiceAreaId: null,
     subtasks,
   };
 }
@@ -67,6 +70,9 @@ function createMockEpic(
     sortOrder: 0,
     projectId: "project-1",
     runId: null,
+    priority: null,
+    cardIds: null,
+    mssServiceAreaId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     stories,
@@ -80,9 +86,6 @@ function createExtractedData(
     project: {
       id: "project-1",
       name: "Test Project",
-      description: "Test project description",
-      createdAt: new Date(),
-      updatedAt: new Date(),
     },
     epics,
   };

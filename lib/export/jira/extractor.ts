@@ -27,7 +27,7 @@ export async function extractExportData(
   // Build where clause based on scope
   const whereClause = buildWhereClause(projectId, scope);
 
-  // Fetch epics with all relations
+  // Fetch epics with all relations (including MSS)
   const epics = await db.epic.findMany({
     where: whereClause,
     orderBy: [
@@ -35,9 +35,15 @@ export async function extractExportData(
       { code: "asc" },
     ],
     include: {
+      mssServiceArea: {
+        include: { serviceLine: true },
+      },
       stories: {
         orderBy: { code: "asc" },
         include: {
+          mssServiceArea: {
+            include: { serviceLine: true },
+          },
           subtasks: {
             orderBy: { code: "asc" },
           },

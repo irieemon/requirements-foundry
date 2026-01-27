@@ -3,7 +3,7 @@
 // Requirements Foundry - Jira Export Engine
 // ═══════════════════════════════════════════════════════════════
 
-import type { Epic, Story, Subtask } from "@prisma/client";
+import type { Epic, Story, Subtask, MssServiceArea, MssServiceLine } from "@prisma/client";
 
 // ─────────────────────────────────────────────────────────────────
 // Configuration Types
@@ -30,8 +30,19 @@ export interface ExportConfig {
 // Data Types
 // ─────────────────────────────────────────────────────────────────
 
-export type StoryWithSubtasks = Story & { subtasks: Subtask[] };
-export type EpicWithRelations = Epic & { stories: StoryWithSubtasks[] };
+// MSS relation type for nested include
+export type MssServiceAreaWithLine = MssServiceArea & {
+  serviceLine: MssServiceLine;
+};
+
+export type StoryWithSubtasks = Story & {
+  subtasks: Subtask[];
+  mssServiceArea?: MssServiceAreaWithLine | null;
+};
+export type EpicWithRelations = Epic & {
+  stories: StoryWithSubtasks[];
+  mssServiceArea?: MssServiceAreaWithLine | null;
+};
 
 export interface ExtractedData {
   project: { id: string; name: string };
@@ -59,6 +70,9 @@ export interface NormalizedItem {
   impact?: string | null;
   theme?: string | null;
   dependencies?: string | null;
+  // MSS (Master Service Schedule) fields
+  mssServiceLineName?: string | null;
+  mssServiceAreaName?: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────
