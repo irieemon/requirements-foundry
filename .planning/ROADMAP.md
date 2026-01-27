@@ -101,7 +101,7 @@ Plans:
 **Plans**: 2 planned
 
 Plans:
-- [ ] 19-01: Data Model & AI Service — UploadContext extension, question generator, server actions
+- [x] 19-01: Data Model & AI Service — UploadContext extension, question generator, server actions — completed 2026-01-27
 - [ ] 19-02: UI Components & Flow Integration — Question display component, upload/analysis flow changes
 
 #### Phase 20: Context Integration
@@ -138,5 +138,5 @@ Plans:
 | 16. MSS Dashboard & Reporting | v1.2 | 1/1 | Complete | 2026-01-20 |
 | 17. MSS Export Integration | v1.2 | 1/1 | Complete | 2026-01-27 |
 | 18. Context Schema & Upload Form | v1.3 | 1/1 | Complete | 2026-01-27 |
-| 19. AI Question Generation | v1.3 | 0/2 | Planned | - |
+| 19. AI Question Generation | v1.3 | 1/2 | In progress | - |
 | 20. Context Integration | v1.3 | 0/? | Not started | - |
