@@ -69,11 +69,41 @@ model Upload {
   cards      Card[]
   images     DocumentImage[]
   runUploads RunUpload[]
+  context    UploadContext?
 
   @@index([projectId])
   @@index([extractionStatus])
   @@index([analysisStatus])
   @@index([projectId, analysisStatus])
+}
+
+// ============================================
+// Upload Context (User-provided metadata)
+// ============================================
+
+model UploadContext {
+  id        String @id @default(cuid())
+  uploadId  String @unique
+  upload    Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  // Project Basics
+  projectType    String? // "new-development", "enhancement", "migration", "maintenance", "other"
+  businessDomain String? // e.g., "healthcare", "finance", "retail"
+  targetAudience String? @db.Text // description of end users
+
+  // Document Classification
+  documentType    String? // "requirements", "design", "meeting-notes", "analysis", "specification", "other"
+  confidentiality String? // "public", "internal", "confidential"
+  sourceSystem    String? // where the doc came from
+
+  // Freeform
+  notes    String? @db.Text // any additional context
+  keyTerms String? // comma-separated domain terms
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([uploadId])
 }
 
 model DocumentImage {
