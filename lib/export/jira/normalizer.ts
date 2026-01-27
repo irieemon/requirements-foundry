@@ -3,7 +3,7 @@
 // Flattens hierarchy and assigns temporary IDs for Jira import
 // ═══════════════════════════════════════════════════════════════
 
-import type { ExtractedData, NormalizedItem, EpicWithRelations, StoryWithSubtasks } from "./types";
+import type { ExtractedData, NormalizedItem, EpicWithRelations, StoryWithSubtasks, MssServiceAreaWithLine } from "./types";
 import type { Subtask } from "@prisma/client";
 
 // ─────────────────────────────────────────────────────────────────
@@ -40,6 +40,9 @@ function normalizeEpic(epic: EpicWithRelations, index: number): NormalizedItem {
     effort: epic.effort,
     impact: epic.impact,
     theme: epic.theme,
+    // MSS fields
+    mssServiceLineName: epic.mssServiceArea?.serviceLine?.name ?? null,
+    mssServiceAreaName: epic.mssServiceArea?.name ?? null,
   };
 }
 
@@ -47,8 +50,11 @@ function normalizeStory(
   story: StoryWithSubtasks,
   index: number,
   parentTempId: string,
-  epicCode: string
+  epicCode: string,
+  epicMssServiceArea?: MssServiceAreaWithLine | null
 ): NormalizedItem {
+  // Story inherits MSS from epic if not directly assigned
+  const effectiveMss = story.mssServiceArea ?? epicMssServiceArea;
   return {
     tempId: generateTempId("S", index),
     parentTempId,
@@ -63,6 +69,9 @@ function normalizeStory(
     technicalNotes: story.technicalNotes,
     priority: story.priority,
     effort: story.effort,
+    // MSS fields (own or inherited from epic)
+    mssServiceLineName: effectiveMss?.serviceLine?.name ?? null,
+    mssServiceAreaName: effectiveMss?.name ?? null,
   };
 }
 
@@ -117,7 +126,8 @@ export function normalizeForExport(
         story,
         storyIndex++,
         epicItem.tempId,
-        epic.code
+        epic.code,
+        epic.mssServiceArea // Pass epic's MSS for inheritance
       );
       items.push(storyItem);
 
