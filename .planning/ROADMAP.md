@@ -4,7 +4,7 @@
 
 - ✅ [v1.0 Generative Pipeline Fix](milestones/v1.0-ROADMAP.md) (Phases 1-9) — SHIPPED 2026-01-15
 - ✅ [v1.1 UX Polish](milestones/v1.1-ROADMAP.md) (Phases 10-12) — SHIPPED 2026-01-20
-- 🚧 **v1.2 MSS Integration** — Phases 13-17 (in progress)
+- ✅ **v1.2 MSS Integration** — Phases 13-17 (COMPLETE 2026-01-27)
 
 ## Overview
 
@@ -58,7 +58,7 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full details.
 
 </details>
 
-### 🚧 v1.2 MSS Integration (In Progress)
+### ✅ v1.2 MSS Integration (Complete)
 
 **Milestone Goal:** Import and manage Master Service Schedule (MSS) taxonomy, map work items to service lines for effort visibility
 
@@ -95,25 +95,25 @@ Plans:
 - [ ] 15-01: Schema & AI Integration (mssServiceAreaId FK, AI auto-assignment)
 - [ ] 15-02: UI Integration (MSS selector, epic/story card display)
 
-#### Phase 16: MSS Dashboard & Reporting
+#### Phase 16: MSS Dashboard & Reporting ✅
 
 **Goal**: View work items grouped by service line, effort summaries
 **Depends on**: Phase 15
-**Research**: Unlikely (internal aggregation)
-**Plans**: TBD
+**Research**: No (internal aggregation)
+**Plans**: 1
 
 Plans:
-- [ ] 16-01: TBD (run /gsd:plan-phase 16 to break down)
+- [x] 16-01: Dashboard page with coverage metrics and service line breakdown — completed 2026-01-20
 
-#### Phase 17: MSS Export Integration
+#### Phase 17: MSS Export Integration ✅
 
 **Goal**: Include MSS mappings in JIRA export
 **Depends on**: Phase 16
 **Research**: Unlikely (extending existing JIRA export)
-**Plans**: TBD
+**Plans**: 1
 
 Plans:
-- [ ] 17-01: TBD (run /gsd:plan-phase 17 to break down)
+- [x] 17-01: MSS Export Integration — completed 2026-01-27
 
 ## Progress
 
@@ -136,5 +136,5 @@ Plans:
 | 13. MSS Data Model & Import | v1.2 | 0/? | Not started | - |
 | 14. MSS Management UI | v1.2 | 0/? | Not started | - |
 | 15. MSS Mapping to Work Items | v1.2 | 0/? | Not started | - |
-| 16. MSS Dashboard & Reporting | v1.2 | 0/? | Not started | - |
-| 17. MSS Export Integration | v1.2 | 0/? | Not started | - |
+| 16. MSS Dashboard & Reporting | v1.2 | 1/1 | Complete | 2026-01-20 |
+| 17. MSS Export Integration | v1.2 | 1/1 | Complete | 2026-01-27 |
