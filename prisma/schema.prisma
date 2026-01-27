@@ -100,6 +100,12 @@ model UploadContext {
   notes    String? @db.Text // any additional context
   keyTerms String? // comma-separated domain terms
 
+  // AI Question Generation
+  aiQuestions          String?   @db.Text // JSON array of generated questions
+  aiAnswers            String?   @db.Text // JSON array of user answers (parallel array)
+  questionsGeneratedAt DateTime?          // When AI generated questions
+  answersSubmittedAt   DateTime?          // When user submitted answers
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
