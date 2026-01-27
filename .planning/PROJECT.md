@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Requirements Foundry is a tool that transforms uploaded documents into structured requirements (cards), groups them into epics, generates user stories with AI, and breaks stories down into implementable subtasks. The generative pipeline works reliably with real-time progress feedback, and the UI provides a polished, modern dashboard with contextual navigation and preview-first JIRA export.
+Requirements Foundry is a tool that transforms uploaded documents into structured requirements (cards), groups them into epics, generates user stories with AI, and breaks stories down into implementable subtasks. Work items can be mapped to MSS (Master Service Schedule) taxonomy for service line visibility. The generative pipeline works reliably with real-time progress feedback, and the UI provides a polished dashboard with contextual navigation, MSS management, and preview-first JIRA export.
 
 ## Core Value
 
@@ -34,14 +34,15 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 - Modern card redesign for epics/stories/subtasks — v1.1
 - JIRA export preview showing exact import hierarchy — v1.1
 - Tabbed export wizard with validation indicators — v1.1
+- MSS taxonomy import (L2/L3/L4 service hierarchy) — v1.2
+- MSS management UI (CRUD for service entries) — v1.2
+- MSS mapping to epics/stories with AI auto-assignment — v1.2
+- MSS dashboard with coverage metrics — v1.2
+- MSS export integration with JIRA — v1.2
 
 ### Active
 
-- [ ] MSS taxonomy import (L2/L3/L4 service hierarchy)
-- [ ] MSS management UI (CRUD for service entries)
-- [ ] MSS mapping to epics/stories
-- [ ] MSS dashboard and effort reporting
-- [ ] MSS export integration with JIRA
+(No active requirements - ready for next milestone planning)
 
 ### Out of Scope
 
@@ -51,14 +52,14 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 
 ## Context
 
-**Shipped v1.1 with:**
-- ~30,500 lines of TypeScript/TSX
+**Shipped v1.2 with:**
+- ~34,435 lines of TypeScript/TSX
 - Tech stack: Next.js, Prisma, Claude AI, Vercel, @vercel/blob
-- 12 phases (including decimals), 27 plans executed over 8 days
+- 17 phases, 35 plans executed over 15 days
 - All generative flows working with real-time progress
-- Polished modern UI with Notion/Linear aesthetic
-- Preview-first JIRA export with tabbed wizard
-- Client-side Blob uploads supporting large files
+- Complete MSS taxonomy management (import, CRUD, mapping, dashboard, export)
+- AI auto-assignment of MSS during epic generation
+- Preview-first JIRA export with MSS integration
 
 ## Constraints
 
@@ -82,6 +83,10 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 | Client-side Blob uploads | Bypasses 4.5MB serverless body limit | Good |
 | Container/Presentational card pattern | Better separation of concerns, testability | Good |
 | Tabbed interface for wizard steps | Reduces cognitive load, clear section separation | Good |
+| Upsert pattern for MSS CSV import | Same file can be re-imported safely | Good |
+| Polymorphic MSS dialogs | Single component handles L2/L3/L4 levels | Good |
+| MSS inheritance (story from epic) | Reduces manual mapping, consistent in export | Good |
+| Arrow format for MSS in exports | "Service Line → Service Area" clear hierarchy | Good |
 
 ---
-*Last updated: 2026-01-20 after v1.1 milestone*
+*Last updated: 2026-01-27 after v1.2 milestone*

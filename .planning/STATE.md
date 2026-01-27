@@ -2,17 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-20)
+See: .planning/PROJECT.md (updated 2026-01-27)
 
 **Core value:** All generative flows complete successfully with real-time progress feedback.
-**Current focus:** v1.2 MSS Integration — Import and manage Master Service Schedule taxonomy
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 17 of 17 (MSS Export Integration) — Complete
-Plan: 1 of 1 complete
-Status: v1.2 Milestone Complete
-Last activity: 2026-01-27 — Phase 17 Plan 01 completed
+Phase: 17 of 17 (all phases complete)
+Plan: N/A
+Status: Ready for next milestone planning
+Last activity: 2026-01-27 — v1.2 milestone archived
 
 Progress: ████████████████████ 100% (17/17 phases complete)
 
@@ -20,24 +20,19 @@ Progress: ████████████████████ 100% (17/
 
 - **v1.0 Generative Pipeline Fix** — SHIPPED 2026-01-15
 - **v1.1 UX Polish** — SHIPPED 2026-01-20
-- **v1.2 MSS Integration** — COMPLETE 2026-01-27 (Phases 13-17)
+- **v1.2 MSS Integration** — SHIPPED 2026-01-27 (Phases 13-17)
 
 ## Accumulated Context
 
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table.
-Key decisions from v1.0:
-- Fire-and-confirm pattern for server action triggers
-- Frontend-only enhancement using existing polling data
-- Batch DB operations before parallelization
-- Limited parallelization (2-3 concurrent) respecting Claude API limits
 
-Key decisions from v1.1:
-- Preview tab default in export wizard for data-first UX
-- Nested collapsible tree pattern for hierarchy visualization
-- Tabbed interface for multi-section wizard steps
-- Client-side Blob upload for large file support
+Key decisions from v1.2:
+- Upsert pattern for MSS CSV import (idempotent re-imports)
+- Polymorphic dialogs for all MSS levels (L2/L3/L4)
+- Story MSS inheritance from epic with override capability
+- Arrow format for MSS hierarchy in exports
 
 ### Deferred Issues
 
@@ -51,25 +46,25 @@ None.
 
 - Milestone v1.0 shipped: 2026-01-15
 - Milestone v1.1 shipped: 2026-01-20
-- Milestone v1.2 next: MSS Integration (5 phases)
+- Milestone v1.2 shipped: 2026-01-27
 
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: v1.2 milestone complete, ready for /gsd:complete-milestone
+Stopped at: v1.2 milestone complete
 Resume file: None
 
 ## Notes
 
-**v1.2 MSS Integration Complete:**
-- Phase 13: MSS Data Model & Import (DB schema, CSV import) ✓
-- Phase 14: MSS Management UI (CRUD interface) ✓
-- Phase 15: MSS Mapping to Work Items (epics/stories) ✓
-- Phase 16: MSS Dashboard & Reporting (effort visibility) ✓
-- Phase 17: MSS Export Integration (JIRA) ✓
+**v1.2 MSS Integration Shipped:**
+- L2/L3/L4 taxonomy schema with CSV import
+- Full CRUD management UI with hierarchy viewer
+- MSS selector on epics/stories with AI auto-assignment
+- Dashboard with coverage metrics and service line breakdown
+- JIRA export integration with inheritance support
 
 **Next Step:**
-Run /gsd:complete-milestone to archive v1.2 and prepare for v1.3
+Run /gsd:discuss-milestone to plan v1.3
 
 **Constraints:**
 - Keep existing shadcn/ui component library

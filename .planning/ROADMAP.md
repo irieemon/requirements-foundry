@@ -4,8 +4,7 @@
 
 - ✅ [v1.0 Generative Pipeline Fix](milestones/v1.0-ROADMAP.md) (Phases 1-9) — SHIPPED 2026-01-15
 - ✅ [v1.1 UX Polish](milestones/v1.1-ROADMAP.md) (Phases 10-12) — SHIPPED 2026-01-20
-- ✅ **v1.2 MSS Integration** — Phases 13-17 (COMPLETE 2026-01-27)
-
+- ✅ [v1.2 MSS Integration](milestones/v1.2-ROADMAP.md) (Phases 13-17) — SHIPPED 2026-01-27
 ## Overview
 
 This roadmap addressed three regressed generative flows: card analysis (frozen progress), epic generation (no progress indicator), and story generation (silent timeout failures). All flows now work with real-time progress feedback, plus subtask generation and performance optimizations.
@@ -58,62 +57,25 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full details.
 
 </details>
 
-### ✅ v1.2 MSS Integration (Complete)
+<details>
+<summary>✅ v1.2 MSS Integration (Phases 13-17) — SHIPPED 2026-01-27</summary>
 
-**Milestone Goal:** Import and manage Master Service Schedule (MSS) taxonomy, map work items to service lines for effort visibility
+- [x] Phase 13: MSS Data Model & Import (1/1 plan) — completed 2026-01-20
+- [x] Phase 14: MSS Management UI (3/3 plans) — completed 2026-01-20
+- [x] Phase 15: MSS Mapping to Work Items (2/2 plans) — completed 2026-01-20
+- [x] Phase 16: MSS Dashboard & Reporting (1/1 plan) — completed 2026-01-20
+- [x] Phase 17: MSS Export Integration (1/1 plan) — completed 2026-01-27
 
-**Status:** Not started - ready for `/gsd:plan-phase 13`
+**Key accomplishments:**
+- L2/L3/L4 MSS taxonomy schema with flexible CSV import
+- Full CRUD management UI with collapsible hierarchy viewer
+- MSS selector on epics/stories with AI auto-assignment
+- Dashboard with coverage metrics and service line breakdown
+- JIRA export integration with inheritance support
 
-#### Phase 13: MSS Data Model & Import
+See [v1.2 archive](milestones/v1.2-ROADMAP.md) for full details.
 
-**Goal**: Create database schema for L2/L3/L4 service hierarchy, CSV import functionality
-**Depends on**: v1.1 complete
-**Research**: Unlikely (internal DB patterns, CSV parsing)
-**Plans**: TBD
-
-Plans:
-- [ ] 13-01: TBD (run /gsd:plan-phase 13 to break down)
-
-#### Phase 14: MSS Management UI
-
-**Goal**: CRUD interface to view, add, edit, delete MSS entries
-**Depends on**: Phase 13
-**Research**: Unlikely (existing CRUD patterns)
-**Plans**: TBD
-
-Plans:
-- [ ] 14-01: TBD (run /gsd:plan-phase 14 to break down)
-
-#### Phase 15: MSS Mapping to Work Items
-
-**Goal**: Add MSS selector to epics/stories, store relationships
-**Depends on**: Phase 14
-**Research**: No (existing patterns)
-**Plans**: 2
-
-Plans:
-- [ ] 15-01: Schema & AI Integration (mssServiceAreaId FK, AI auto-assignment)
-- [ ] 15-02: UI Integration (MSS selector, epic/story card display)
-
-#### Phase 16: MSS Dashboard & Reporting ✅
-
-**Goal**: View work items grouped by service line, effort summaries
-**Depends on**: Phase 15
-**Research**: No (internal aggregation)
-**Plans**: 1
-
-Plans:
-- [x] 16-01: Dashboard page with coverage metrics and service line breakdown — completed 2026-01-20
-
-#### Phase 17: MSS Export Integration ✅
-
-**Goal**: Include MSS mappings in JIRA export
-**Depends on**: Phase 16
-**Research**: Unlikely (extending existing JIRA export)
-**Plans**: 1
-
-Plans:
-- [x] 17-01: MSS Export Integration — completed 2026-01-27
+</details>
 
 ## Progress
 
@@ -133,8 +95,8 @@ Plans:
 | 10.2 KPI & Subtask UX | v1.1 | 1/1 | Complete | 2026-01-16 |
 | 11. Data Display & Hierarchy | v1.1 | 3/3 | Complete | 2026-01-20 |
 | 12. JIRA Export Preview | v1.1 | 2/2 | Complete | 2026-01-20 |
-| 13. MSS Data Model & Import | v1.2 | 0/? | Not started | - |
-| 14. MSS Management UI | v1.2 | 0/? | Not started | - |
-| 15. MSS Mapping to Work Items | v1.2 | 0/? | Not started | - |
+| 13. MSS Data Model & Import | v1.2 | 1/1 | Complete | 2026-01-20 |
+| 14. MSS Management UI | v1.2 | 3/3 | Complete | 2026-01-20 |
+| 15. MSS Mapping to Work Items | v1.2 | 2/2 | Complete | 2026-01-20 |
 | 16. MSS Dashboard & Reporting | v1.2 | 1/1 | Complete | 2026-01-20 |
 | 17. MSS Export Integration | v1.2 | 1/1 | Complete | 2026-01-27 |
