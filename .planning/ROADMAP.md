@@ -88,10 +88,10 @@ See [v1.2 archive](milestones/v1.2-ROADMAP.md) for full details.
 **Goal**: Add structured context fields during document upload including project basics, document classification, and notes
 **Depends on**: Phase 17 (v1.2 complete)
 **Research**: Unlikely (internal patterns, existing form components)
-**Plans**: TBD
+**Plans**: 1
 
 Plans:
-- [ ] 18-01: TBD (run /gsd:plan-phase 18 to break down)
+- [ ] 18-01: Context Schema & Upload Form Integration
 
 #### Phase 19: AI Question Generation
 
@@ -136,6 +136,6 @@ Plans:
 | 15. MSS Mapping to Work Items | v1.2 | 2/2 | Complete | 2026-01-20 |
 | 16. MSS Dashboard & Reporting | v1.2 | 1/1 | Complete | 2026-01-20 |
 | 17. MSS Export Integration | v1.2 | 1/1 | Complete | 2026-01-27 |
-| 18. Context Schema & Upload Form | v1.3 | 0/? | Not started | - |
+| 18. Context Schema & Upload Form | v1.3 | 0/1 | Planned | - |
 | 19. AI Question Generation | v1.3 | 0/? | Not started | - |
 | 20. Context Integration | v1.3 | 0/? | Not started | - |
