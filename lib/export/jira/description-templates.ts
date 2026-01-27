@@ -28,12 +28,33 @@ function formatBulletList(items: string[]): string {
   return items.map((item) => `* ${item}`).join("\n");
 }
 
+/**
+ * Formats MSS service area info for display.
+ * Returns "Service Line → Service Area" format for clear hierarchy.
+ */
+function formatMssSection(item: NormalizedItem): string | null {
+  if (!item.mssServiceAreaName) return null;
+
+  const parts = [item.mssServiceLineName, item.mssServiceAreaName]
+    .filter(Boolean)
+    .join(" → ");
+
+  return parts ? `**Service Area:** ${parts}` : null;
+}
+
 // ─────────────────────────────────────────────────────────────────
 // Compact Templates
 // ─────────────────────────────────────────────────────────────────
 
 function formatCompactEpic(item: NormalizedItem): string {
   const parts: string[] = [];
+
+  // MSS service area first (if assigned)
+  const mss = formatMssSection(item);
+  if (mss) {
+    parts.push(mss);
+    parts.push(""); // blank line separator
+  }
 
   if (item.description) {
     parts.push(item.description);
@@ -48,6 +69,13 @@ function formatCompactEpic(item: NormalizedItem): string {
 
 function formatCompactStory(item: NormalizedItem): string {
   const parts: string[] = [];
+
+  // MSS service area first (if assigned)
+  const mss = formatMssSection(item);
+  if (mss) {
+    parts.push(mss);
+    parts.push(""); // blank line separator
+  }
 
   if (item.userStory) {
     parts.push(item.userStory);
@@ -75,6 +103,15 @@ function formatFullEpic(item: NormalizedItem): string {
   if (item.description) {
     parts.push("## Overview");
     parts.push(item.description);
+  }
+
+  // MSS Service Area section (after Overview)
+  if (item.mssServiceAreaName) {
+    const mssPath = [item.mssServiceLineName, item.mssServiceAreaName]
+      .filter(Boolean)
+      .join(" → ");
+    parts.push("\n## Service Area");
+    parts.push(mssPath);
   }
 
   if (item.businessValue) {
@@ -106,6 +143,15 @@ function formatFullStory(item: NormalizedItem): string {
   if (item.userStory) {
     parts.push("## User Story");
     parts.push(item.userStory);
+  }
+
+  // MSS Service Area section (after User Story)
+  if (item.mssServiceAreaName) {
+    const mssPath = [item.mssServiceLineName, item.mssServiceAreaName]
+      .filter(Boolean)
+      .join(" → ");
+    parts.push("\n## Service Area");
+    parts.push(mssPath);
   }
 
   if (item.persona) {
