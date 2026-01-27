@@ -4,7 +4,9 @@ import { MssImportDialog } from "@/components/mss/mss-import-dialog";
 import { MssStatsCard } from "@/components/mss/mss-stats-card";
 import { MssClearDialog } from "@/components/mss/mss-clear-dialog";
 import { PageHeader } from "@/components/layout/page-header";
-import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Upload, BarChart3 } from "lucide-react";
+import Link from "next/link";
 
 export default async function MssPage() {
   const [hierarchyResult, statsResult] = await Promise.all([
@@ -22,6 +24,12 @@ export default async function MssPage() {
         description="Manage L2/L3/L4 service hierarchy"
         actions={
           <div className="flex items-center gap-2">
+            <Link href="/mss/dashboard">
+              <Button variant="outline" size="sm">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+            </Link>
             <MssImportDialog />
             <MssClearDialog stats={stats} />
           </div>

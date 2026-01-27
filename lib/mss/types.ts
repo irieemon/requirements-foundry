@@ -106,3 +106,45 @@ export interface MssAssignmentResult {
   success: boolean;
   error?: string;
 }
+
+// ============================================
+// MSS Coverage & Dashboard Types
+// ============================================
+
+/**
+ * Overall coverage metrics for the MSS dashboard
+ */
+export interface MssCoverageStats {
+  totalEpics: number;
+  assignedEpics: number;
+  unassignedEpics: number;
+  epicCoveragePercent: number;
+  totalStories: number;
+  assignedStories: number;
+  unassignedStories: number;
+  storyCoveragePercent: number;
+}
+
+/**
+ * Coverage stats for a single L3 Service Area
+ */
+export interface MssServiceAreaCoverage {
+  id: string;
+  code: string;
+  name: string;
+  epicCount: number;
+  storyCount: number;
+  epicTitles: string[];
+}
+
+/**
+ * Coverage stats for a single L2 Service Line with nested L3 breakdown
+ */
+export interface MssServiceLineCoverage {
+  id: string;
+  code: string;
+  name: string;
+  totalEpics: number;
+  totalStories: number;
+  serviceAreas: MssServiceAreaCoverage[];
+}

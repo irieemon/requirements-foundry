@@ -9,6 +9,9 @@ import type {
   MssServiceAreaInput,
   MssActivityInput,
   MssAssignmentResult,
+  MssCoverageStats,
+  MssServiceLineCoverage,
+  MssServiceAreaCoverage,
 } from "@/lib/mss/types";
 import { Prisma } from "@prisma/client";
 
@@ -535,5 +538,159 @@ export async function getMssServiceAreaByCode(
   } catch (error) {
     console.error("Failed to get MSS service area by code:", error);
     return null;
+  }
+}
+
+// ============================================
+// MSS Coverage & Dashboard Operations
+// ============================================
+
+/**
+ * Get overall coverage statistics for MSS assignments
+ * Shows how many epics/stories have MSS service area assignments
+ */
+export async function getMssCoverageStats(): Promise<
+  | { success: true; data: MssCoverageStats }
+  | { success: false; error: string }
+> {
+  try {
+    const [
+      totalEpics,
+      assignedEpics,
+      totalStories,
+      assignedStories,
+    ] = await Promise.all([
+      db.epic.count(),
+      db.epic.count({ where: { mssServiceAreaId: { not: null } } }),
+      db.story.count(),
+      // Story is "assigned" if it has its own MSS assignment OR its epic has one
+      db.story.count({
+        where: {
+          OR: [
+            { mssServiceAreaId: { not: null } },
+            { epic: { mssServiceAreaId: { not: null } } },
+          ],
+        },
+      }),
+    ]);
+
+    const epicCoveragePercent = totalEpics > 0
+      ? Math.round((assignedEpics / totalEpics) * 100)
+      : 0;
+    const storyCoveragePercent = totalStories > 0
+      ? Math.round((assignedStories / totalStories) * 100)
+      : 0;
+
+    return {
+      success: true,
+      data: {
+        totalEpics,
+        assignedEpics,
+        unassignedEpics: totalEpics - assignedEpics,
+        epicCoveragePercent,
+        totalStories,
+        assignedStories,
+        unassignedStories: totalStories - assignedStories,
+        storyCoveragePercent,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to get MSS coverage stats:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Get coverage breakdown by L2 Service Line with nested L3 details
+ * Shows which service lines have assigned epics/stories
+ */
+export async function getMssCoverageByServiceLine(): Promise<
+  | { success: true; data: MssServiceLineCoverage[] }
+  | { success: false; error: string }
+> {
+  try {
+    // Get all service lines with their service areas
+    const serviceLines = await db.mssServiceLine.findMany({
+      include: {
+        serviceAreas: {
+          include: {
+            epics: {
+              select: { id: true, title: true },
+            },
+            stories: {
+              select: { id: true },
+            },
+          },
+          orderBy: { code: "asc" },
+        },
+      },
+      orderBy: { code: "asc" },
+    });
+
+    // Also get stories that inherit MSS from their epic (no direct assignment)
+    const storiesWithInheritedMss = await db.story.findMany({
+      where: {
+        mssServiceAreaId: null,
+        epic: { mssServiceAreaId: { not: null } },
+      },
+      select: {
+        id: true,
+        epic: {
+          select: { mssServiceAreaId: true },
+        },
+      },
+    });
+
+    // Build a map of service area ID -> inherited story count
+    const inheritedStoryCounts = new Map<string, number>();
+    for (const story of storiesWithInheritedMss) {
+      const areaId = story.epic.mssServiceAreaId!;
+      inheritedStoryCounts.set(areaId, (inheritedStoryCounts.get(areaId) || 0) + 1);
+    }
+
+    // Transform to coverage structure
+    const coverage: MssServiceLineCoverage[] = serviceLines.map((sl) => {
+      const serviceAreas: MssServiceAreaCoverage[] = sl.serviceAreas.map((sa) => {
+        const directStoryCount = sa.stories.length;
+        const inheritedStoryCount = inheritedStoryCounts.get(sa.id) || 0;
+
+        return {
+          id: sa.id,
+          code: sa.code,
+          name: sa.name,
+          epicCount: sa.epics.length,
+          storyCount: directStoryCount + inheritedStoryCount,
+          epicTitles: sa.epics.map((e) => e.title),
+        };
+      });
+
+      const totalEpics = serviceAreas.reduce((sum, sa) => sum + sa.epicCount, 0);
+      const totalStories = serviceAreas.reduce((sum, sa) => sum + sa.storyCount, 0);
+
+      return {
+        id: sl.id,
+        code: sl.code,
+        name: sl.name,
+        totalEpics,
+        totalStories,
+        serviceAreas,
+      };
+    });
+
+    // Only return service lines that have at least one assignment
+    const coverageWithAssignments = coverage.filter(
+      (sl) => sl.totalEpics > 0 || sl.totalStories > 0
+    );
+
+    return { success: true, data: coverageWithAssignments };
+  } catch (error) {
+    console.error("Failed to get MSS coverage by service line:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
