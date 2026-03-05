@@ -172,7 +172,7 @@ Phases 21 and 22 can run in parallel. Phase 23 depends on both. Then 24, then 25
 | 18. Context Schema & Upload Form | v1.3 | 1/1 | Complete | 2026-01-27 |
 | 19. AI Question Generation | v1.3 | 1/2 | Paused | - |
 | 20. Context Integration | v1.3 | 0/? | Paused | - |
-| 21. Application Code Migration | v2.0 | 4/5 | Gap closure | - |
+| 21. Application Code Migration | 5/5 | Complete   | 2026-03-05 | - |
 | 22. Infrastructure Foundation | v2.0 | 0/? | Not started | - |
 | 23. Compute and Deployment | v2.0 | 0/? | Not started | - |
 | 24. CI/CD and Operations | v2.0 | 0/? | Not started | - |
