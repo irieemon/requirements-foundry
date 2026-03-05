@@ -1,4 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
+import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import {
   CardData,
   EpicData,
@@ -31,34 +32,49 @@ export interface AIProvider {
 }
 
 // ============================================
-// Check if API key is available
+// AWS Credential Detection
 // ============================================
 
-export function hasAnthropicKey(): boolean {
-  return !!process.env.ANTHROPIC_API_KEY;
+let _credentialCheckResult: boolean | null = null;
+
+export async function hasAwsCredentials(): Promise<boolean> {
+  if (_credentialCheckResult !== null) {
+    return _credentialCheckResult;
+  }
+  try {
+    await fromNodeProviderChain()();
+    _credentialCheckResult = true;
+  } catch {
+    _credentialCheckResult = false;
+  }
+  return _credentialCheckResult;
 }
 
 // ============================================
 // Get the appropriate provider
 // ============================================
 
-export function getAIProvider(): AIProvider {
-  if (hasAnthropicKey()) {
-    return new AnthropicProvider();
+export async function getAIProvider(): Promise<AIProvider> {
+  if (process.env.MOCK_MODE === "true") {
+    return new MockProvider();
   }
+  if (await hasAwsCredentials()) {
+    return new BedrockProvider();
+  }
+  console.warn("No AWS credentials found, falling back to MockProvider");
   return new MockProvider();
 }
 
 // ============================================
-// Anthropic Provider
+// Bedrock Provider
 // ============================================
 
-class AnthropicProvider implements AIProvider {
-  private client: Anthropic;
+class BedrockProvider implements AIProvider {
+  private client: AnthropicBedrock;
 
   constructor() {
-    this.client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+    this.client = new AnthropicBedrock({
+      awsRegion: process.env.AWS_REGION || "us-east-1",
     });
   }
 
@@ -136,7 +152,7 @@ Return ONLY valid JSON array:
 ]`;
 
       const message = await this.client.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "anthropic.claude-sonnet-4-20250514-v1:0",
         max_tokens: 4096,
         messages: [{ role: "user", content: prompt }],
       });
@@ -214,7 +230,7 @@ Return ONLY valid JSON array:
 ]`;
 
       const message = await this.client.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "anthropic.claude-sonnet-4-20250514-v1:0",
         max_tokens: 4096,
         messages: [{ role: "user", content: prompt }],
       });
@@ -287,7 +303,7 @@ Return ONLY valid JSON array:
 ]`;
 
       const message = await this.client.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "anthropic.claude-sonnet-4-20250514-v1:0",
         max_tokens: 2048,
         messages: [{ role: "user", content: prompt }],
       });
