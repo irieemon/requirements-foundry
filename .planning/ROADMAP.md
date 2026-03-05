@@ -108,7 +108,11 @@ Plans:
   3. S3 bucket exists with private-only access; ECR repository exists with lifecycle policy keeping last 10 images
   4. Security groups enforce the correct boundaries: ALB accepts corporate CIDR only, ECS accepts ALB only, RDS accepts ECS only
   5. Secrets Manager holds DATABASE_URL; SSM Parameter Store holds non-sensitive config (bucket name, region)
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 22-01-PLAN.md — CDK project init, VPC, subnets, NAT, security groups, VPC endpoints
+- [ ] 22-02-PLAN.md — RDS PostgreSQL, S3 bucket, ECR repo, ECS cluster, secrets, SSM parameters
+- [ ] 22-03-PLAN.md — Internal ALB, IAM roles, stack outputs for Phase 23
 
 ### Phase 23: Compute and Deployment
 **Goal**: The application is running on ECS Fargate and accessible from the corporate network via the internal ALB
@@ -173,7 +177,7 @@ Phases 21 and 22 can run in parallel. Phase 23 depends on both. Then 24, then 25
 | 19. AI Question Generation | v1.3 | 1/2 | Paused | - |
 | 20. Context Integration | v1.3 | 0/? | Paused | - |
 | 21. Application Code Migration | 5/5 | Complete    | 2026-03-05 | - |
-| 22. Infrastructure Foundation | v2.0 | 0/? | Not started | - |
+| 22. Infrastructure Foundation | v2.0 | 0/3 | Planning complete | - |
 | 23. Compute and Deployment | v2.0 | 0/? | Not started | - |
 | 24. CI/CD and Operations | v2.0 | 0/? | Not started | - |
 | 25. Validation and Data Migration | v2.0 | 0/? | Not started | - |
