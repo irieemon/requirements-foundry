@@ -21,7 +21,7 @@ Requirements for AWS migration. Each maps to roadmap phases.
 ### Networking
 
 - [x] **NET-01**: VPC with private subnets across 2 availability zones in us-east-1
-- [ ] **NET-02**: Internal Application Load Balancer accessible from corporate network only
+- [x] **NET-02**: Internal Application Load Balancer accessible from corporate network only
 - [x] **NET-03**: NAT Gateway for outbound internet access from private subnets
 - [x] **NET-04**: Security groups enforce ALB accepts corporate CIDR only, ECS accepts ALB only, RDS accepts ECS only
 - [x] **NET-05**: S3 Gateway VPC Endpoint for free S3 access from private subnets
@@ -51,8 +51,8 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 - [x] **SEC-01**: DATABASE_URL stored in AWS Secrets Manager and injected into ECS container
 - [x] **SEC-02**: Non-sensitive config (S3 bucket name, region, app name) stored in SSM Parameter Store
-- [ ] **SEC-03**: IAM task execution role can pull ECR images and read secrets
-- [ ] **SEC-04**: IAM task role has permissions for S3, Bedrock, and CloudWatch Logs
+- [x] **SEC-03**: IAM task execution role can pull ECR images and read secrets
+- [x] **SEC-04**: IAM task role has permissions for S3, Bedrock, and CloudWatch Logs
 
 ### Compute
 
@@ -145,7 +145,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CODE-07 | Phase 21 | Complete |
 | CODE-08 | Phase 21 | Complete |
 | NET-01 | Phase 22 | Complete |
-| NET-02 | Phase 22 | Pending |
+| NET-02 | Phase 22 | Complete |
 | NET-03 | Phase 22 | Complete |
 | NET-04 | Phase 22 | Complete |
 | NET-05 | Phase 22 | Complete |
@@ -163,8 +163,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-04 | Phase 23 | Pending |
 | SEC-01 | Phase 22 | Complete |
 | SEC-02 | Phase 22 | Complete |
-| SEC-03 | Phase 22 | Pending |
-| SEC-04 | Phase 22 | Pending |
+| SEC-03 | Phase 22 | Complete |
+| SEC-04 | Phase 22 | Complete |
 | CMP-01 | Phase 23 | Pending |
 | CMP-02 | Phase 22 | Complete |
 | CMP-03 | Phase 22 | Complete |
