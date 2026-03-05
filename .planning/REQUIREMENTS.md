@@ -11,12 +11,12 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 - [ ] **CODE-01**: Storage adapter uses S3 SDK (`@aws-sdk/client-s3`) instead of `@vercel/blob` for file upload, download, and deletion
 - [ ] **CODE-02**: AI provider uses Bedrock SDK (`@anthropic-ai/bedrock-sdk`) with correct model IDs instead of direct Anthropic SDK
-- [ ] **CODE-03**: Database connection uses standard PostgreSQL connection string without Vercel/Neon SSL detection logic
-- [ ] **CODE-04**: Dockerfile produces a working standalone Next.js container image with static assets and public directory
+- [x] **CODE-03**: Database connection uses standard PostgreSQL connection string without Vercel/Neon SSL detection logic
+- [x] **CODE-04**: Dockerfile produces a working standalone Next.js container image with static assets and public directory
 - [ ] **CODE-05**: Self-continuation HTTP pattern (fire-and-confirm) replaced with direct async calls in all generative flows
-- [ ] **CODE-06**: Health check endpoint returns 200 for ALB and ECS health monitoring
+- [x] **CODE-06**: Health check endpoint returns 200 for ALB and ECS health monitoring
 - [ ] **CODE-07**: All Vercel-specific environment variables and config removed (`VERCEL_URL`, `BATCH_STORY_SECRET`, `VERCEL_AUTOMATION_BYPASS_SECRET`)
-- [ ] **CODE-08**: Package dependencies updated (add AWS SDKs, remove `@vercel/blob` and `@anthropic-ai/sdk`)
+- [x] **CODE-08**: Package dependencies updated (add AWS SDKs, remove `@vercel/blob` and `@anthropic-ai/sdk`)
 
 ### Networking
 
@@ -138,12 +138,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | CODE-01 | Phase 21 | Pending |
 | CODE-02 | Phase 21 | Pending |
-| CODE-03 | Phase 21 | Pending |
-| CODE-04 | Phase 21 | Pending |
+| CODE-03 | Phase 21 | Complete |
+| CODE-04 | Phase 21 | Complete |
 | CODE-05 | Phase 21 | Pending |
-| CODE-06 | Phase 21 | Pending |
+| CODE-06 | Phase 21 | Complete |
 | CODE-07 | Phase 21 | Pending |
-| CODE-08 | Phase 21 | Pending |
+| CODE-08 | Phase 21 | Complete |
 | NET-01 | Phase 22 | Pending |
 | NET-02 | Phase 22 | Pending |
 | NET-03 | Phase 22 | Pending |

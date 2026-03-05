@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
-status: planning
-stopped_at: Phase 21 context gathered
-last_updated: "2026-03-05T18:53:27.041Z"
-last_activity: 2026-03-05 -- Roadmap created for v2.0 AWS Migration (Phases 21-25)
+status: executing
+stopped_at: Completed 21-01-PLAN.md
+last_updated: "2026-03-05T19:17:55Z"
+last_activity: 2026-03-05 -- Completed Plan 21-01 (Foundation & Dependencies)
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 5
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 21 of 25 (Application Code Migration)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-03-05 -- Roadmap created for v2.0 AWS Migration (Phases 21-25)
+Plan: 1 of ? in current phase (Plan 01 complete)
+Status: Executing
+Last activity: 2026-03-05 -- Completed Plan 21-01 (Foundation & Dependencies)
 
-Progress: [░░░░░░░░░░] 0% (v2.0 milestone)
+Progress: [█░░░░░░░░░] 5% (v2.0 milestone)
 
 ## Milestones
 
@@ -43,9 +43,13 @@ Progress: [░░░░░░░░░░] 0% (v2.0 milestone)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0 (v2.0)
-- Average duration: --
-- Total execution time: --
+- Total plans completed: 1 (v2.0)
+- Average duration: 3 min
+- Total execution time: 3 min
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 21    | 01   | 3 min    | 2     | 7     |
 
 *Updated after each plan completion*
 
@@ -62,6 +66,9 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - GitHub Actions for CI/CD with OIDC auth
 - CDK (TypeScript) for IaC
 - Phases 21 and 22 can run in parallel
+- [21-01] node:22-alpine for all Docker stages
+- [21-01] Standardize on DATABASE_URL only (removed POSTGRES_URL fallback)
+- [21-01] Health check aiEnabled uses MOCK_MODE flag instead of API key presence
 
 ### Pending Todos
 
@@ -75,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T18:53:27.038Z
-Stopped at: Phase 21 context gathered
-Resume file: .planning/phases/21-application-code-migration/21-CONTEXT.md
+Last session: 2026-03-05T19:17:55Z
+Stopped at: Completed 21-01-PLAN.md
+Resume file: .planning/phases/21-application-code-migration/21-01-SUMMARY.md
