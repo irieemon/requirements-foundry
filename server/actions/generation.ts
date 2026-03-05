@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getAIProvider, hasAnthropicKey } from "@/lib/ai/provider";
+import { getAIProvider, hasAwsCredentials } from "@/lib/ai/provider";
 import { RunType, RunStatus, GenerationMode, PersonaSet, CardData } from "@/lib/types";
 import { getMssHierarchy, getMssServiceAreaByCode } from "./mss";
 
@@ -63,10 +63,10 @@ export async function generateEpicsForProject(projectId: string) {
     }
 
     // Generate epics
-    const provider = getAIProvider();
-    const isRealAI = hasAnthropicKey();
+    const provider = await getAIProvider();
+    const isRealAI = await hasAwsCredentials();
 
-    await appendLog(run.id, `Using ${isRealAI ? "Anthropic API" : "Mock Provider"}`);
+    await appendLog(run.id, `Using ${isRealAI ? "Bedrock AI" : "Mock Provider"}`);
     await appendLog(run.id, `Processing ${cards.length} cards...`);
     if (mssContext) {
       await appendLog(run.id, `MSS taxonomy loaded - auto-assignment enabled`);
@@ -199,11 +199,11 @@ export async function generateStoriesForEpic(
       priority: epic.priority || undefined,
     };
 
-    const provider = getAIProvider();
-    const isRealAI = hasAnthropicKey();
+    const provider = await getAIProvider();
+    const isRealAI = await hasAwsCredentials();
 
     await appendLog(run.id, `Mode: ${mode}, Personas: ${personaSet}`);
-    await appendLog(run.id, `Using ${isRealAI ? "Anthropic API" : "Mock Provider"}`);
+    await appendLog(run.id, `Using ${isRealAI ? "Bedrock AI" : "Mock Provider"}`);
 
     const result = await provider.generateStories(epicData, mode, personaSet);
 

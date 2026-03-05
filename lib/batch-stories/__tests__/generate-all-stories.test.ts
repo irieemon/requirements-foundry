@@ -16,7 +16,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 // Mock the AI provider
 vi.mock("@/lib/ai/provider", () => ({
   getAIProvider: vi.fn(),
-  hasAnthropicKey: vi.fn(),
+  hasAwsCredentials: vi.fn(),
 }));
 
 // Mock the database
