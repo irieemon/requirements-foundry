@@ -40,9 +40,9 @@ model Upload {
   rawContent       String   // extracted text content (use @db.Text for large content)
   filePath         String?  // path to original file on disk (local mode only)
 
-  // Vercel Blob storage fields (used when UPLOAD_STORAGE=blob)
-  blobUrl          String?  // Public URL from Vercel Blob
-  blobPathname     String?  // Pathname/key in Blob storage
+  // S3 storage fields (used when UPLOAD_STORAGE=s3)
+  storageUrl       String?  // Storage URL (e.g., s3://bucket/key)
+  storageKey       String?  // Storage key/path in S3
 
   // Extraction and analysis status
   extractionStatus String   @default("PENDING") // PENDING, EXTRACTING, EXTRACTED, FAILED
