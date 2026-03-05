@@ -1,5 +1,7 @@
 import * as cdk from 'aws-cdk-lib/core';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
@@ -153,6 +155,92 @@ export class RequirementsFoundryStack extends cdk.Stack {
       stringValue: repository.repositoryUri,
       description: 'ECR repository URI for container images',
     });
+
+    // Internal ALB (NET-02)
+    const alb = new elbv2.ApplicationLoadBalancer(this, 'Alb', {
+      loadBalancerName: 'requirements-foundry-prod-alb',
+      vpc: this.vpc,
+      internetFacing: false,
+      securityGroup: this.albSg,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+    });
+
+    // ALB Target Group
+    const targetGroup = new elbv2.ApplicationTargetGroup(this, 'TargetGroup', {
+      targetGroupName: 'requirements-foundry-prod-tg',
+      vpc: this.vpc,
+      port: 3000,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      targetType: elbv2.TargetType.IP,
+      healthCheck: {
+        path: '/api/health',
+        interval: cdk.Duration.seconds(30),
+        healthyThresholdCount: 2,
+        unhealthyThresholdCount: 3,
+      },
+    });
+
+    // ALB Listener - default 503 response (no targets yet)
+    const listener = alb.addListener('HttpListener', {
+      port: 80,
+      defaultAction: elbv2.ListenerAction.fixedResponse(503, {
+        contentType: 'text/plain',
+        messageBody: 'Service not yet deployed',
+      }),
+    });
+
+    // Add target group as secondary action -- Phase 23 will switch to forwarding
+    listener.addTargetGroups('AppTargets', {
+      targetGroups: [targetGroup],
+      conditions: [elbv2.ListenerCondition.pathPatterns(['/*'])],
+      priority: 1,
+    });
+
+    // IAM Task Execution Role (SEC-03)
+    const taskExecutionRole = new iam.Role(this, 'TaskExecutionRole', {
+      roleName: 'requirements-foundry-prod-task-execution',
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy'),
+      ],
+    });
+    // Grant read access to secrets
+    dbInstance.secret!.grantRead(taskExecutionRole);
+    databaseUrlSecret.grantRead(taskExecutionRole);
+
+    // IAM Task Role (SEC-04)
+    const taskRole = new iam.Role(this, 'TaskRole', {
+      roleName: 'requirements-foundry-prod-task',
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+    });
+    // S3 read/write for file uploads
+    bucket.grantReadWrite(taskRole);
+    // Bedrock invoke model
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
+      resources: ['*'],
+    }));
+    // CloudWatch Logs (for container logging)
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+      resources: ['*'],
+    }));
+
+    // Stack Outputs (for Phase 23)
+    new cdk.CfnOutput(this, 'VpcId', { value: this.vpc.vpcId, exportName: 'rf-prod-vpc-id' });
+    new cdk.CfnOutput(this, 'AlbDnsName', { value: alb.loadBalancerDnsName, exportName: 'rf-prod-alb-dns' });
+    new cdk.CfnOutput(this, 'AlbArn', { value: alb.loadBalancerArn, exportName: 'rf-prod-alb-arn' });
+    new cdk.CfnOutput(this, 'TargetGroupArn', { value: targetGroup.targetGroupArn, exportName: 'rf-prod-tg-arn' });
+    new cdk.CfnOutput(this, 'RdsEndpoint', { value: dbInstance.dbInstanceEndpointAddress, exportName: 'rf-prod-rds-endpoint' });
+    new cdk.CfnOutput(this, 'RdsSecretArn', { value: dbInstance.secret!.secretArn, exportName: 'rf-prod-rds-secret-arn' });
+    new cdk.CfnOutput(this, 'DatabaseUrlSecretArn', { value: databaseUrlSecret.secretArn, exportName: 'rf-prod-db-url-secret-arn' });
+    new cdk.CfnOutput(this, 'BucketName', { value: bucket.bucketName, exportName: 'rf-prod-bucket-name' });
+    new cdk.CfnOutput(this, 'EcrRepoUri', { value: repository.repositoryUri, exportName: 'rf-prod-ecr-repo-uri' });
+    new cdk.CfnOutput(this, 'ClusterName', { value: cluster.clusterName, exportName: 'rf-prod-cluster-name' });
+    new cdk.CfnOutput(this, 'ClusterArn', { value: cluster.clusterArn, exportName: 'rf-prod-cluster-arn' });
+    new cdk.CfnOutput(this, 'TaskExecutionRoleArn', { value: taskExecutionRole.roleArn, exportName: 'rf-prod-exec-role-arn' });
+    new cdk.CfnOutput(this, 'TaskRoleArn', { value: taskRole.roleArn, exportName: 'rf-prod-task-role-arn' });
+    new cdk.CfnOutput(this, 'EcsSgId', { value: this.ecsSg.securityGroupId, exportName: 'rf-prod-ecs-sg-id' });
 
     // Tags
     cdk.Tags.of(this).add('Project', 'requirements-foundry');
