@@ -4,7 +4,7 @@
 // ============================================
 
 import { db } from "@/lib/db";
-import { getAIProvider, hasAnthropicKey } from "@/lib/ai/provider";
+import { getAIProvider, hasAwsCredentials } from "@/lib/ai/provider";
 import {
   RunStatus,
   RunPhase,
@@ -78,9 +78,9 @@ export async function executeBatchStoryRun(runId: string): Promise<void> {
     await appendLog(runId, `Existing stories behavior: ${existingBehavior}`);
 
     // 3. Get AI provider
-    const provider = getAIProvider();
-    const isRealAI = hasAnthropicKey();
-    await appendLog(runId, `Using ${isRealAI ? "Anthropic API" : "Mock Provider"}`);
+    const provider = await getAIProvider();
+    const isRealAI = await hasAwsCredentials();
+    await appendLog(runId, `Using ${isRealAI ? "AWS Bedrock" : "Mock Provider"}`);
 
     await updateRun(runId, { phase: RunPhase.GENERATING_STORIES });
 

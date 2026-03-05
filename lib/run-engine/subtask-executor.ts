@@ -1,10 +1,10 @@
 // ============================================
 // Subtask Executor
-// Processes stories and generates subtasks within the process-next loop
+// Processes stories and generates subtasks via direct async execution
 // ============================================
 
 import { db } from "@/lib/db";
-import { getAIProvider, hasAnthropicKey } from "@/lib/ai/provider";
+import { getAIProvider, hasAwsCredentials } from "@/lib/ai/provider";
 import { createRunLogger } from "@/lib/observability";
 import {
   RunStatus,
@@ -27,14 +27,11 @@ export { RunStatus, RunPhase, RunStoryStatus };
 export interface SubtaskExecutionResult {
   success: boolean;
   storiesProcessed: number;
-  timedOut: boolean;
   message: string;
 }
 
 export interface SubtaskExecutorOptions {
   runId: string;
-  timeoutMs: number;
-  startTime: number;
   logger: ReturnType<typeof createRunLogger>;
 }
 
@@ -45,10 +42,9 @@ export interface SubtaskExecutorOptions {
 export async function executeSubtaskGeneration(
   options: SubtaskExecutorOptions
 ): Promise<SubtaskExecutionResult> {
-  const { runId, timeoutMs, startTime, logger } = options;
+  const { runId, logger } = options;
 
   let storiesProcessed = 0;
-  let timedOut = false;
 
   try {
     // 1. Load the run with stories
@@ -60,13 +56,13 @@ export async function executeSubtaskGeneration(
     });
 
     if (!run) {
-      return { success: false, storiesProcessed: 0, timedOut: false, message: "Run not found" };
+      return { success: false, storiesProcessed: 0, message: "Run not found" };
     }
 
     // 2. Check if run is cancelled or completed
     if (run.status === RunStatus.CANCELLED) {
       logger.info("run.cancelled", { metadata: { reason: "user" } });
-      return { success: true, storiesProcessed: 0, timedOut: false, message: "Run cancelled" };
+      return { success: true, storiesProcessed: 0, message: "Run cancelled" };
     }
 
     if (
@@ -74,7 +70,7 @@ export async function executeSubtaskGeneration(
       run.status === RunStatus.FAILED ||
       run.status === RunStatus.PARTIAL
     ) {
-      return { success: true, storiesProcessed: 0, timedOut: false, message: "Run already completed" };
+      return { success: true, storiesProcessed: 0, message: "Run already completed" };
     }
 
     // 3. Update to RUNNING if not already
@@ -105,14 +101,6 @@ export async function executeSubtaskGeneration(
     // MAIN PROCESSING LOOP
     // ====================================================
     while (true) {
-      // Check timeout
-      const elapsed = Date.now() - startTime;
-      if (elapsed > timeoutMs) {
-        logger.warn("timeout_approaching", { duration: elapsed, metadata: { threshold: timeoutMs } });
-        timedOut = true;
-        break;
-      }
-
       // Update heartbeat
       await db.run.update({
         where: { id: runId },
@@ -239,8 +227,8 @@ export async function executeSubtaskGeneration(
           };
 
           // Generate subtasks via AI
-          const provider = getAIProvider();
-          const isRealAI = hasAnthropicKey();
+          const provider = await getAIProvider();
+          const isRealAI = await hasAwsCredentials();
 
           // Update heartbeat before AI call
           await db.run.update({
@@ -353,10 +341,7 @@ export async function executeSubtaskGeneration(
     return {
       success: true,
       storiesProcessed,
-      timedOut,
-      message: timedOut
-        ? `Timed out after ${storiesProcessed} stories, continuation needed`
-        : "All stories processed",
+      message: "All stories processed",
     };
 
   } catch (error) {
@@ -366,7 +351,6 @@ export async function executeSubtaskGeneration(
     return {
       success: false,
       storiesProcessed,
-      timedOut: false,
       message: errorMsg,
     };
   }

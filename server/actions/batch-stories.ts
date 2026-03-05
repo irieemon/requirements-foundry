@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { createRunLogger } from "@/lib/observability";
-import { triggerProcessNextAsync } from "@/lib/run-engine/process-next-trigger";
+import { executeBatchStoryRun } from "@/lib/run-engine/batch-story-executor";
 import {
   RunType,
   RunStatus,
@@ -106,39 +105,10 @@ export async function startGenerateAllStories(
       })),
     });
 
-    // 6. Log run creation and trigger processing
-    const logger = createRunLogger(run.id);
-    logger.runCreated(projectId, epicsToProcess.length, options);
-
-    // Trigger the first process-next call (MUST await on Vercel)
-    // Fire-and-forget doesn't work from Server Actions on Vercel because
-    // the function terminates when the action returns, killing pending fetches.
-    logger.info("invocation.continuation_triggered", {
-      metadata: { targetEndpoint: "process-next" },
+    // 6. Fire and forget -- executor runs in background, server action returns immediately
+    executeBatchStoryRun(run.id).catch((error) => {
+      console.error(`[BatchStory] Background execution failed for run ${run.id}:`, error);
     });
-    const triggerResult = await triggerProcessNextAsync(run.id);
-
-    if (!triggerResult.success) {
-      logger.continuationFailed(new Error(triggerResult.error || "Unknown error"));
-      
-      // Mark the run as failed so the UI shows the error
-      await db.run.update({
-        where: { id: run.id },
-        data: {
-          status: RunStatus.FAILED,
-          phase: RunPhase.FAILED,
-          errorMsg: `Failed to start processing: ${triggerResult.error}`,
-          completedAt: new Date(),
-        },
-      });
-      
-      revalidatePath(`/projects/${projectId}`);
-      return {
-        success: false,
-        error: `Failed to start processing: ${triggerResult.error}`,
-        runId: run.id,
-      };
-    }
 
     revalidatePath(`/projects/${projectId}`);
 
@@ -244,8 +214,7 @@ export async function cancelBatchStoryRun(
     return { success: false, error: "Run is not active" };
   }
 
-  // With the continuation pattern, we just mark the run as cancelled
-  // The next process-next call will see this and stop
+  // Mark the run as cancelled - the executor will see this and stop
   await db.run.update({
     where: { id: runId },
     data: {

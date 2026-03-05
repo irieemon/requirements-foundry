@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { createRunLogger } from "@/lib/observability";
-import { triggerProcessNextUploadAsync } from "@/lib/run-engine/process-next-trigger";
+import { executeRun } from "@/lib/run-engine/executor";
 import {
   RunType,
   RunStatus,
@@ -107,22 +106,10 @@ export async function analyzeProject(
       data: { analysisStatus: AnalysisStatus.QUEUED },
     });
 
-    // 7. Log run creation and trigger processing
-    const logger = createRunLogger(run.id);
-    logger.runCreated(projectId, uploadsToAnalyze.length, options);
-
-    // Trigger the first process-next-upload call (MUST await on Vercel)
-    // Fire-and-forget doesn't work from Server Actions on Vercel because
-    // the function terminates when the action returns, killing pending fetches.
-    logger.info("invocation.continuation_triggered", {
-      metadata: { targetEndpoint: "process-next-upload" },
+    // 7. Fire and forget -- executor runs in background, server action returns immediately
+    executeRun(run.id).catch((error) => {
+      console.error(`[CardAnalysis] Background execution failed for run ${run.id}:`, error);
     });
-    const triggerResult = await triggerProcessNextUploadAsync(run.id);
-
-    if (!triggerResult.success) {
-      logger.continuationFailed(new Error(triggerResult.error || "Unknown error"));
-      // Don't fail - the run is created and can be recovered via stale detection
-    }
 
     revalidatePath(`/projects/${projectId}`);
 
@@ -210,8 +197,7 @@ export async function cancelRun(
     return { success: false, error: "Run is not active" };
   }
 
-  // With the continuation pattern, we just mark the run as cancelled
-  // The next process-next-upload call will see this and stop
+  // Mark the run as cancelled - the executor will see this and stop
   await db.run.update({
     where: { id: runId },
     data: {

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { createRunLogger } from "@/lib/observability";
-import { triggerProcessNextAsync } from "@/lib/run-engine/process-next-trigger";
+import { executeSubtaskGeneration, finalizeSubtaskRun } from "@/lib/run-engine/subtask-executor";
 import {
   RunType,
   RunStatus,
@@ -87,44 +87,14 @@ export async function startGenerateSubtasks(
       })),
     });
 
-    // 5. Log run creation and trigger processing
+    // 5. Fire and forget -- executor processes all stories then finalizes
     const logger = createRunLogger(run.id);
-    logger.info("run.created", {
-      metadata: {
-        epicId,
-        storyCount: epic.stories.length,
-        mode: options.mode,
-        existingBehavior: options.existingSubtasksBehavior,
-      },
+    (async () => {
+      const result = await executeSubtaskGeneration({ runId: run.id, logger });
+      await finalizeSubtaskRun(run.id, logger);
+    })().catch((error) => {
+      console.error(`[SubtaskGen] Background execution failed for run ${run.id}:`, error);
     });
-
-    // Trigger the first process-next call
-    logger.info("invocation.continuation_triggered", {
-      metadata: { targetEndpoint: "process-next" },
-    });
-    const triggerResult = await triggerProcessNextAsync(run.id);
-
-    if (!triggerResult.success) {
-      logger.error("continuation_failed", new Error(triggerResult.error || "Unknown error"));
-
-      // Mark the run as failed so the UI shows the error
-      await db.run.update({
-        where: { id: run.id },
-        data: {
-          status: RunStatus.FAILED,
-          phase: RunPhase.FAILED,
-          errorMsg: `Failed to start processing: ${triggerResult.error}`,
-          completedAt: new Date(),
-        },
-      });
-
-      revalidatePath(`/projects/${epic.project.id}`);
-      return {
-        success: false,
-        error: `Failed to start processing: ${triggerResult.error}`,
-        runId: run.id,
-      };
-    }
 
     revalidatePath(`/projects/${epic.project.id}`);
 
@@ -237,7 +207,7 @@ export async function cancelBatchSubtaskRun(
     return { success: false, error: "Run is not active" };
   }
 
-  // Mark the run as cancelled - the next process-next iteration will see this
+  // Mark the run as cancelled - the executor will see this and stop
   await db.run.update({
     where: { id: runId },
     data: {

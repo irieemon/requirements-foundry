@@ -70,9 +70,9 @@ export async function executeRun(runId: string): Promise<void> {
     await appendLog(runId, `Loading ${run.runUploads.length} document(s)...`);
 
     // 3. Get analyzer
-    const analyzer = getDocumentAnalyzer();
+    const analyzer = await getDocumentAnalyzer();
     const isRealAI = analyzer.isAvailable();
-    await appendLog(runId, `Using ${isRealAI ? "Claude AI" : "Mock"} analyzer`);
+    await appendLog(runId, `Using ${isRealAI ? "AWS Bedrock" : "Mock"} analyzer`);
 
     await updateRun(runId, { phase: RunPhase.ANALYZING });
 
