@@ -21,7 +21,9 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.71.2",
+    "@anthropic-ai/bedrock-sdk": "^0.26.4",
+    "@aws-sdk/client-s3": "^3.1002.0",
+    "@aws-sdk/credential-providers": "^3.1002.0",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
@@ -40,7 +42,6 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@vercel/blob": "^0.27.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "csv-stringify": "^6.6.0",
