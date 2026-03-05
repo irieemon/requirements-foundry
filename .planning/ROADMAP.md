@@ -90,7 +90,12 @@ Paused at Phase 19 for AWS migration priority. Resume after v2.0 ships.
   3. AI provider calls use Bedrock SDK constructor and model ID format -- mock mode still works without any AWS credentials
   4. The fire-and-confirm HTTP self-trigger pattern is gone from all generative flows -- story/epic/subtask generation uses direct async calls
   5. No references to `@vercel/blob`, `@anthropic-ai/sdk`, `VERCEL_URL`, `BATCH_STORY_SECRET`, or `VERCEL_AUTOMATION_BYPASS_SECRET` remain in codebase
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 21-01-PLAN.md — Package swap, Dockerfile, db.ts simplification, health check
+- [ ] 21-02-PLAN.md — S3 storage adapter, Prisma column rename, upload flow migration
+- [ ] 21-03-PLAN.md — Bedrock AI provider, credential auto-detection, document-analyzer/question-generator
+- [ ] 21-04-PLAN.md — Self-continuation elimination, Vercel reference purge
 
 ### Phase 22: Infrastructure Foundation
 **Goal**: All AWS infrastructure exists and is deployable via CDK -- networking, database, storage, secrets, and container registry are provisioned and correctly configured
@@ -166,7 +171,7 @@ Phases 21 and 22 can run in parallel. Phase 23 depends on both. Then 24, then 25
 | 18. Context Schema & Upload Form | v1.3 | 1/1 | Complete | 2026-01-27 |
 | 19. AI Question Generation | v1.3 | 1/2 | Paused | - |
 | 20. Context Integration | v1.3 | 0/? | Paused | - |
-| 21. Application Code Migration | v2.0 | 0/? | Not started | - |
+| 21. Application Code Migration | v2.0 | 0/4 | Planning | - |
 | 22. Infrastructure Foundation | v2.0 | 0/? | Not started | - |
 | 23. Compute and Deployment | v2.0 | 0/? | Not started | - |
 | 24. CI/CD and Operations | v2.0 | 0/? | Not started | - |
