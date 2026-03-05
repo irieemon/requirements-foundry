@@ -1,5 +1,5 @@
 // Requirements Foundry - Prisma Schema
-// PostgreSQL for production (Vercel), SQLite-compatible for local dev via env
+// PostgreSQL for production, SQLite-compatible for local dev via env
 
 generator client {
   provider = "prisma-client-js"
@@ -274,7 +274,7 @@ model Run {
   startedAt   DateTime?
   completedAt DateTime?
 
-  // Heartbeat for stale run detection (Vercel serverless recovery)
+  // Heartbeat for stale run detection (serverless recovery)
   heartbeatAt DateTime?  // Last worker check-in time
 
   // Optimistic concurrency control
