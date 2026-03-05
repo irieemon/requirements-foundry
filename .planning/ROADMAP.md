@@ -1,24 +1,21 @@
-# Roadmap: Requirements Foundry - Generative Pipeline Fix
+# Roadmap: Requirements Foundry
 
 ## Milestones
 
 - ✅ [v1.0 Generative Pipeline Fix](milestones/v1.0-ROADMAP.md) (Phases 1-9) — SHIPPED 2026-01-15
 - ✅ [v1.1 UX Polish](milestones/v1.1-ROADMAP.md) (Phases 10-12) — SHIPPED 2026-01-20
 - ✅ [v1.2 MSS Integration](milestones/v1.2-ROADMAP.md) (Phases 13-17) — SHIPPED 2026-01-27
-- 🚧 **v1.3 Contextual Upload** - Phases 18-20 (in progress)
+- ⏸️ **v1.3 Contextual Upload** - Phases 18-20 (paused for AWS migration)
+- 🚧 **v2.0 AWS Migration** - Phases 21-25 (in progress)
 
 ## Overview
 
-This roadmap addressed three regressed generative flows: card analysis (frozen progress), epic generation (no progress indicator), and story generation (silent timeout failures). All flows now work with real-time progress feedback, plus subtask generation and performance optimizations.
-
-## Domain Expertise
-
-None
+This milestone migrates Requirements Foundry from Vercel to AWS. The application code changes are narrow -- swap four Vercel-specific integrations (Blob storage, Anthropic SDK, Neon DB, serverless timeout workarounds) -- while the infrastructure work provisions a complete internal VPC deployment (ECS Fargate, RDS PostgreSQL, S3, Bedrock, ALB). Phases 21 and 22 can run in parallel since code changes have zero AWS dependency.
 
 ## Completed Milestones
 
 <details>
-<summary> v1.0 Generative Pipeline Fix (Phases 1-9) — SHIPPED 2026-01-15</summary>
+<summary>v1.0 Generative Pipeline Fix (Phases 1-9) — SHIPPED 2026-01-15</summary>
 
 - [x] **Phase 1: Investigation & Instrumentation** (2/2 plans) — completed 2026-01-13
 - [x] **Phase 2: Card Analysis Progress Fix** (1/1 plan) — completed 2026-01-13
@@ -30,18 +27,12 @@ None
 - [x] **Phase 8: Subtask Viewing** (1/1 plan) — completed 2026-01-15
 - [x] **Phase 9: Performance Optimization** (3/3 plans) — completed 2026-01-15
 
-**Key accomplishments:**
-- Fixed real-time progress for card analysis, epic generation, story generation
-- Added Stories page and Subtasks page
-- Implemented full subtask generation pipeline
-- Optimized with batch DB operations and parallel processing
-
 See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full details.
 
 </details>
 
 <details>
-<summary>✅ v1.1 UX Polish (Phases 10-12) — SHIPPED 2026-01-20</summary>
+<summary>v1.1 UX Polish (Phases 10-12) — SHIPPED 2026-01-20</summary>
 
 - [x] Phase 10: Navigation & Layout (3/3 plans) — completed 2026-01-15
 - [x] Phase 10.1: Upload Client Direct (1/1 plan) — completed 2026-01-16
@@ -49,18 +40,12 @@ See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full details.
 - [x] Phase 11: Data Display & Hierarchy (3/3 plans) — completed 2026-01-20
 - [x] Phase 12: JIRA Export Preview (2/2 plans) — completed 2026-01-20
 
-**Key accomplishments:**
-- Contextual sidebar navigation with project sections
-- Fixed 413 file upload errors (client-side Blob uploads)
-- Modern card redesign for epics/stories/subtasks
-- Tabbed JIRA export wizard with preview-first UX
-
 See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full details.
 
 </details>
 
 <details>
-<summary>✅ v1.2 MSS Integration (Phases 13-17) — SHIPPED 2026-01-27</summary>
+<summary>v1.2 MSS Integration (Phases 13-17) — SHIPPED 2026-01-27</summary>
 
 - [x] Phase 13: MSS Data Model & Import (1/1 plan) — completed 2026-01-20
 - [x] Phase 14: MSS Management UI (3/3 plans) — completed 2026-01-20
@@ -68,53 +53,94 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full details.
 - [x] Phase 16: MSS Dashboard & Reporting (1/1 plan) — completed 2026-01-20
 - [x] Phase 17: MSS Export Integration (1/1 plan) — completed 2026-01-27
 
-**Key accomplishments:**
-- L2/L3/L4 MSS taxonomy schema with flexible CSV import
-- Full CRUD management UI with collapsible hierarchy viewer
-- MSS selector on epics/stories with AI auto-assignment
-- Dashboard with coverage metrics and service line breakdown
-- JIRA export integration with inheritance support
-
 See [v1.2 archive](milestones/v1.2-ROADMAP.md) for full details.
 
 </details>
 
-### 🚧 v1.3 Contextual Upload (In Progress)
+<details>
+<summary>v1.3 Contextual Upload (Phases 18-20) — PAUSED</summary>
 
-**Milestone Goal:** Enhance document analysis with user-provided project context and AI-driven clarifying questions
+- [x] Phase 18: Context Schema & Upload Form (1/1 plan) — completed 2026-01-27
+- [ ] Phase 19: AI Question Generation (1/2 plans) — paused
+- [ ] Phase 20: Context Integration (0/? plans) — not started
 
-#### Phase 18: Context Schema & Upload Form ✓
+Paused at Phase 19 for AWS migration priority. Resume after v2.0 ships.
 
-**Goal**: Add structured context fields during document upload including project basics, document classification, and notes
-**Depends on**: Phase 17 (v1.2 complete)
-**Research**: Unlikely (internal patterns, existing form components)
-**Plans**: 1/1 complete
+</details>
 
-Plans:
-- [x] 18-01: Context Schema & Upload Form Integration — completed 2026-01-27
+## Phases
 
-#### Phase 19: AI Question Generation
+### v2.0 AWS Migration
 
-**Goal**: After upload and initial context, AI reviews documents and generates one-shot clarifying questions for user to answer
-**Depends on**: Phase 18
-**Research**: Unlikely (existing Claude/LLM integration patterns)
-**Plans**: 2 planned
+- [ ] **Phase 21: Application Code Migration** - Replace Vercel-specific integrations, Dockerize, eliminate self-continuation pattern
+- [ ] **Phase 22: Infrastructure Foundation** - CDK project with VPC, networking, RDS, S3, IAM, secrets, ECR
+- [ ] **Phase 23: Compute and Deployment** - Wire ECS Fargate service to infrastructure, deploy running application
+- [ ] **Phase 24: CI/CD and Operations** - Automated deployments, stale run recovery, monitoring and alarms
+- [ ] **Phase 25: Validation and Data Migration** - End-to-end smoke tests, database migration from Neon to RDS
 
-Plans:
-- [x] 19-01: Data Model & AI Service — UploadContext extension, question generator, server actions — completed 2026-01-27
-- [ ] 19-02: UI Components & Flow Integration — Question display component, upload/analysis flow changes
+## Phase Details
 
-#### Phase 20: Context Integration
-
-**Goal**: Card analysis receives full context (user-provided + AI Q&A answers) to produce better-informed requirements
-**Depends on**: Phase 19
-**Research**: Unlikely (extending existing card analysis flow)
+### Phase 21: Application Code Migration
+**Goal**: The application runs in a Docker container with AWS service integrations (S3, Bedrock, standard PostgreSQL) and no Vercel dependencies
+**Depends on**: Nothing (can run in parallel with Phase 22)
+**Requirements**: CODE-01, CODE-02, CODE-03, CODE-04, CODE-05, CODE-06, CODE-07, CODE-08, AI-03
+**Success Criteria** (what must be TRUE):
+  1. `docker build` produces a working image and `docker run` starts the app on port 3000 with styled pages and static assets
+  2. File upload uses S3 SDK calls (put, get, delete) instead of `@vercel/blob` -- verifiable by running with `MOCK_MODE` or local S3 (MinIO)
+  3. AI provider calls use Bedrock SDK constructor and model ID format -- mock mode still works without any AWS credentials
+  4. The fire-and-confirm HTTP self-trigger pattern is gone from all generative flows -- story/epic/subtask generation uses direct async calls
+  5. No references to `@vercel/blob`, `@anthropic-ai/sdk`, `VERCEL_URL`, `BATCH_STORY_SECRET`, or `VERCEL_AUTOMATION_BYPASS_SECRET` remain in codebase
 **Plans**: TBD
 
-Plans:
-- [ ] 20-01: TBD (run /gsd:plan-phase 20 to break down)
+### Phase 22: Infrastructure Foundation
+**Goal**: All AWS infrastructure exists and is deployable via CDK -- networking, database, storage, secrets, and container registry are provisioned and correctly configured
+**Depends on**: Nothing (can run in parallel with Phase 21)
+**Requirements**: NET-01, NET-02, NET-03, NET-04, NET-05, NET-06, DB-01, DB-02, STOR-01, SEC-01, SEC-02, SEC-03, SEC-04, CMP-02, CMP-03, IAC-01, IAC-02
+**Success Criteria** (what must be TRUE):
+  1. `cdk deploy` provisions the full stack (VPC, subnets, NAT, ALB, RDS, S3, ECR, security groups, VPC endpoints) without errors
+  2. RDS PostgreSQL instance is reachable from within the VPC private subnets (verified by connection test)
+  3. S3 bucket exists with private-only access; ECR repository exists with lifecycle policy keeping last 10 images
+  4. Security groups enforce the correct boundaries: ALB accepts corporate CIDR only, ECS accepts ALB only, RDS accepts ECS only
+  5. Secrets Manager holds DATABASE_URL; SSM Parameter Store holds non-sensitive config (bucket name, region)
+**Plans**: TBD
+
+### Phase 23: Compute and Deployment
+**Goal**: The application is running on ECS Fargate and accessible from the corporate network via the internal ALB
+**Depends on**: Phase 21, Phase 22
+**Requirements**: CMP-01, CMP-04, AI-01, AI-02, AI-04, STOR-02, STOR-03
+**Success Criteria** (what must be TRUE):
+  1. ECS Fargate task is running with the Docker image from Phase 21, using 0.5 vCPU / 1GB RAM, and stays healthy (ALB health checks pass)
+  2. Navigating to the internal ALB URL from the corporate network loads the application homepage
+  3. File upload via presigned URLs works end-to-end (upload a document, see it stored in S3, retrieve it)
+  4. AI-powered generation (card analysis, epic generation) completes successfully using Bedrock Claude with IAM auth (no API keys)
+**Plans**: TBD
+
+### Phase 24: CI/CD and Operations
+**Goal**: Deployments are automated via GitHub Actions, stale run recovery works without Vercel Cron, and basic operational monitoring is in place
+**Depends on**: Phase 23
+**Requirements**: CICD-01, CICD-02, CICD-03, CRON-01, OPS-01, OPS-02, OPS-03
+**Success Criteria** (what must be TRUE):
+  1. Pushing to `main` triggers a GitHub Actions workflow that builds, pushes to ECR, and deploys to ECS -- new code is live within minutes
+  2. GitHub Actions authenticates to AWS via OIDC (no long-lived credentials stored in GitHub secrets)
+  3. Stale run recovery executes periodically and cleans up stuck runs (verifiable by checking recovered run logs)
+  4. CloudWatch alarms fire when ECS task count drops to 0 or ALB has unhealthy targets, and SNS delivers email notification
+**Plans**: TBD
+
+### Phase 25: Validation and Data Migration
+**Goal**: All existing features work identically on AWS, and production data is migrated from Neon to RDS
+**Depends on**: Phase 24
+**Requirements**: DB-03, DB-04, VAL-01, VAL-02, VAL-03, VAL-04
+**Success Criteria** (what must be TRUE):
+  1. Full smoke test passes: upload document, analyze cards, generate epics, generate stories, generate subtasks, export to JIRA -- all on AWS
+  2. MSS taxonomy import and mapping to epics/stories works correctly on AWS
+  3. After `pg_dump`/`pg_restore` from Neon to RDS, all existing projects, cards, epics, stories, and subtasks are accessible
+  4. Prisma migrations run cleanly against RDS and schema matches expectations
+**Plans**: TBD
 
 ## Progress
+
+**Execution Order:**
+Phases 21 and 22 can run in parallel. Phase 23 depends on both. Then 24, then 25 sequentially.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -138,5 +164,10 @@ Plans:
 | 16. MSS Dashboard & Reporting | v1.2 | 1/1 | Complete | 2026-01-20 |
 | 17. MSS Export Integration | v1.2 | 1/1 | Complete | 2026-01-27 |
 | 18. Context Schema & Upload Form | v1.3 | 1/1 | Complete | 2026-01-27 |
-| 19. AI Question Generation | v1.3 | 1/2 | In progress | - |
-| 20. Context Integration | v1.3 | 0/? | Not started | - |
+| 19. AI Question Generation | v1.3 | 1/2 | Paused | - |
+| 20. Context Integration | v1.3 | 0/? | Paused | - |
+| 21. Application Code Migration | v2.0 | 0/? | Not started | - |
+| 22. Infrastructure Foundation | v2.0 | 0/? | Not started | - |
+| 23. Compute and Deployment | v2.0 | 0/? | Not started | - |
+| 24. CI/CD and Operations | v2.0 | 0/? | Not started | - |
+| 25. Validation and Data Migration | v2.0 | 0/? | Not started | - |

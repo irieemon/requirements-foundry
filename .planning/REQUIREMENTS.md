@@ -136,58 +136,58 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CODE-01 | TBD | Pending |
-| CODE-02 | TBD | Pending |
-| CODE-03 | TBD | Pending |
-| CODE-04 | TBD | Pending |
-| CODE-05 | TBD | Pending |
-| CODE-06 | TBD | Pending |
-| CODE-07 | TBD | Pending |
-| CODE-08 | TBD | Pending |
-| NET-01 | TBD | Pending |
-| NET-02 | TBD | Pending |
-| NET-03 | TBD | Pending |
-| NET-04 | TBD | Pending |
-| NET-05 | TBD | Pending |
-| NET-06 | TBD | Pending |
-| DB-01 | TBD | Pending |
-| DB-02 | TBD | Pending |
-| DB-03 | TBD | Pending |
-| DB-04 | TBD | Pending |
-| STOR-01 | TBD | Pending |
-| STOR-02 | TBD | Pending |
-| STOR-03 | TBD | Pending |
-| AI-01 | TBD | Pending |
-| AI-02 | TBD | Pending |
-| AI-03 | TBD | Pending |
-| AI-04 | TBD | Pending |
-| SEC-01 | TBD | Pending |
-| SEC-02 | TBD | Pending |
-| SEC-03 | TBD | Pending |
-| SEC-04 | TBD | Pending |
-| CMP-01 | TBD | Pending |
-| CMP-02 | TBD | Pending |
-| CMP-03 | TBD | Pending |
-| CMP-04 | TBD | Pending |
-| CICD-01 | TBD | Pending |
-| CICD-02 | TBD | Pending |
-| CICD-03 | TBD | Pending |
-| CRON-01 | TBD | Pending |
-| OPS-01 | TBD | Pending |
-| OPS-02 | TBD | Pending |
-| OPS-03 | TBD | Pending |
-| IAC-01 | TBD | Pending |
-| IAC-02 | TBD | Pending |
-| VAL-01 | TBD | Pending |
-| VAL-02 | TBD | Pending |
-| VAL-03 | TBD | Pending |
-| VAL-04 | TBD | Pending |
+| CODE-01 | Phase 21 | Pending |
+| CODE-02 | Phase 21 | Pending |
+| CODE-03 | Phase 21 | Pending |
+| CODE-04 | Phase 21 | Pending |
+| CODE-05 | Phase 21 | Pending |
+| CODE-06 | Phase 21 | Pending |
+| CODE-07 | Phase 21 | Pending |
+| CODE-08 | Phase 21 | Pending |
+| NET-01 | Phase 22 | Pending |
+| NET-02 | Phase 22 | Pending |
+| NET-03 | Phase 22 | Pending |
+| NET-04 | Phase 22 | Pending |
+| NET-05 | Phase 22 | Pending |
+| NET-06 | Phase 22 | Pending |
+| DB-01 | Phase 22 | Pending |
+| DB-02 | Phase 22 | Pending |
+| DB-03 | Phase 25 | Pending |
+| DB-04 | Phase 25 | Pending |
+| STOR-01 | Phase 22 | Pending |
+| STOR-02 | Phase 23 | Pending |
+| STOR-03 | Phase 23 | Pending |
+| AI-01 | Phase 23 | Pending |
+| AI-02 | Phase 23 | Pending |
+| AI-03 | Phase 21 | Pending |
+| AI-04 | Phase 23 | Pending |
+| SEC-01 | Phase 22 | Pending |
+| SEC-02 | Phase 22 | Pending |
+| SEC-03 | Phase 22 | Pending |
+| SEC-04 | Phase 22 | Pending |
+| CMP-01 | Phase 23 | Pending |
+| CMP-02 | Phase 22 | Pending |
+| CMP-03 | Phase 22 | Pending |
+| CMP-04 | Phase 23 | Pending |
+| CICD-01 | Phase 24 | Pending |
+| CICD-02 | Phase 24 | Pending |
+| CICD-03 | Phase 24 | Pending |
+| CRON-01 | Phase 24 | Pending |
+| OPS-01 | Phase 24 | Pending |
+| OPS-02 | Phase 24 | Pending |
+| OPS-03 | Phase 24 | Pending |
+| IAC-01 | Phase 22 | Pending |
+| IAC-02 | Phase 22 | Pending |
+| VAL-01 | Phase 25 | Pending |
+| VAL-02 | Phase 25 | Pending |
+| VAL-03 | Phase 25 | Pending |
+| VAL-04 | Phase 25 | Pending |
 
 **Coverage:**
-- v1 requirements: 45 total
-- Mapped to phases: 0
-- Unmapped: 45
+- v1 requirements: 46 total
+- Mapped to phases: 46
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 after roadmap creation (traceability complete)*
