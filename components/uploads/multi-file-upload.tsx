@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +33,6 @@ interface FileWithPreview {
   status: "pending" | "uploading" | "processing" | "success" | "error";
   error?: string;
   wordCount?: number;
-  blobUrl?: string;
   progress?: number;
 }
 
@@ -44,16 +42,6 @@ interface UploadResult {
   success: boolean;
   error?: string;
   wordCount?: number;
-}
-
-interface ProcessUploadRequest {
-  projectId: string;
-  blobUrl: string;
-  blobPathname: string;
-  filename: string;
-  fileType: string;
-  fileSize: number;
-  context?: UploadContextFormData;
 }
 
 interface MultiFileUploadProps {
@@ -155,7 +143,7 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
   );
 
   // ============================================
-  // Upload (Two-phase: Client → Blob, then Blob URL → API)
+  // Upload (Server-side FormData upload)
   // ============================================
 
   const handleUpload = async () => {
@@ -178,44 +166,29 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
       );
 
       try {
-        // Step 1: Upload directly to Blob (bypasses 4.5MB serverless limit)
-        const blob = await upload(file.name, file, {
-          access: "public",
-          handleUploadUrl: "/api/uploads/get-upload-url",
-          clientPayload: JSON.stringify({ projectId }),
-          onUploadProgress: ({ percentage }) => {
-            // Update individual file progress
-            setFiles((prev) =>
-              prev.map((f) => (f.id === id ? { ...f, progress: percentage } : f))
-            );
-            // Update overall progress (blob upload is ~50% of total work)
-            const fileProgress = (i + percentage / 100) / totalFiles;
-            setProgress(Math.round(fileProgress * 50));
-          },
-        });
+        // Build FormData with the file and metadata
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("projectId", projectId);
+        formData.append("filename", file.name);
+        formData.append("fileType", file.type || "application/octet-stream");
+        formData.append("fileSize", String(file.size));
 
-        // Mark as processing (API step)
+        if (contextData && Object.keys(contextData).length > 0) {
+          formData.append("context", JSON.stringify(contextData));
+        }
+
+        // Mark as processing (server is handling the upload + extraction)
         setFiles((prev) =>
           prev.map((f) =>
-            f.id === id ? { ...f, status: "processing" as const, blobUrl: blob.url } : f
+            f.id === id ? { ...f, status: "processing" as const } : f
           )
         );
 
-        // Step 2: Call API with blob URL for document processing
-        const processRequest: ProcessUploadRequest = {
-          projectId,
-          blobUrl: blob.url,
-          blobPathname: blob.pathname,
-          filename: file.name,
-          fileType: file.type || "application/octet-stream",
-          fileSize: file.size,
-          ...(contextData && Object.keys(contextData).length > 0 && { context: contextData }),
-        };
-
+        // Send file directly to the server API
         const response = await fetch("/api/uploads", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(processRequest),
+          body: formData,
         });
 
         if (!response.ok) {
@@ -461,7 +434,7 @@ export function MultiFileUpload({ projectId, onUploadComplete }: MultiFileUpload
         <div className="flex items-center justify-end gap-2 pt-2 border-t">
           {contextData && Object.keys(contextData).length > 0 && (
             <span className="text-xs text-muted-foreground">
-              ✓ Context provided
+              Context provided
             </span>
           )}
           <Button onClick={handleUpload} disabled={uploading || pendingCount === 0}>

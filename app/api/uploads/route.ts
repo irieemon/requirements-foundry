@@ -1,6 +1,6 @@
 // ============================================
 // Document Upload API Route
-// POST /api/uploads - Process documents from Blob URL (NO AI analysis)
+// POST /api/uploads - Process documents via server-side FormData upload
 // GET /api/uploads - List uploads for a project
 // ============================================
 
@@ -9,13 +9,7 @@ import { db } from "@/lib/db";
 import { DocumentProcessor } from "@/lib/documents/processor";
 import { validateFile, getMimeTypeFromExtension } from "@/lib/documents/types";
 import { ExtractionStatus, AnalysisStatus } from "@/lib/types";
-
-// Force Node.js runtime for file processing APIs
-export const runtime = "nodejs";
-
-// Allow up to 30 seconds for upload processing
-export const maxDuration = 30;
-
+import { uploadToStorage } from "@/lib/storage";
 
 // ============================================
 // Types
@@ -30,16 +24,6 @@ interface UploadContextData {
   sourceSystem?: string;
   notes?: string;
   keyTerms?: string;
-}
-
-interface UploadRequest {
-  projectId: string;
-  blobUrl: string;
-  blobPathname: string;
-  filename: string;
-  fileType: string;
-  fileSize: number;
-  context?: UploadContextData;
 }
 
 interface UploadResult {
@@ -58,22 +42,37 @@ interface UploadResponse {
 }
 
 // ============================================
-// POST Handler - Process from Blob URL (No AI Analysis)
-// Client uploads directly to Blob, then sends URL here for processing
+// POST Handler - Process uploaded file via FormData
+// Client sends file directly to server; server stores in S3 if configured
 // ============================================
 
 export async function POST(request: NextRequest): Promise<NextResponse<UploadResponse>> {
   try {
-    // Parse JSON body (not FormData - file is already in Blob)
-    const body = (await request.json()) as UploadRequest;
-    const { projectId, blobUrl, blobPathname, filename, fileType, fileSize, context } = body;
+    // Parse FormData (file sent directly from client)
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+    const projectId = formData.get("projectId") as string | null;
+    const contextJson = formData.get("context") as string | null;
 
     // Validate required fields
-    if (!projectId || !blobUrl || !filename) {
+    if (!projectId || !file) {
       return NextResponse.json(
-        { success: false, results: [], error: "projectId, blobUrl, and filename are required" },
+        { success: false, results: [], error: "projectId and file are required" },
         { status: 400 }
       );
+    }
+
+    const filename = file.name;
+    const fileSize = file.size;
+
+    // Parse optional context
+    let context: UploadContextData | undefined;
+    if (contextJson) {
+      try {
+        context = JSON.parse(contextJson) as UploadContextData;
+      } catch {
+        // Ignore invalid context JSON
+      }
     }
 
     // Verify project exists
@@ -89,7 +88,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
     }
 
     // Determine MIME type
-    const mimeType = fileType || getMimeTypeFromExtension(filename) || "application/octet-stream";
+    const fileType = formData.get("fileType") as string | null;
+    const mimeType = fileType || file.type || getMimeTypeFromExtension(filename) || "application/octet-stream";
 
     // Validate file type and size
     const validation = validateFile(mimeType, fileSize);
@@ -105,27 +105,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
       });
     }
 
-    // Fetch file content from Blob URL
-    let buffer: Buffer;
-    try {
-      const blobResponse = await fetch(blobUrl);
-      if (!blobResponse.ok) {
-        throw new Error(`Failed to fetch blob: ${blobResponse.status} ${blobResponse.statusText}`);
-      }
-      const arrayBuffer = await blobResponse.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
-    } catch (fetchError) {
-      console.error("Blob fetch error:", fetchError);
-      return NextResponse.json({
-        success: false,
-        results: [{
-          uploadId: "",
-          filename,
-          success: false,
-          error: "Failed to fetch file from storage",
-        }],
-      });
-    }
+    // Get buffer from the uploaded file
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Upload to S3 if configured
+    const storageResult = await uploadToStorage(buffer, filename, mimeType);
 
     // Process document (extraction only)
     const processingResult = await DocumentProcessor.process(buffer, filename, mimeType);
@@ -138,8 +123,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
           filename,
           fileType: mimeType,
           rawContent: "",
-          blobUrl,
-          blobPathname,
+          storageUrl: storageResult.storageUrl,
+          storageKey: storageResult.storageKey,
           extractionStatus: ExtractionStatus.FAILED,
           analysisStatus: AnalysisStatus.PENDING,
           errorMsg: processingResult.error || "Processing failed",
@@ -168,8 +153,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
         filename,
         fileType: mimeType,
         rawContent: content.text,
-        blobUrl,
-        blobPathname,
+        storageUrl: storageResult.storageUrl,
+        storageKey: storageResult.storageKey,
         extractionStatus: ExtractionStatus.EXTRACTED,
         analysisStatus: AnalysisStatus.PENDING,
         fileSize: content.metadata.fileSize,

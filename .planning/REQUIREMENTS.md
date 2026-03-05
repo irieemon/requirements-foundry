@@ -10,7 +10,7 @@ Requirements for AWS migration. Each maps to roadmap phases.
 ### Application Code
 
 - [ ] **CODE-01**: Storage adapter uses S3 SDK (`@aws-sdk/client-s3`) instead of `@vercel/blob` for file upload, download, and deletion
-- [ ] **CODE-02**: AI provider uses Bedrock SDK (`@anthropic-ai/bedrock-sdk`) with correct model IDs instead of direct Anthropic SDK
+- [x] **CODE-02**: AI provider uses Bedrock SDK (`@anthropic-ai/bedrock-sdk`) with correct model IDs instead of direct Anthropic SDK
 - [x] **CODE-03**: Database connection uses standard PostgreSQL connection string without Vercel/Neon SSL detection logic
 - [x] **CODE-04**: Dockerfile produces a working standalone Next.js container image with static assets and public directory
 - [ ] **CODE-05**: Self-continuation HTTP pattern (fire-and-confirm) replaced with direct async calls in all generative flows
@@ -44,7 +44,7 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 - [ ] **AI-01**: Bedrock invokes Claude with correct model ID format (`anthropic.claude-sonnet-4-20250514-v1:0`)
 - [ ] **AI-02**: ECS task role has `bedrock:InvokeModel` permission via IAM (no API keys)
-- [ ] **AI-03**: Mock mode continues to work without Bedrock access
+- [x] **AI-03**: Mock mode continues to work without Bedrock access
 - [ ] **AI-04**: Bedrock model access enabled in us-east-1 (FTU form completed)
 
 ### Secrets and Configuration
@@ -137,7 +137,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CODE-01 | Phase 21 | Pending |
-| CODE-02 | Phase 21 | Pending |
+| CODE-02 | Phase 21 | Complete |
 | CODE-03 | Phase 21 | Complete |
 | CODE-04 | Phase 21 | Complete |
 | CODE-05 | Phase 21 | Pending |
@@ -159,7 +159,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STOR-03 | Phase 23 | Pending |
 | AI-01 | Phase 23 | Pending |
 | AI-02 | Phase 23 | Pending |
-| AI-03 | Phase 21 | Pending |
+| AI-03 | Phase 21 | Complete |
 | AI-04 | Phase 23 | Pending |
 | SEC-01 | Phase 22 | Pending |
 | SEC-02 | Phase 22 | Pending |

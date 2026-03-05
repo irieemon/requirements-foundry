@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
 status: executing
-stopped_at: Completed 21-01-PLAN.md
-last_updated: "2026-03-05T19:17:55Z"
-last_activity: 2026-03-05 -- Completed Plan 21-01 (Foundation & Dependencies)
+stopped_at: Completed 21-03-PLAN.md
+last_updated: "2026-03-05T19:22:48Z"
+last_activity: 2026-03-05 -- Completed Plan 21-03 (AI Provider Bedrock Migration)
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 0
-  completed_plans: 1
-  percent: 5
+  completed_plans: 2
+  percent: 10
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 21 of 25 (Application Code Migration)
-Plan: 1 of ? in current phase (Plan 01 complete)
+Plan: 3 of ? in current phase (Plans 01, 03 complete)
 Status: Executing
-Last activity: 2026-03-05 -- Completed Plan 21-01 (Foundation & Dependencies)
+Last activity: 2026-03-05 -- Completed Plan 21-03 (AI Provider Bedrock Migration)
 
-Progress: [█░░░░░░░░░] 5% (v2.0 milestone)
+Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 
 ## Milestones
 
@@ -43,13 +43,14 @@ Progress: [█░░░░░░░░░] 5% (v2.0 milestone)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1 (v2.0)
-- Average duration: 3 min
-- Total execution time: 3 min
+- Total plans completed: 2 (v2.0)
+- Average duration: 2.5 min
+- Total execution time: 5 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 21    | 01   | 3 min    | 2     | 7     |
+| 21    | 03   | 2 min    | 2     | 3     |
 
 *Updated after each plan completion*
 
@@ -69,6 +70,9 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [21-01] node:22-alpine for all Docker stages
 - [21-01] Standardize on DATABASE_URL only (removed POSTGRES_URL fallback)
 - [21-01] Health check aiEnabled uses MOCK_MODE flag instead of API key presence
+- [21-03] Factory functions (getAIProvider, getDocumentAnalyzer, getQuestionGenerator) are now async
+- [21-03] Bedrock model ID format: anthropic.claude-sonnet-4-20250514-v1:0
+- [21-03] AWS credential detection uses fromNodeProviderChain with module-level caching
 
 ### Pending Todos
 
@@ -82,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T19:17:55Z
-Stopped at: Completed 21-01-PLAN.md
-Resume file: .planning/phases/21-application-code-migration/21-01-SUMMARY.md
+Last session: 2026-03-05T19:22:48Z
+Stopped at: Completed 21-03-PLAN.md
+Resume file: .planning/phases/21-application-code-migration/21-03-SUMMARY.md
