@@ -214,4 +214,118 @@ describe('RequirementsFoundryStack', () => {
       });
     });
   });
+
+  describe('Application Load Balancer', () => {
+    test('ALB exists and is internal', () => {
+      template.hasResourceProperties('AWS::ElasticLoadBalancingV2::LoadBalancer', {
+        Scheme: 'internal',
+        Type: 'application',
+      });
+    });
+
+    test('ALB listener on port 80 exists', () => {
+      template.hasResourceProperties('AWS::ElasticLoadBalancingV2::Listener', {
+        Port: 80,
+        Protocol: 'HTTP',
+      });
+    });
+
+    test('Target group has port 3000, protocol HTTP, target type ip, health check /api/health', () => {
+      template.hasResourceProperties('AWS::ElasticLoadBalancingV2::TargetGroup', {
+        Port: 3000,
+        Protocol: 'HTTP',
+        TargetType: 'ip',
+        HealthCheckPath: '/api/health',
+      });
+    });
+  });
+
+  describe('IAM Roles', () => {
+    test('Task execution role exists with ECS tasks as principal', () => {
+      template.hasResourceProperties('AWS::IAM::Role', {
+        RoleName: 'requirements-foundry-prod-task-execution',
+        AssumeRolePolicyDocument: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Principal: Match.objectLike({
+                Service: 'ecs-tasks.amazonaws.com',
+              }),
+            }),
+          ]),
+        }),
+      });
+    });
+
+    test('Task execution role has AmazonECSTaskExecutionRolePolicy managed policy', () => {
+      template.hasResourceProperties('AWS::IAM::Role', {
+        RoleName: 'requirements-foundry-prod-task-execution',
+        ManagedPolicyArns: Match.arrayWith([
+          Match.objectLike({
+            'Fn::Join': Match.arrayWith([
+              Match.arrayWith([
+                Match.stringLikeRegexp('AmazonECSTaskExecutionRolePolicy'),
+              ]),
+            ]),
+          }),
+        ]),
+      });
+    });
+
+    test('Task role exists with Bedrock InvokeModel permission', () => {
+      template.hasResourceProperties('AWS::IAM::Policy', {
+        PolicyDocument: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: Match.arrayWith([
+                'bedrock:InvokeModel',
+              ]),
+            }),
+          ]),
+        }),
+      });
+    });
+  });
+
+  describe('Stack Outputs', () => {
+    test('stack has at least 14 outputs', () => {
+      const outputs = template.toJSON().Outputs;
+      expect(Object.keys(outputs).length).toBeGreaterThanOrEqual(14);
+    });
+
+    test('VpcId output exists', () => {
+      template.hasOutput('VpcId', {
+        Export: { Name: 'rf-prod-vpc-id' },
+      });
+    });
+
+    test('AlbDnsName output exists', () => {
+      template.hasOutput('AlbDnsName', {
+        Export: { Name: 'rf-prod-alb-dns' },
+      });
+    });
+
+    test('RdsEndpoint output exists', () => {
+      template.hasOutput('RdsEndpoint', {
+        Export: { Name: 'rf-prod-rds-endpoint' },
+      });
+    });
+
+    test('BucketName output exists', () => {
+      template.hasOutput('BucketName', {
+        Export: { Name: 'rf-prod-bucket-name' },
+      });
+    });
+
+    test('EcrRepoUri output exists', () => {
+      template.hasOutput('EcrRepoUri', {
+        Export: { Name: 'rf-prod-ecr-repo-uri' },
+      });
+    });
+
+    test('ClusterName output exists', () => {
+      template.hasOutput('ClusterName', {
+        Export: { Name: 'rf-prod-cluster-name' },
+      });
+    });
+  });
 });
