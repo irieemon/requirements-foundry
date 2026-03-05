@@ -1,5 +1,11 @@
 import * as cdk from 'aws-cdk-lib/core';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as rds from 'aws-cdk-lib/aws-rds';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 
 export class RequirementsFoundryStack extends cdk.Stack {
@@ -78,6 +84,74 @@ export class RequirementsFoundryStack extends cdk.Stack {
       subnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [this.endpointSg],
       privateDnsEnabled: true,
+    });
+
+    // RDS PostgreSQL (DB-01, DB-02)
+    const dbInstance = new rds.DatabaseInstance(this, 'Database', {
+      instanceIdentifier: 'requirements-foundry-prod-rds',
+      engine: rds.DatabaseInstanceEngine.postgres({ version: rds.PostgresEngineVersion.VER_16_3 }),
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE4_GRAVITON, ec2.InstanceSize.MICRO),
+      vpc: this.vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [this.rdsSg],
+      databaseName: 'requirements_foundry',
+      credentials: rds.Credentials.fromGeneratedSecret('postgres', {
+        secretName: 'requirements-foundry-prod/rds-credentials',
+      }),
+      allocatedStorage: 20,
+      maxAllocatedStorage: 50,
+      multiAz: false,
+      deletionProtection: false,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // DATABASE_URL Secret placeholder (SEC-01)
+    const databaseUrlSecret = new secretsmanager.Secret(this, 'DatabaseUrlSecret', {
+      secretName: 'requirements-foundry-prod/database-url',
+      description: 'Composed DATABASE_URL for the application. Value set post-deploy or via entrypoint script.',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // S3 Bucket for uploads (STOR-01)
+    const bucket = new s3.Bucket(this, 'UploadsBucket', {
+      bucketName: 'requirements-foundry-prod-uploads',
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+      versioned: false,
+    });
+
+    // ECR Repository (CMP-03)
+    const repository = new ecr.Repository(this, 'Repository', {
+      repositoryName: 'requirements-foundry-prod',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      emptyOnDelete: true,
+    });
+    repository.addLifecycleRule({ maxImageCount: 10, description: 'Keep last 10 images' });
+
+    // ECS Cluster (CMP-02)
+    const cluster = new ecs.Cluster(this, 'Cluster', {
+      clusterName: 'requirements-foundry-prod-cluster',
+      vpc: this.vpc,
+      containerInsights: true,
+    });
+
+    // SSM Parameters for non-sensitive config (SEC-02)
+    new ssm.StringParameter(this, 'BucketNameParam', {
+      parameterName: '/requirements-foundry/prod/s3-bucket-name',
+      stringValue: bucket.bucketName,
+      description: 'S3 bucket name for file uploads',
+    });
+    new ssm.StringParameter(this, 'RegionParam', {
+      parameterName: '/requirements-foundry/prod/aws-region',
+      stringValue: 'us-east-1',
+      description: 'AWS region for the application',
+    });
+    new ssm.StringParameter(this, 'EcrRepoParam', {
+      parameterName: '/requirements-foundry/prod/ecr-repo-uri',
+      stringValue: repository.repositoryUri,
+      description: 'ECR repository URI for container images',
     });
 
     // Tags
