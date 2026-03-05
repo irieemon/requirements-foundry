@@ -51,9 +51,9 @@ export class RunLogger {
   constructor(runId: string, request?: Request) {
     this.runId = runId;
     this.invocationId = crypto.randomUUID();
-    this.traceId = request?.headers.get("x-vercel-trace") || undefined;
-    this.environment = process.env.VERCEL_ENV || process.env.NODE_ENV || "development";
-    this.region = process.env.VERCEL_REGION || undefined;
+    this.traceId = request?.headers.get("x-trace-id") || undefined;
+    this.environment = process.env.NODE_ENV || "development";
+    this.region = process.env.AWS_REGION || undefined;
   }
 
   // ============================================

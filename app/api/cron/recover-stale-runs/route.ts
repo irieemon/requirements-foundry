@@ -3,15 +3,7 @@
 // GET /api/cron/recover-stale-runs
 // ============================================
 // Finds runs stuck in RUNNING state and attempts recovery.
-// Configure as Vercel Cron Job to run every 5 minutes.
-//
-// vercel.json addition:
-// {
-//   "crons": [{
-//     "path": "/api/cron/recover-stale-runs",
-//     "schedule": "*/5 * * * *"
-//   }]
-// }
+// Configure external cron (e.g. ECS scheduled task) to call every 5 minutes.
 
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -20,13 +12,8 @@ import {
   logEvent,
 } from "@/lib/observability";
 
-// Vercel cron jobs use GET requests
-export const runtime = "nodejs";
-export const maxDuration = 60; // 1 minute max for cron job
-
 export async function GET(request: NextRequest) {
-  // Verify the request is from Vercel Cron
-  // In production, this header is added by Vercel
+  // Verify the request is authenticated via Bearer token
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 

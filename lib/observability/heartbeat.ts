@@ -228,10 +228,15 @@ export async function recoverStaleRun(runId: string): Promise<RecoveryResult> {
   });
 
   if (pendingAfterReset > 0) {
-    // Trigger continuation
+    // Trigger continuation via direct executor call
     try {
-      const { triggerProcessNext } = await import("@/lib/run-engine/process-next-trigger");
-      triggerProcessNext(runId);
+      const { executeBatchStoryRun } = await import("@/lib/run-engine/batch-story-executor");
+      executeBatchStoryRun(runId).catch((error) => {
+        logEvent("error", "stale_run.continuation_failed", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
 
       logEvent("info", "stale_run.continuation_triggered", {
         runId,
