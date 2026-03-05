@@ -113,4 +113,105 @@ describe('RequirementsFoundryStack', () => {
       });
     });
   });
+
+  describe('RDS PostgreSQL', () => {
+    test('RDS instance has correct configuration', () => {
+      template.hasResourceProperties('AWS::RDS::DBInstance', {
+        DBInstanceClass: 'db.t4g.micro',
+        Engine: 'postgres',
+        DBName: 'requirements_foundry',
+        MultiAZ: false,
+      });
+    });
+
+    test('RDS instance is in isolated subnets via subnet group', () => {
+      template.hasResourceProperties('AWS::RDS::DBInstance', {
+        DBSubnetGroupName: Match.anyValue(),
+      });
+    });
+  });
+
+  describe('S3 Bucket', () => {
+    test('S3 bucket has all public access blocked', () => {
+      template.hasResourceProperties('AWS::S3::Bucket', {
+        PublicAccessBlockConfiguration: {
+          BlockPublicAcls: true,
+          BlockPublicPolicy: true,
+          IgnorePublicAcls: true,
+          RestrictPublicBuckets: true,
+        },
+      });
+    });
+  });
+
+  describe('ECR Repository', () => {
+    test('ECR repository exists with correct name', () => {
+      template.hasResourceProperties('AWS::ECR::Repository', {
+        RepositoryName: 'requirements-foundry-prod',
+      });
+    });
+
+    test('ECR repository has lifecycle policy with maxImageCount 10', () => {
+      template.hasResourceProperties('AWS::ECR::Repository', {
+        LifecyclePolicy: {
+          LifecyclePolicyText: Match.stringLikeRegexp('"countNumber":10'),
+        },
+      });
+    });
+  });
+
+  describe('ECS Cluster', () => {
+    test('ECS cluster has container insights enabled', () => {
+      template.hasResourceProperties('AWS::ECS::Cluster', {
+        ClusterSettings: Match.arrayWith([
+          Match.objectLike({
+            Name: 'containerInsights',
+            Value: 'enabled',
+          }),
+        ]),
+      });
+    });
+  });
+
+  describe('Secrets Manager', () => {
+    test('DATABASE_URL secret exists', () => {
+      template.hasResourceProperties('AWS::SecretsManager::Secret', {
+        Name: 'requirements-foundry-prod/database-url',
+        Description: Match.stringLikeRegexp('DATABASE_URL'),
+      });
+    });
+
+    test('at least 2 secrets exist (RDS credentials + DATABASE_URL)', () => {
+      const secrets = template.findResources('AWS::SecretsManager::Secret');
+      expect(Object.keys(secrets).length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('SSM Parameters', () => {
+    test('3 SSM parameters exist', () => {
+      template.resourceCountIs('AWS::SSM::Parameter', 3);
+    });
+
+    test('S3 bucket name parameter exists', () => {
+      template.hasResourceProperties('AWS::SSM::Parameter', {
+        Name: '/requirements-foundry/prod/s3-bucket-name',
+        Type: 'String',
+      });
+    });
+
+    test('AWS region parameter exists', () => {
+      template.hasResourceProperties('AWS::SSM::Parameter', {
+        Name: '/requirements-foundry/prod/aws-region',
+        Type: 'String',
+        Value: 'us-east-1',
+      });
+    });
+
+    test('ECR repo URI parameter exists', () => {
+      template.hasResourceProperties('AWS::SSM::Parameter', {
+        Name: '/requirements-foundry/prod/ecr-repo-uri',
+        Type: 'String',
+      });
+    });
+  });
 });
