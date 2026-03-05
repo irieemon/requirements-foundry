@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
 status: executing
-stopped_at: Completed 21-02-PLAN.md
-last_updated: "2026-03-05T19:24:59Z"
-last_activity: 2026-03-05 -- Completed Plan 21-02 (File Storage S3 Migration)
+stopped_at: Completed 21-04-PLAN.md
+last_updated: "2026-03-05T19:32:09Z"
+last_activity: 2026-03-05 -- Completed Plan 21-04 (HTTP Trigger Elimination)
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 0
-  completed_plans: 3
-  percent: 15
+  completed_plans: 4
+  percent: 20
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 21 of 25 (Application Code Migration)
-Plan: 3 of ? in current phase (Plans 01, 02, 03 complete)
+Plan: 4 of ? in current phase (Plans 01, 02, 03, 04 complete)
 Status: Executing
-Last activity: 2026-03-05 -- Completed Plan 21-02 (File Storage S3 Migration)
+Last activity: 2026-03-05 -- Completed Plan 21-04 (HTTP Trigger Elimination)
 
-Progress: [██░░░░░░░░] 15% (v2.0 milestone)
+Progress: [██░░░░░░░░] 20% (v2.0 milestone)
 
 ## Milestones
 
@@ -43,15 +43,16 @@ Progress: [██░░░░░░░░] 15% (v2.0 milestone)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3 (v2.0)
-- Average duration: 3 min
-- Total execution time: 9 min
+- Total plans completed: 4 (v2.0)
+- Average duration: 4 min
+- Total execution time: 14 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 21    | 01   | 3 min    | 2     | 7     |
 | 21    | 02   | 4 min    | 2     | 5     |
 | 21    | 03   | 2 min    | 2     | 3     |
+| 21    | 04   | 5 min    | 2     | 13    |
 
 *Updated after each plan completion*
 
@@ -77,6 +78,9 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [21-03] Factory functions (getAIProvider, getDocumentAnalyzer, getQuestionGenerator) are now async
 - [21-03] Bedrock model ID format: anthropic.claude-sonnet-4-20250514-v1:0
 - [21-03] AWS credential detection uses fromNodeProviderChain with module-level caching
+- [21-04] Fire-and-forget executor calls from server actions with .catch() error logging
+- [21-04] Subtask action uses IIFE wrapping executeSubtaskGeneration + finalizeSubtaskRun
+- [21-04] Logger uses AWS_REGION/NODE_ENV instead of VERCEL_REGION/VERCEL_ENV
 
 ### Pending Todos
 
@@ -90,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T19:24:59Z
-Stopped at: Completed 21-02-PLAN.md
-Resume file: .planning/phases/21-application-code-migration/21-02-SUMMARY.md
+Last session: 2026-03-05T19:32:09Z
+Stopped at: Completed 21-04-PLAN.md
+Resume file: .planning/phases/21-application-code-migration/21-04-SUMMARY.md

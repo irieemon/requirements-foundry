@@ -72,7 +72,7 @@ Paused at Phase 19 for AWS migration priority. Resume after v2.0 ships.
 
 ### v2.0 AWS Migration
 
-- [ ] **Phase 21: Application Code Migration** - Replace Vercel-specific integrations, Dockerize, eliminate self-continuation pattern
+- [x] **Phase 21: Application Code Migration** - Replace Vercel-specific integrations, Dockerize, eliminate self-continuation pattern (completed 2026-03-05)
 - [ ] **Phase 22: Infrastructure Foundation** - CDK project with VPC, networking, RDS, S3, IAM, secrets, ECR
 - [ ] **Phase 23: Compute and Deployment** - Wire ECS Fargate service to infrastructure, deploy running application
 - [ ] **Phase 24: CI/CD and Operations** - Automated deployments, stale run recovery, monitoring and alarms
@@ -171,7 +171,7 @@ Phases 21 and 22 can run in parallel. Phase 23 depends on both. Then 24, then 25
 | 18. Context Schema & Upload Form | v1.3 | 1/1 | Complete | 2026-01-27 |
 | 19. AI Question Generation | v1.3 | 1/2 | Paused | - |
 | 20. Context Integration | v1.3 | 0/? | Paused | - |
-| 21. Application Code Migration | 3/4 | In Progress|  | - |
+| 21. Application Code Migration | 4/4 | Complete   | 2026-03-05 | - |
 | 22. Infrastructure Foundation | v2.0 | 0/? | Not started | - |
 | 23. Compute and Deployment | v2.0 | 0/? | Not started | - |
 | 24. CI/CD and Operations | v2.0 | 0/? | Not started | - |
