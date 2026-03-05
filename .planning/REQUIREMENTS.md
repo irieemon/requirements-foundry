@@ -20,12 +20,12 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 ### Networking
 
-- [ ] **NET-01**: VPC with private subnets across 2 availability zones in us-east-1
+- [x] **NET-01**: VPC with private subnets across 2 availability zones in us-east-1
 - [ ] **NET-02**: Internal Application Load Balancer accessible from corporate network only
-- [ ] **NET-03**: NAT Gateway for outbound internet access from private subnets
-- [ ] **NET-04**: Security groups enforce ALB accepts corporate CIDR only, ECS accepts ALB only, RDS accepts ECS only
-- [ ] **NET-05**: S3 Gateway VPC Endpoint for free S3 access from private subnets
-- [ ] **NET-06**: Bedrock Interface VPC Endpoint to keep AI traffic on AWS backbone
+- [x] **NET-03**: NAT Gateway for outbound internet access from private subnets
+- [x] **NET-04**: Security groups enforce ALB accepts corporate CIDR only, ECS accepts ALB only, RDS accepts ECS only
+- [x] **NET-05**: S3 Gateway VPC Endpoint for free S3 access from private subnets
+- [x] **NET-06**: Bedrock Interface VPC Endpoint to keep AI traffic on AWS backbone
 
 ### Database
 
@@ -79,8 +79,8 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 ### Infrastructure as Code
 
-- [ ] **IAC-01**: All AWS infrastructure defined in CDK (TypeScript) -- VPC, subnets, ALB, ECS, RDS, S3, IAM, security groups, secrets, log groups
-- [ ] **IAC-02**: CDK project bootstrapped and deployable from local machine
+- [x] **IAC-01**: All AWS infrastructure defined in CDK (TypeScript) -- VPC, subnets, ALB, ECS, RDS, S3, IAM, security groups, secrets, log groups
+- [x] **IAC-02**: CDK project bootstrapped and deployable from local machine
 
 ### Validation
 
@@ -144,12 +144,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CODE-06 | Phase 21 | Complete |
 | CODE-07 | Phase 21 | Complete |
 | CODE-08 | Phase 21 | Complete |
-| NET-01 | Phase 22 | Pending |
+| NET-01 | Phase 22 | Complete |
 | NET-02 | Phase 22 | Pending |
-| NET-03 | Phase 22 | Pending |
-| NET-04 | Phase 22 | Pending |
-| NET-05 | Phase 22 | Pending |
-| NET-06 | Phase 22 | Pending |
+| NET-03 | Phase 22 | Complete |
+| NET-04 | Phase 22 | Complete |
+| NET-05 | Phase 22 | Complete |
+| NET-06 | Phase 22 | Complete |
 | DB-01 | Phase 22 | Pending |
 | DB-02 | Phase 22 | Pending |
 | DB-03 | Phase 25 | Pending |
@@ -176,8 +176,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPS-01 | Phase 24 | Pending |
 | OPS-02 | Phase 24 | Pending |
 | OPS-03 | Phase 24 | Pending |
-| IAC-01 | Phase 22 | Pending |
-| IAC-02 | Phase 22 | Pending |
+| IAC-01 | Phase 22 | Complete |
+| IAC-02 | Phase 22 | Complete |
 | VAL-01 | Phase 25 | Pending |
 | VAL-02 | Phase 25 | Pending |
 | VAL-03 | Phase 25 | Pending |

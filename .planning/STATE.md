@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
 status: executing
-stopped_at: Phase 22 context gathered
-last_updated: "2026-03-05T20:55:57.360Z"
-last_activity: 2026-03-05 -- Completed Plan 21-05 (Verification Gap Closure)
+stopped_at: Completed 22-01 (CDK Project & VPC Networking)
+last_updated: "2026-03-05T23:43:21.000Z"
+last_activity: 2026-03-05 -- Completed Plan 22-01 (CDK Project & VPC Networking)
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
-  percent: 93
+  total_plans: 6
+  completed_plans: 6
+  percent: 94
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** The application runs reliably on AWS infrastructure, accessible to internal corporate users, with all existing features working identically.
-**Current focus:** v2.0 AWS Migration - Phase 21 (Application Code Migration)
+**Current focus:** v2.0 AWS Migration - Phase 22 (Infrastructure Foundation)
 
 ## Current Position
 
-Phase: 21 of 25 (Application Code Migration)
-Plan: 5 of ? in current phase (Plans 01, 02, 03, 04, 05 complete)
+Phase: 22 of 25 (Infrastructure Foundation)
+Plan: 1 of ? in current phase (Plan 01 complete)
 Status: Executing
-Last activity: 2026-03-05 -- Completed Plan 21-05 (Verification Gap Closure)
+Last activity: 2026-03-05 -- Completed Plan 22-01 (CDK Project & VPC Networking)
 
-Progress: [█████████░] 93% (v2.0 milestone)
+Progress: [█████████░] 94% (v2.0 milestone)
 
 ## Milestones
 
@@ -43,9 +43,9 @@ Progress: [█████████░] 93% (v2.0 milestone)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5 (v2.0)
-- Average duration: 3 min
-- Total execution time: 15 min
+- Total plans completed: 6 (v2.0)
+- Average duration: 4 min
+- Total execution time: 21 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -54,6 +54,7 @@ Progress: [█████████░] 93% (v2.0 milestone)
 | 21    | 03   | 2 min    | 2     | 3     |
 | 21    | 04   | 5 min    | 2     | 13    |
 | 21    | 05   | 1 min    | 2     | 3     |
+| 22    | 01   | 6 min    | 2     | 7     |
 
 *Updated after each plan completion*
 
@@ -83,6 +84,9 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [21-04] Subtask action uses IIFE wrapping executeSubtaskGeneration + finalizeSubtaskRun
 - [21-04] Logger uses AWS_REGION/NODE_ENV instead of VERCEL_REGION/VERCEL_ENV
 - [Phase 21]: Removed additional Vercel reference in heartbeat comment not identified in plan
+- [22-01] Literal region us-east-1 in stack env for deterministic synth
+- [22-01] S3 endpoint added to both PRIVATE_WITH_EGRESS and PRIVATE_ISOLATED subnets
+- [22-01] Bedrock endpoint ServiceName resolves to literal string with concrete region
 
 ### Pending Todos
 
@@ -96,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T20:55:57.356Z
-Stopped at: Phase 22 context gathered
-Resume file: .planning/phases/22-infrastructure-foundation/22-CONTEXT.md
+Last session: 2026-03-05T23:43:21.000Z
+Stopped at: Completed 22-01 (CDK Project & VPC Networking)
+Resume file: .planning/phases/22-infrastructure-foundation/22-01-SUMMARY.md
