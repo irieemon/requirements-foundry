@@ -6,9 +6,9 @@ export async function GET() {
   const basic = {
     status: "ok",
     timestamp: new Date().toISOString(),
-    aiEnabled: !!process.env.ANTHROPIC_API_KEY,
-    environment: process.env.VERCEL_ENV || process.env.NODE_ENV || "development",
-    region: process.env.VERCEL_REGION || "local",
+    aiEnabled: process.env.MOCK_MODE !== "true",
+    environment: process.env.NODE_ENV || "development",
+    region: process.env.AWS_REGION || "local",
   };
 
   // Optional: Include run health status
