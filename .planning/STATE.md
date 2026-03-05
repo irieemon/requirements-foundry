@@ -2,26 +2,25 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-27)
+See: .planning/PROJECT.md (updated 2026-03-05)
 
-**Core value:** All generative flows complete successfully with real-time progress feedback.
-**Current focus:** v1.3 Contextual Upload - enhancing document analysis with user context and AI questions
+**Core value:** The application runs reliably on AWS infrastructure, accessible to internal corporate users, with all existing features working identically.
+**Current focus:** v2.0 AWS Migration - porting from Vercel to AWS (ECS Fargate, RDS, S3, Bedrock)
 
 ## Current Position
 
-Phase: 19 of 20 (AI Question Generation)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-01-27 — Completed 19-01-PLAN.md
-
-Progress: ██░░░░░░░░░░░░░░░░░░ 10%
+Phase: Pending roadmap creation
+Plan: N/A
+Status: Milestone initialization
+Last activity: 2026-03-05 -- Paused v1.3, initialized v2.0 AWS Migration
 
 ## Milestones
 
-- **v1.0 Generative Pipeline Fix** — SHIPPED 2026-01-15
-- **v1.1 UX Polish** — SHIPPED 2026-01-20
-- **v1.2 MSS Integration** — SHIPPED 2026-01-27 (Phases 13-17)
-- **v1.3 Contextual Upload** — IN PROGRESS (Phases 18-20)
+- **v1.0 Generative Pipeline Fix** -- SHIPPED 2026-01-15
+- **v1.1 UX Polish** -- SHIPPED 2026-01-20
+- **v1.2 MSS Integration** -- SHIPPED 2026-01-27 (Phases 13-17)
+- **v1.3 Contextual Upload** -- PAUSED at Phase 19/20 (AI Question Generation)
+- **v2.0 AWS Migration** -- IN PROGRESS (initializing)
 
 ## Accumulated Context
 
@@ -29,15 +28,17 @@ Progress: ██░░░░░░░░░░░░░░░░░░ 10%
 
 All decisions logged in PROJECT.md Key Decisions table.
 
-Key decisions from v1.2:
-- Upsert pattern for MSS CSV import (idempotent re-imports)
-- Polymorphic dialogs for all MSS levels (L2/L3/L4)
-- Story MSS inheritance from epic with override capability
-- Arrow format for MSS hierarchy in exports
+Key decisions for v2.0:
+- ECS Fargate for compute (containerized, Docker-ready)
+- RDS PostgreSQL for database (standard managed, cost-effective)
+- S3 for file storage (replaces @vercel/blob)
+- Amazon Bedrock for AI (replaces direct Anthropic SDK)
+- Internal ALB only (no public access)
+- GitHub Actions for CI/CD
 
 ### Deferred Issues
 
-None.
+- v1.3 Contextual Upload paused at Phase 19 (resume after AWS migration)
 
 ### Blockers/Concerns Carried Forward
 
@@ -48,30 +49,22 @@ None.
 - Milestone v1.0 shipped: 2026-01-15
 - Milestone v1.1 shipped: 2026-01-20
 - Milestone v1.2 shipped: 2026-01-27
-- Milestone v1.3 created: Contextual Upload, 3 phases (Phase 18-20)
+- Milestone v1.3 paused: 2026-03-05 (at Phase 19/20)
+- Milestone v2.0 created: AWS Migration
 
 ## Session Continuity
 
-Last session: 2026-01-27
-Stopped at: Completed 19-01-PLAN.md (Plan 1 of 2 for Phase 19)
+Last session: 2026-03-05
+Stopped at: Milestone initialization, pending workflow config and roadmap
 Resume file: None
 
 ## Notes
 
-**v1.3 Contextual Upload Focus:**
-- Upload context form with structured fields (project basics, doc classification, notes)
-- AI clarifying questions generated after document review
-- Context-enhanced card analysis for better-informed requirements
-
-**User flow:**
-1. User uploads documents
-2. Context form appears with structured fields + notes
-3. AI reviews docs + context, generates clarifying questions
-4. User answers questions (one-shot)
-5. Card analysis proceeds with full context
-
-**Constraints:**
-- Keep existing shadcn/ui component library
-- Maintain all existing functionality
-- Context gathering happens during upload flow (not separate step)
-- AI questions are one-shot (not interactive chat)
+**v2.0 AWS Migration Focus:**
+- Replace Vercel-specific dependencies (Blob, DB config, AI SDK)
+- Containerize with Docker for ECS Fargate
+- Provision AWS infrastructure (VPC, RDS, S3, ALB, ECS)
+- Set up CI/CD with GitHub Actions
+- Internal-only access (corporate network)
+- POC heading toward production
+- Future: Okta SSO integration
