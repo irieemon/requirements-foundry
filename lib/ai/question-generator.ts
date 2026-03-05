@@ -3,7 +3,7 @@
 // Generates clarifying questions based on documents + context
 // ============================================
 
-import Anthropic from "@anthropic-ai/sdk";
+import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
 import type { ExtractedContent } from "@/lib/documents/types";
 import type { UploadContextFormData } from "@/lib/uploads/context-schema";
 import {
@@ -11,7 +11,7 @@ import {
   aiQuestionsArraySchema,
   QUESTION_CATEGORIES,
 } from "@/lib/uploads/context-schema";
-import { hasAnthropicKey } from "./provider";
+import { hasAwsCredentials } from "./provider";
 
 // ============================================
 // Types
@@ -47,12 +47,12 @@ export interface QuestionGenerator {
 // Anthropic Question Generator
 // ============================================
 
-class AnthropicQuestionGenerator implements QuestionGenerator {
-  private client: Anthropic;
+class BedrockQuestionGenerator implements QuestionGenerator {
+  private client: AnthropicBedrock;
 
   constructor() {
-    this.client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+    this.client = new AnthropicBedrock({
+      awsRegion: process.env.AWS_REGION || "us-east-1",
     });
   }
 
@@ -125,7 +125,7 @@ ${documentText}
 Generate ${maxQuestions} clarifying questions based on the above documents and context.`;
 
       const message = await this.client.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "anthropic.claude-sonnet-4-20250514-v1:0",
         max_tokens: 2048,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
@@ -337,9 +337,12 @@ class MockQuestionGenerator implements QuestionGenerator {
 // Factory Function
 // ============================================
 
-export function getQuestionGenerator(): QuestionGenerator {
-  if (hasAnthropicKey()) {
-    return new AnthropicQuestionGenerator();
+export async function getQuestionGenerator(): Promise<QuestionGenerator> {
+  if (process.env.MOCK_MODE === "true") {
+    return new MockQuestionGenerator();
+  }
+  if (await hasAwsCredentials()) {
+    return new BedrockQuestionGenerator();
   }
   return new MockQuestionGenerator();
 }

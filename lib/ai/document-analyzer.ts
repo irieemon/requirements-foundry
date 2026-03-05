@@ -3,10 +3,10 @@
 // Multi-modal analysis of extracted documents
 // ============================================
 
-import Anthropic from "@anthropic-ai/sdk";
+import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
 import type { CardData } from "@/lib/types";
 import type { ExtractedContent, ExtractedImage } from "@/lib/documents/types";
-import { hasAnthropicKey } from "./provider";
+import { hasAwsCredentials } from "./provider";
 
 // ============================================
 // Types
@@ -50,12 +50,12 @@ export interface DocumentAnalyzer {
 // Anthropic Document Analyzer
 // ============================================
 
-class AnthropicDocumentAnalyzer implements DocumentAnalyzer {
-  private client: Anthropic;
+class BedrockDocumentAnalyzer implements DocumentAnalyzer {
+  private client: AnthropicBedrock;
 
   constructor() {
-    this.client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+    this.client = new AnthropicBedrock({
+      awsRegion: process.env.AWS_REGION || "us-east-1",
     });
   }
 
@@ -121,7 +121,7 @@ Return ONLY a valid JSON array of cards:
 ]`;
 
       const message = await this.client.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "anthropic.claude-sonnet-4-20250514-v1:0",
         max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: "user", content: messageContent }],
@@ -164,8 +164,8 @@ Return ONLY a valid JSON array of cards:
    */
   private buildMessageContent(
     contents: ExtractedContent[]
-  ): Anthropic.Messages.ContentBlockParam[] {
-    const messageContent: Anthropic.Messages.ContentBlockParam[] = [];
+  ): AnthropicBedrock.Messages.ContentBlockParam[] {
+    const messageContent: AnthropicBedrock.Messages.ContentBlockParam[] = [];
 
     for (const content of contents) {
       // Add text content
@@ -311,9 +311,12 @@ class MockDocumentAnalyzer implements DocumentAnalyzer {
 // Factory Function
 // ============================================
 
-export function getDocumentAnalyzer(): DocumentAnalyzer {
-  if (hasAnthropicKey()) {
-    return new AnthropicDocumentAnalyzer();
+export async function getDocumentAnalyzer(): Promise<DocumentAnalyzer> {
+  if (process.env.MOCK_MODE === "true") {
+    return new MockDocumentAnalyzer();
+  }
+  if (await hasAwsCredentials()) {
+    return new BedrockDocumentAnalyzer();
   }
   return new MockDocumentAnalyzer();
 }
