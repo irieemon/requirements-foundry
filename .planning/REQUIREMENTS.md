@@ -29,14 +29,14 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 ### Database
 
-- [ ] **DB-01**: RDS PostgreSQL instance (db.t4g.micro, single-AZ) in private subnet
-- [ ] **DB-02**: Database subnet group using private subnets
+- [x] **DB-01**: RDS PostgreSQL instance (db.t4g.micro, single-AZ) in private subnet
+- [x] **DB-02**: Database subnet group using private subnets
 - [ ] **DB-03**: Database migrated from Neon to RDS via pg_dump/pg_restore
 - [ ] **DB-04**: Prisma migrations run successfully against RDS instance
 
 ### Storage
 
-- [ ] **STOR-01**: S3 bucket for file uploads with private access only
+- [x] **STOR-01**: S3 bucket for file uploads with private access only
 - [ ] **STOR-02**: Presigned URL upload flow replaces Vercel Blob handleUpload for client-side uploads
 - [ ] **STOR-03**: Server-side S3 operations (get, delete) work from ECS container via IAM role
 
@@ -49,16 +49,16 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 ### Secrets and Configuration
 
-- [ ] **SEC-01**: DATABASE_URL stored in AWS Secrets Manager and injected into ECS container
-- [ ] **SEC-02**: Non-sensitive config (S3 bucket name, region, app name) stored in SSM Parameter Store
+- [x] **SEC-01**: DATABASE_URL stored in AWS Secrets Manager and injected into ECS container
+- [x] **SEC-02**: Non-sensitive config (S3 bucket name, region, app name) stored in SSM Parameter Store
 - [ ] **SEC-03**: IAM task execution role can pull ECR images and read secrets
 - [ ] **SEC-04**: IAM task role has permissions for S3, Bedrock, and CloudWatch Logs
 
 ### Compute
 
 - [ ] **CMP-01**: ECS Fargate service runs the Next.js container (0.5 vCPU / 1GB RAM)
-- [ ] **CMP-02**: ECS cluster created in us-east-1
-- [ ] **CMP-03**: ECR repository stores container images with lifecycle policy (keep last 10)
+- [x] **CMP-02**: ECS cluster created in us-east-1
+- [x] **CMP-03**: ECR repository stores container images with lifecycle policy (keep last 10)
 - [ ] **CMP-04**: Container logs sent to CloudWatch via awslogs driver
 
 ### CI/CD
@@ -150,24 +150,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NET-04 | Phase 22 | Complete |
 | NET-05 | Phase 22 | Complete |
 | NET-06 | Phase 22 | Complete |
-| DB-01 | Phase 22 | Pending |
-| DB-02 | Phase 22 | Pending |
+| DB-01 | Phase 22 | Complete |
+| DB-02 | Phase 22 | Complete |
 | DB-03 | Phase 25 | Pending |
 | DB-04 | Phase 25 | Pending |
-| STOR-01 | Phase 22 | Pending |
+| STOR-01 | Phase 22 | Complete |
 | STOR-02 | Phase 23 | Pending |
 | STOR-03 | Phase 23 | Pending |
 | AI-01 | Phase 23 | Pending |
 | AI-02 | Phase 23 | Pending |
 | AI-03 | Phase 21 | Complete |
 | AI-04 | Phase 23 | Pending |
-| SEC-01 | Phase 22 | Pending |
-| SEC-02 | Phase 22 | Pending |
+| SEC-01 | Phase 22 | Complete |
+| SEC-02 | Phase 22 | Complete |
 | SEC-03 | Phase 22 | Pending |
 | SEC-04 | Phase 22 | Pending |
 | CMP-01 | Phase 23 | Pending |
-| CMP-02 | Phase 22 | Pending |
-| CMP-03 | Phase 22 | Pending |
+| CMP-02 | Phase 22 | Complete |
+| CMP-03 | Phase 22 | Complete |
 | CMP-04 | Phase 23 | Pending |
 | CICD-01 | Phase 24 | Pending |
 | CICD-02 | Phase 24 | Pending |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
 status: executing
-stopped_at: Completed 22-01 (CDK Project & VPC Networking)
-last_updated: "2026-03-05T23:43:21.000Z"
-last_activity: 2026-03-05 -- Completed Plan 22-01 (CDK Project & VPC Networking)
+stopped_at: Completed 22-02 (Data, Storage & Compute Foundation)
+last_updated: "2026-03-05T23:48:23.000Z"
+last_activity: 2026-03-05 -- Completed Plan 22-02 (Data, Storage & Compute Foundation)
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 6
-  percent: 94
+  completed_plans: 7
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 22 of 25 (Infrastructure Foundation)
-Plan: 1 of ? in current phase (Plan 01 complete)
+Plan: 2 of 3 in current phase (Plan 02 complete)
 Status: Executing
-Last activity: 2026-03-05 -- Completed Plan 22-01 (CDK Project & VPC Networking)
+Last activity: 2026-03-05 -- Completed Plan 22-02 (Data, Storage & Compute Foundation)
 
-Progress: [█████████░] 94% (v2.0 milestone)
+Progress: [█████████░] 95% (v2.0 milestone)
 
 ## Milestones
 
@@ -43,9 +43,9 @@ Progress: [█████████░] 94% (v2.0 milestone)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (v2.0)
-- Average duration: 4 min
-- Total execution time: 21 min
+- Total plans completed: 7 (v2.0)
+- Average duration: 3 min
+- Total execution time: 24 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -55,6 +55,7 @@ Progress: [█████████░] 94% (v2.0 milestone)
 | 21    | 04   | 5 min    | 2     | 13    |
 | 21    | 05   | 1 min    | 2     | 3     |
 | 22    | 01   | 6 min    | 2     | 7     |
+| 22    | 02   | 3 min    | 2     | 2     |
 
 *Updated after each plan completion*
 
@@ -87,6 +88,9 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [22-01] Literal region us-east-1 in stack env for deterministic synth
 - [22-01] S3 endpoint added to both PRIVATE_WITH_EGRESS and PRIVATE_ISOLATED subnets
 - [22-01] Bedrock endpoint ServiceName resolves to literal string with concrete region
+- [22-02] All stateful resources use RemovalPolicy.DESTROY for POC teardown
+- [22-02] DATABASE_URL secret is a placeholder; composed at container startup (Phase 23)
+- [22-02] CDK lifecycle policy serializes maxImageCount as countNumber in JSON
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T23:43:21.000Z
-Stopped at: Completed 22-01 (CDK Project & VPC Networking)
-Resume file: .planning/phases/22-infrastructure-foundation/22-01-SUMMARY.md
+Last session: 2026-03-05T23:48:23Z
+Stopped at: Completed 22-02 (Data, Storage & Compute Foundation)
+Resume file: .planning/phases/22-infrastructure-foundation/22-02-SUMMARY.md
