@@ -31,8 +31,18 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
+# Copy entrypoint script
+COPY entrypoint.js ./
+
+# Copy Prisma CLI for migrate deploy at startup
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
+
+# Copy migration files
+COPY --from=builder /app/prisma/migrations ./prisma/migrations
+
 USER nextjs
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["node", "entrypoint.js"]
