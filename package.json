@@ -23,6 +23,7 @@
   "dependencies": {
     "@anthropic-ai/bedrock-sdk": "^0.26.4",
     "@aws-sdk/client-s3": "^3.1002.0",
+    "@aws-sdk/client-secrets-manager": "^3.1003.0",
     "@aws-sdk/credential-providers": "^3.1002.0",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/adapter-pg": "^7.2.0",
