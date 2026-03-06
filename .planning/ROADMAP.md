@@ -182,6 +182,6 @@ Phases 21 and 22 can run in parallel. Phase 23 depends on both. Then 24, then 25
 | 20. Context Integration | v1.3 | 0/? | Paused | - |
 | 21. Application Code Migration | 5/5 | Complete    | 2026-03-05 | - |
 | 22. Infrastructure Foundation | 3/3 | Complete    | 2026-03-05 | - |
-| 23. Compute and Deployment | v2.0 | 0/3 | Not started | - |
+| 23. Compute and Deployment | 2/3 | In Progress|  | - |
 | 24. CI/CD and Operations | v2.0 | 0/? | Not started | - |
 | 25. Validation and Data Migration | v2.0 | 0/? | Not started | - |

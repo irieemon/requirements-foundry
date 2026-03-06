@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
-status: completed
-stopped_at: Phase 23 context gathered
-last_updated: "2026-03-06T00:15:03.484Z"
-last_activity: 2026-03-05 -- Completed Plan 22-03 (ALB, IAM Roles & Stack Outputs)
+status: in-progress
+stopped_at: Completed 23-02 (Entrypoint, Dockerfile, Deploy Script)
+last_updated: "2026-03-06T00:37:21.895Z"
+last_activity: 2026-03-05 -- Completed Plan 23-02 (Entrypoint, Dockerfile, Deploy Script)
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
-  percent: 95
+  total_plans: 11
+  completed_plans: 9
+  percent: 92
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** The application runs reliably on AWS infrastructure, accessible to internal corporate users, with all existing features working identically.
-**Current focus:** v2.0 AWS Migration - Phase 22 (Infrastructure Foundation)
+**Current focus:** v2.0 AWS Migration - Phase 23 (Compute and Deployment)
 
 ## Current Position
 
-Phase: 22 of 25 (Infrastructure Foundation) -- COMPLETE
-Plan: 3 of 3 in current phase (Plan 03 complete)
-Status: Phase Complete
-Last activity: 2026-03-05 -- Completed Plan 22-03 (ALB, IAM Roles & Stack Outputs)
+Phase: 23 of 25 (Compute and Deployment) -- IN PROGRESS
+Plan: 2 of 3 in current phase (Plan 02 complete)
+Status: In Progress
+Last activity: 2026-03-05 -- Completed Plan 23-02 (Entrypoint, Dockerfile, Deploy Script)
 
-Progress: [█████████░] 95% (v2.0 milestone)
+Progress: [█████████░] 92% (v2.0 milestone)
 
 ## Milestones
 
@@ -43,9 +43,9 @@ Progress: [█████████░] 95% (v2.0 milestone)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8 (v2.0)
+- Total plans completed: 10 (v2.0)
 - Average duration: 3 min
-- Total execution time: 26 min
+- Total execution time: 30 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -57,6 +57,8 @@ Progress: [█████████░] 95% (v2.0 milestone)
 | 22    | 01   | 6 min    | 2     | 7     |
 | 22    | 02   | 3 min    | 2     | 2     |
 | 22    | 03   | 2 min    | 2     | 2     |
+| 23    | 01   | 2 min    | 2     | 2     |
+| 23    | 02   | 2 min    | 2     | 6     |
 
 *Updated after each plan completion*
 
@@ -95,6 +97,8 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [Phase 22]: [22-03] HTTP/80 listener with default 503 fixed response; Phase 23 switches to forwarding
 - [Phase 22]: [22-03] Bedrock IAM policy uses resources: ['*'] (no resource-level permissions supported)
 - [Phase 22]: [22-03] 14 CfnOutputs with rf-prod-* export names for cross-stack references
+- [23-02] require('./server.js') instead of exec to keep same process for SIGTERM handling
+- [23-02] Migration failure is non-fatal -- log and continue for resilience
 
 ### Pending Todos
 
@@ -108,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T00:15:03.474Z
-Stopped at: Phase 23 context gathered
-Resume file: .planning/phases/23-compute-and-deployment/23-CONTEXT.md
+Last session: 2026-03-06T00:37:00Z
+Stopped at: Completed 23-02 (Entrypoint, Dockerfile, Deploy Script)
+Resume file: .planning/phases/23-compute-and-deployment/23-02-SUMMARY.md
