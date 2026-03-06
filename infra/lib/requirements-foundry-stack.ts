@@ -7,6 +7,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 
@@ -226,6 +227,51 @@ export class RequirementsFoundryStack extends cdk.Stack {
       resources: ['*'],
     }));
 
+    // CloudWatch Log Group (CMP-04)
+    const logGroup = new logs.LogGroup(this, 'AppLogGroup', {
+      logGroupName: '/ecs/requirements-foundry-prod',
+      retention: logs.RetentionDays.TWO_WEEKS,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Fargate Task Definition (CMP-01)
+    const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
+      family: 'requirements-foundry-prod',
+      cpu: 512,
+      memoryLimitMiB: 1024,
+      executionRole: taskExecutionRole,
+      taskRole: taskRole,
+    });
+
+    // Container
+    taskDefinition.addContainer('AppContainer', {
+      image: ecs.ContainerImage.fromEcrRepository(repository, 'latest'),
+      logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'app', logGroup }),
+      environment: {
+        NODE_ENV: 'production',
+        PORT: '3000',
+        AWS_REGION: 'us-east-1',
+        S3_BUCKET_NAME: bucket.bucketName,
+        RDS_SECRET_NAME: 'requirements-foundry-prod/rds-credentials',
+      },
+      portMappings: [{ containerPort: 3000, protocol: ecs.Protocol.TCP }],
+    });
+
+    // Fargate Service
+    const service = new ecs.FargateService(this, 'Service', {
+      serviceName: 'requirements-foundry-prod-service',
+      cluster,
+      taskDefinition,
+      desiredCount: 1,
+      securityGroups: [this.ecsSg],
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      assignPublicIp: false,
+      circuitBreaker: { rollback: false },
+    });
+
+    // Wire Fargate service to ALB target group
+    service.attachToApplicationTargetGroup(targetGroup);
+
     // Stack Outputs (for Phase 23)
     new cdk.CfnOutput(this, 'VpcId', { value: this.vpc.vpcId, exportName: 'rf-prod-vpc-id' });
     new cdk.CfnOutput(this, 'AlbDnsName', { value: alb.loadBalancerDnsName, exportName: 'rf-prod-alb-dns' });
@@ -241,6 +287,8 @@ export class RequirementsFoundryStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'TaskExecutionRoleArn', { value: taskExecutionRole.roleArn, exportName: 'rf-prod-exec-role-arn' });
     new cdk.CfnOutput(this, 'TaskRoleArn', { value: taskRole.roleArn, exportName: 'rf-prod-task-role-arn' });
     new cdk.CfnOutput(this, 'EcsSgId', { value: this.ecsSg.securityGroupId, exportName: 'rf-prod-ecs-sg-id' });
+    new cdk.CfnOutput(this, 'ServiceName', { value: service.serviceName, exportName: 'rf-prod-service-name' });
+    new cdk.CfnOutput(this, 'LogGroupName', { value: logGroup.logGroupName, exportName: 'rf-prod-log-group' });
 
     // Tags
     cdk.Tags.of(this).add('Project', 'requirements-foundry');
