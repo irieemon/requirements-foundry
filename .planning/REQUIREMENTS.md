@@ -37,7 +37,7 @@ Requirements for AWS migration. Each maps to roadmap phases.
 ### Storage
 
 - [x] **STOR-01**: S3 bucket for file uploads with private access only
-- [x] **STOR-02**: Presigned URL upload flow replaces Vercel Blob handleUpload for client-side uploads
+- [x] **STOR-02**: Server-side S3 upload via FormData replaces Vercel Blob handleUpload for file uploads
 - [x] **STOR-03**: Server-side S3 operations (get, delete) work from ECS container via IAM role
 
 ### AI Integration
