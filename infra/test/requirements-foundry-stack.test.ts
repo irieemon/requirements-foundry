@@ -287,9 +287,9 @@ describe('RequirementsFoundryStack', () => {
   });
 
   describe('Stack Outputs', () => {
-    test('stack has at least 14 outputs', () => {
+    test('stack has at least 16 outputs', () => {
       const outputs = template.toJSON().Outputs;
-      expect(Object.keys(outputs).length).toBeGreaterThanOrEqual(14);
+      expect(Object.keys(outputs).length).toBeGreaterThanOrEqual(16);
     });
 
     test('VpcId output exists', () => {
@@ -325,6 +325,63 @@ describe('RequirementsFoundryStack', () => {
     test('ClusterName output exists', () => {
       template.hasOutput('ClusterName', {
         Export: { Name: 'rf-prod-cluster-name' },
+      });
+    });
+  });
+
+  describe('Fargate Task Definition', () => {
+    test('task definition has Cpu 512 and Memory 1024', () => {
+      template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+        Cpu: '512',
+        Memory: '1024',
+      });
+    });
+
+    test('task definition has NetworkMode awsvpc', () => {
+      template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+        NetworkMode: 'awsvpc',
+      });
+    });
+
+    test('container definition has port mapping with ContainerPort 3000', () => {
+      template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+        ContainerDefinitions: Match.arrayWith([
+          Match.objectLike({
+            PortMappings: Match.arrayWith([
+              Match.objectLike({
+                ContainerPort: 3000,
+              }),
+            ]),
+          }),
+        ]),
+      });
+    });
+  });
+
+  describe('CloudWatch Logs', () => {
+    test('log group exists with name /ecs/requirements-foundry-prod', () => {
+      template.hasResourceProperties('AWS::Logs::LogGroup', {
+        LogGroupName: '/ecs/requirements-foundry-prod',
+      });
+    });
+
+    test('log group has RetentionInDays 14', () => {
+      template.hasResourceProperties('AWS::Logs::LogGroup', {
+        RetentionInDays: 14,
+      });
+    });
+  });
+
+  describe('Fargate Service', () => {
+    test('service has DesiredCount 1', () => {
+      template.hasResourceProperties('AWS::ECS::Service', {
+        DesiredCount: 1,
+      });
+    });
+
+    test('service has LaunchType FARGATE', () => {
+      template.hasResourceProperties('AWS::ECS::Service', {
+        LaunchType: 'FARGATE',
       });
     });
   });
