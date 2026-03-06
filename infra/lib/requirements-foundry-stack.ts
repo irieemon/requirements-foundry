@@ -262,11 +262,11 @@ export class RequirementsFoundryStack extends cdk.Stack {
       serviceName: 'requirements-foundry-prod-service',
       cluster,
       taskDefinition,
-      desiredCount: 1,
+      desiredCount: 0, // Start at 0; scale to 1 after first Docker image push
       securityGroups: [this.ecsSg],
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       assignPublicIp: false,
-      circuitBreaker: { rollback: false },
+      circuitBreaker: { enable: true, rollback: false },
     });
 
     // Wire Fargate service to ALB target group

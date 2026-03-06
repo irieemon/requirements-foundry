@@ -373,9 +373,9 @@ describe('RequirementsFoundryStack', () => {
   });
 
   describe('Fargate Service', () => {
-    test('service has DesiredCount 1', () => {
+    test('service has DesiredCount 0 (bootstrap mode)', () => {
       template.hasResourceProperties('AWS::ECS::Service', {
-        DesiredCount: 1,
+        DesiredCount: 0,
       });
     });
 

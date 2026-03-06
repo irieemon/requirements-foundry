@@ -31,10 +31,11 @@ docker tag "${ECR_REPO}:latest" "${ECR_URI}:latest"
 echo "==> Pushing to ECR..."
 docker push "${ECR_URI}:latest"
 
-echo "==> Triggering ECS deployment..."
+echo "==> Updating ECS service (desired count 1, force new deployment)..."
 aws ecs update-service \
   --cluster "${CLUSTER}" \
   --service "${SERVICE}" \
+  --desired-count 1 \
   --force-new-deployment \
   --region "${AWS_REGION}" \
   --no-cli-pager
