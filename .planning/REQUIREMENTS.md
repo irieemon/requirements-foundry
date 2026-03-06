@@ -43,7 +43,7 @@ Requirements for AWS migration. Each maps to roadmap phases.
 ### AI Integration
 
 - [ ] **AI-01**: Bedrock invokes Claude with correct model ID format (`anthropic.claude-sonnet-4-20250514-v1:0`)
-- [ ] **AI-02**: ECS task role has `bedrock:InvokeModel` permission via IAM (no API keys)
+- [x] **AI-02**: ECS task role has `bedrock:InvokeModel` permission via IAM (no API keys)
 - [x] **AI-03**: Mock mode continues to work without Bedrock access
 - [ ] **AI-04**: Bedrock model access enabled in us-east-1 (FTU form completed)
 
@@ -56,10 +56,10 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 ### Compute
 
-- [ ] **CMP-01**: ECS Fargate service runs the Next.js container (0.5 vCPU / 1GB RAM)
+- [x] **CMP-01**: ECS Fargate service runs the Next.js container (0.5 vCPU / 1GB RAM)
 - [x] **CMP-02**: ECS cluster created in us-east-1
 - [x] **CMP-03**: ECR repository stores container images with lifecycle policy (keep last 10)
-- [ ] **CMP-04**: Container logs sent to CloudWatch via awslogs driver
+- [x] **CMP-04**: Container logs sent to CloudWatch via awslogs driver
 
 ### CI/CD
 
@@ -158,17 +158,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STOR-02 | Phase 23 | Complete |
 | STOR-03 | Phase 23 | Complete |
 | AI-01 | Phase 23 | Pending |
-| AI-02 | Phase 23 | Pending |
+| AI-02 | Phase 23 | Complete |
 | AI-03 | Phase 21 | Complete |
 | AI-04 | Phase 23 | Pending |
 | SEC-01 | Phase 22 | Complete |
 | SEC-02 | Phase 22 | Complete |
 | SEC-03 | Phase 22 | Complete |
 | SEC-04 | Phase 22 | Complete |
-| CMP-01 | Phase 23 | Pending |
+| CMP-01 | Phase 23 | Complete |
 | CMP-02 | Phase 22 | Complete |
 | CMP-03 | Phase 22 | Complete |
-| CMP-04 | Phase 23 | Pending |
+| CMP-04 | Phase 23 | Complete |
 | CICD-01 | Phase 24 | Pending |
 | CICD-02 | Phase 24 | Pending |
 | CICD-03 | Phase 24 | Pending |

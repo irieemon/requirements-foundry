@@ -10,8 +10,8 @@ progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 11
-  completed_plans: 9
-  percent: 92
+  completed_plans: 10
+  percent: 95
 ---
 
 # Project State
@@ -97,6 +97,8 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [Phase 22]: [22-03] HTTP/80 listener with default 503 fixed response; Phase 23 switches to forwarding
 - [Phase 22]: [22-03] Bedrock IAM policy uses resources: ['*'] (no resource-level permissions supported)
 - [Phase 22]: [22-03] 14 CfnOutputs with rf-prod-* export names for cross-stack references
+- [23-01] circuitBreaker rollback disabled for initial bootstrap (no image in ECR yet)
+- [23-01] Container environment uses literal values for non-sensitive config (NODE_ENV, PORT, AWS_REGION)
 - [23-02] require('./server.js') instead of exec to keep same process for SIGTERM handling
 - [23-02] Migration failure is non-fatal -- log and continue for resilience
 
