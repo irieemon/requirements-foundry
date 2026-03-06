@@ -125,7 +125,7 @@ ${documentText}
 Generate ${maxQuestions} clarifying questions based on the above documents and context.`;
 
       const message = await this.client.messages.create({
-        model: "anthropic.claude-sonnet-4-20250514-v1:0",
+        model: "us.anthropic.claude-sonnet-4-20250514-v1:0",
         max_tokens: 2048,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
