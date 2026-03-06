@@ -121,9 +121,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. ECS Fargate task is running with the Docker image from Phase 21, using 0.5 vCPU / 1GB RAM, and stays healthy (ALB health checks pass)
   2. Navigating to the internal ALB URL from the corporate network loads the application homepage
-  3. File upload via presigned URLs works end-to-end (upload a document, see it stored in S3, retrieve it)
+  3. File upload via server-side FormData works end-to-end (upload a document, see it stored in S3, retrieve it)
   4. AI-powered generation (card analysis, epic generation) completes successfully using Bedrock Claude with IAM auth (no API keys)
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 23-01-PLAN.md — CDK Fargate task definition, service, log group, and CDK tests
+- [ ] 23-02-PLAN.md — Entrypoint.js, Dockerfile updates, deploy script
+- [ ] 23-03-PLAN.md — Deploy to AWS, validate end-to-end (S3, Bedrock, ALB)
 
 ### Phase 24: CI/CD and Operations
 **Goal**: Deployments are automated via GitHub Actions, stale run recovery works without Vercel Cron, and basic operational monitoring is in place
@@ -178,6 +182,6 @@ Phases 21 and 22 can run in parallel. Phase 23 depends on both. Then 24, then 25
 | 20. Context Integration | v1.3 | 0/? | Paused | - |
 | 21. Application Code Migration | 5/5 | Complete    | 2026-03-05 | - |
 | 22. Infrastructure Foundation | 3/3 | Complete    | 2026-03-05 | - |
-| 23. Compute and Deployment | v2.0 | 0/? | Not started | - |
+| 23. Compute and Deployment | v2.0 | 0/3 | Not started | - |
 | 24. CI/CD and Operations | v2.0 | 0/? | Not started | - |
 | 25. Validation and Data Migration | v2.0 | 0/? | Not started | - |
