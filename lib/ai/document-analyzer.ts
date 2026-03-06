@@ -4,6 +4,7 @@
 // ============================================
 
 import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
+import type { ContentBlockParam } from "@anthropic-ai/sdk/resources/messages/messages";
 import type { CardData } from "@/lib/types";
 import type { ExtractedContent, ExtractedImage } from "@/lib/documents/types";
 import { hasAwsCredentials } from "./provider";
@@ -164,8 +165,8 @@ Return ONLY a valid JSON array of cards:
    */
   private buildMessageContent(
     contents: ExtractedContent[]
-  ): AnthropicBedrock.Messages.ContentBlockParam[] {
-    const messageContent: AnthropicBedrock.Messages.ContentBlockParam[] = [];
+  ): ContentBlockParam[] {
+    const messageContent: ContentBlockParam[] = [];
 
     for (const content of contents) {
       // Add text content

@@ -123,7 +123,7 @@ export async function generateQuestionsForUpload(uploadId: string): Promise<{
     const validatedContext = contextValidation.success ? contextValidation.data : null;
 
     // 6. Call question generator
-    const generator = getQuestionGenerator();
+    const generator = await getQuestionGenerator();
     const result = await generator.generateQuestions(
       documentContents,
       validatedContext,

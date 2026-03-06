@@ -2,6 +2,7 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY prisma ./prisma
 RUN npm ci
 
 # Stage 2: Build application
@@ -10,7 +11,7 @@ WORKDIR /app
 ENV PRISMA_CLI_QUERY_ENGINE_TYPE=binary
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate && npm run build
+RUN npx prisma generate && DATABASE_URL="postgresql://build:build@localhost:5432/build" npx next build
 
 # Stage 3: Production runner
 FROM node:22-alpine AS runner
