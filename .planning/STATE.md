@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
 status: in-progress
-stopped_at: Completed 23-02 (Entrypoint, Dockerfile, Deploy Script)
-last_updated: "2026-03-06T00:37:21.895Z"
-last_activity: 2026-03-05 -- Completed Plan 23-02 (Entrypoint, Dockerfile, Deploy Script)
+stopped_at: Completed Phase 23 (Compute and Deployment) - E2E verified
+last_updated: "2026-03-09T14:46:00.000Z"
+last_activity: 2026-03-09 -- Phase 23 complete, app verified end-to-end on AWS
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 11
-  completed_plans: 10
-  percent: 95
+  completed_plans: 11
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** The application runs reliably on AWS infrastructure, accessible to internal corporate users, with all existing features working identically.
-**Current focus:** v2.0 AWS Migration - Phase 23 (Compute and Deployment)
+**Current focus:** v2.0 AWS Migration - Phase 23 COMPLETE, ready for Phase 24 (CI/CD)
 
 ## Current Position
 
-Phase: 23 of 25 (Compute and Deployment) -- IN PROGRESS
-Plan: 2 of 3 in current phase (Plan 02 complete)
-Status: In Progress
-Last activity: 2026-03-05 -- Completed Plan 23-02 (Entrypoint, Dockerfile, Deploy Script)
+Phase: 23 of 25 (Compute and Deployment) -- COMPLETE
+Plan: 3 of 3 in current phase (all plans complete)
+Status: Phase 23 verified end-to-end
+Last activity: 2026-03-09 -- Full E2E verification: upload, AI generation, JIRA export
 
-Progress: [█████████░] 92% (v2.0 milestone)
+Progress: [██████████] 100% (v2.0 Phases 21-23 complete)
 
 ## Milestones
 
@@ -38,14 +38,14 @@ Progress: [█████████░] 92% (v2.0 milestone)
 - **v1.1** -- SHIPPED 2026-01-20 (Phases 10-12)
 - **v1.2** -- SHIPPED 2026-01-27 (Phases 13-17)
 - **v1.3** -- PAUSED at Phase 19 (resume after v2.0)
-- **v2.0** -- IN PROGRESS (Phases 21-25)
+- **v2.0** -- IN PROGRESS (Phases 21-25, Phases 21-23 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (v2.0)
-- Average duration: 3 min
-- Total execution time: 30 min
+- Total plans completed: 11 (v2.0)
+- Average duration: 3 min (automated plans)
+- Total execution time: ~35 min + deployment debugging
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -59,6 +59,7 @@ Progress: [█████████░] 92% (v2.0 milestone)
 | 22    | 03   | 2 min    | 2     | 2     |
 | 23    | 01   | 2 min    | 2     | 2     |
 | 23    | 02   | 2 min    | 2     | 6     |
+| 23    | 03   | multi-session | 2 | 6   |
 
 *Updated after each plan completion*
 
@@ -71,7 +72,7 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - RDS PostgreSQL for database (standard managed PG)
 - S3 for file storage (replaces @vercel/blob)
 - Amazon Bedrock for AI (replaces direct Anthropic SDK)
-- Internal ALB only (no public access)
+- Internet-facing ALB (POC; switch to internal after VPN setup)
 - GitHub Actions for CI/CD with OIDC auth
 - CDK (TypeScript) for IaC
 - Phases 21 and 22 can run in parallel
@@ -101,19 +102,27 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [23-01] Container environment uses literal values for non-sensitive config (NODE_ENV, PORT, AWS_REGION)
 - [23-02] require('./server.js') instead of exec to keep same process for SIGTERM handling
 - [23-02] Migration failure is non-fatal -- log and continue for resilience
+- [23-03] RDS force_ssl=1 requires pg adapter SSL: { rejectUnauthorized: false }
+- [23-03] ALB switched to internet-facing (POC) -- no VPN/Direct Connect available
+- [23-03] PrismaPg uses individual connection params (not URL) for reliable password handling
+- [23-03] Custom RDS parameter group created with force_ssl=0 temporarily
+- [23-03] rename_blob_to_storage migration rolled back; app works with original column names
 
 ### Pending Todos
 
-None yet.
+- Re-enable rds.force_ssl=1 after deploying SSL code fix
+- Rebuild Docker image with SSL fix in lib/db.ts
+- Remove entrypoint.js debug pg connection test
+- Apply rename_blob_to_storage migration after code fix deploy
 
 ### Blockers/Concerns
 
-- Bedrock model access approval may take hours -- request early
-- Corporate VPN routing to internal ALB needs confirmation with infra team
-- Presigned URL upload flow is more complex than it appears (CORS, callbacks)
+- Finch VM networking unreliable for cross-platform builds (amd64 on ARM)
+- Corporate VPN routing to internal ALB not available (using internet-facing as workaround)
 
 ## Session Continuity
 
-Last session: 2026-03-06T00:37:00Z
-Stopped at: Completed 23-02 (Entrypoint, Dockerfile, Deploy Script)
-Resume file: .planning/phases/23-compute-and-deployment/23-02-SUMMARY.md
+Last session: 2026-03-09T14:46:00Z
+Stopped at: Phase 23 COMPLETE - all requirements verified E2E
+Resume file: .planning/phases/23-compute-and-deployment/23-03-PLAN.md
+Next: Phase 24 (CI/CD Pipeline) or Phase 25 (Monitoring and Observability)
