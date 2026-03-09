@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
-status: executing
-stopped_at: "Completed 25-03-PLAN.md (smoke test all-pass, Phase 25 complete)"
-last_updated: "2026-03-09T21:59:34Z"
+status: completed
+stopped_at: Completed 25-03-PLAN.md (smoke test all-pass, v2.0 SHIPPED)
+last_updated: "2026-03-09T22:03:59.521Z"
 last_activity: 2026-03-09 -- Smoke test all-pass, v2.0 AWS Migration complete (25-03)
 progress:
   total_phases: 5
-  completed_phases: 5
+  completed_phases: 4
   total_plans: 17
-  completed_plans: 17
+  completed_plans: 16
   percent: 100
 ---
 
