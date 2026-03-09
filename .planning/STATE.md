@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
-status: in-progress
-stopped_at: Completed 25-01-PLAN.md (app deploy pending git push)
-last_updated: "2026-03-09T20:33:00Z"
-last_activity: 2026-03-09 -- Tech debt cleanup and CDK force_ssl deploy (25-01)
+status: executing
+stopped_at: "25-02-PLAN.md Task 2 checkpoint:human-action (data migration)"
+last_updated: "2026-03-09T21:25:45Z"
+last_activity: 2026-03-09 -- Neon-to-RDS migration script created (25-02)
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 15
-  completed_plans: 14
+  total_plans: 17
+  completed_plans: 15
   percent: 93
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 25 of 25 (Validation and Data Migration)
-Plan: 1 of 3 in current phase (Plan 25-01 complete, app deploy pending)
+Plan: 2 of 3 in current phase (Plan 25-02 awaiting human action for data migration)
 Status: Phase 25 In Progress
-Last activity: 2026-03-09 -- Tech debt cleanup and CDK force_ssl deploy (25-01)
+Last activity: 2026-03-09 -- Neon-to-RDS migration script created (25-02)
 
 Progress: [█████████░] 93% (v2.0 Phases 21-24 complete, Phase 25 in progress)
 
@@ -43,7 +43,7 @@ Progress: [█████████░] 93% (v2.0 Phases 21-24 complete, Phas
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14 (v2.0)
+- Total plans completed: 15 (v2.0)
 - Average duration: 3 min (automated plans)
 - Total execution time: ~37 min + deployment debugging
 
@@ -64,6 +64,7 @@ Progress: [█████████░] 93% (v2.0 Phases 21-24 complete, Phas
 | 24    | 02   | 2 min    | 2     | 1     |
 | 24    | 03   | multi-session | 2 | 1   |
 | 25    | 01   | 83 min   | 2     | 2     |
+| 25    | 02   | 2 min    | 1     | 1     |
 
 *Updated after each plan completion*
 
@@ -123,6 +124,8 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [24-03] GitHub AWS_ACCOUNT_ID repository secret confirmed set by user
 - [25-01] CDK parameter group replaces manually-created parameter group from Phase 23
 - [25-01] Application redeployment deferred to git push (Finch amd64 emulation too slow)
+- [25-02] Strategy B: full dump from Neon, restore to RDS, Prisma applies rename on restart
+- [25-02] pg_restore warnings about 'does not exist' treated as harmless (--clean --if-exists)
 
 ### Pending Todos
 
@@ -136,7 +139,7 @@ Key decisions for v2.0 (full log in PROJECT.md):
 
 ## Session Continuity
 
-Last session: 2026-03-09T20:33:00Z
-Stopped at: Completed 25-01-PLAN.md (app deploy pending git push)
-Resume file: .planning/phases/25-validation-and-data-migration/25-01-SUMMARY.md
-Next: Push to main to deploy app, then 25-02 (data migration from Neon to RDS)
+Last session: 2026-03-09T21:25:45Z
+Stopped at: 25-02-PLAN.md Task 2 checkpoint:human-action (data migration from Neon to RDS)
+Resume file: .planning/phases/25-validation-and-data-migration/25-02-SUMMARY.md
+Next: User runs migration script with Neon credentials, then 25-03 (smoke testing)

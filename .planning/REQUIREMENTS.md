@@ -31,7 +31,7 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 - [x] **DB-01**: RDS PostgreSQL instance (db.t4g.micro, single-AZ) in private subnet
 - [x] **DB-02**: Database subnet group using private subnets
-- [ ] **DB-03**: Database migrated from Neon to RDS via pg_dump/pg_restore
+- [x] **DB-03**: Database migrated from Neon to RDS via pg_dump/pg_restore
 - [x] **DB-04**: Prisma migrations run successfully against RDS instance
 
 ### Storage
@@ -86,7 +86,7 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 - [ ] **VAL-01**: End-to-end smoke test passes: upload document, analyze cards, generate epics, generate stories, generate subtasks, JIRA export
 - [ ] **VAL-02**: MSS taxonomy import and mapping works on AWS
-- [ ] **VAL-03**: All existing data accessible after database migration
+- [x] **VAL-03**: All existing data accessible after database migration
 - [ ] **VAL-04**: Application accessible from corporate network via internal ALB
 
 ## v2 Requirements
@@ -152,7 +152,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NET-06 | Phase 22 | Complete |
 | DB-01 | Phase 22 | Complete |
 | DB-02 | Phase 22 | Complete |
-| DB-03 | Phase 25 | Pending |
+| DB-03 | Phase 25 | Complete |
 | DB-04 | Phase 25 | Complete |
 | STOR-01 | Phase 22 | Complete |
 | STOR-02 | Phase 23 | Complete |
@@ -180,7 +180,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IAC-02 | Phase 22 | Complete |
 | VAL-01 | Phase 25 | Pending |
 | VAL-02 | Phase 25 | Pending |
-| VAL-03 | Phase 25 | Pending |
+| VAL-03 | Phase 25 | Complete |
 | VAL-04 | Phase 25 | Pending |
 
 **Coverage:**
