@@ -1,5 +1,38 @@
 # Project Milestones: Requirements Foundry
 
+## v2.0 AWS Migration (Shipped: 2026-03-09)
+
+**Delivered:** Migrated Requirements Foundry from Vercel to AWS with full feature parity -- ECS Fargate, RDS PostgreSQL, S3, Bedrock AI, automated CI/CD, and operational monitoring.
+
+**Phases completed:** 21-25 (17 plans total)
+
+**Key accomplishments:**
+
+- Replaced all Vercel dependencies (Blob, Anthropic SDK, Neon SSL, self-continuation) with AWS equivalents (S3, Bedrock, standard PG, direct async)
+- Built complete CDK infrastructure stack: VPC with 3 subnet tiers, RDS PostgreSQL, S3, ECR, ECS Fargate, ALB, VPC endpoints
+- Deployed containerized Next.js application on ECS Fargate (0.5 vCPU / 1GB RAM) accessible via ALB
+- Automated CI/CD via GitHub Actions with OIDC authentication (no long-lived credentials)
+- Added operational monitoring: CloudWatch alarms, SNS notifications, Lambda cron scheduler for stale run recovery
+- Full smoke test passed: generative pipeline, MSS flow, Bedrock AI, file uploads all working on AWS
+
+**Stats:**
+
+- ~84 commits in milestone
+- 94 files changed, +14,163 / -2,092 lines
+- 61,483 total LOC (TypeScript/TSX/JS/JSON)
+- 5 phases, 17 plans
+- 5 days from start to ship (Mar 5-9, 2026)
+
+**Git range:** `feat(21-01)` → `docs(phase-25)`
+
+**Known gaps:**
+- 23-03-SUMMARY.md missing (multi-session deployment debugging, work completed)
+- AI-01/AI-04 checkbox omissions in REQUIREMENTS.md (validated by smoke test)
+
+**What's next:** Resume v1.3 (Contextual Upload, Phase 19) or start new milestone
+
+---
+
 ## v1.2 MSS Integration (Shipped: 2026-01-27)
 
 **Delivered:** Complete MSS (Master Service Schedule) taxonomy management pipeline from CSV import through JIRA export, enabling work items to be mapped to service lines for effort visibility.

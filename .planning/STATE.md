@@ -1,134 +1,45 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: AWS Migration
-status: completed
-stopped_at: Completed 25-03-PLAN.md (smoke test all-pass, v2.0 SHIPPED)
-last_updated: "2026-03-09T22:03:59.521Z"
-last_activity: 2026-03-09 -- Smoke test all-pass, v2.0 AWS Migration complete (25-03)
+milestone: null
+milestone_name: null
+status: between_milestones
+stopped_at: v2.0 milestone archived
+last_updated: "2026-03-09T22:30:00.000Z"
+last_activity: 2026-03-09 -- v2.0 AWS Migration milestone completed and archived
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 17
-  completed_plans: 16
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-05)
+See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** The application runs reliably on AWS infrastructure, accessible to internal corporate users, with all existing features working identically.
-**Current focus:** v2.0 AWS Migration - SHIPPED (all phases complete, smoke test passed)
+**Current focus:** Between milestones — v2.0 shipped, ready for next milestone
 
 ## Current Position
 
-Phase: 25 of 25 (Validation and Data Migration)
-Plan: 3 of 3 in current phase (All plans complete)
-Status: Phase 25 Complete -- v2.0 AWS Migration SHIPPED
-Last activity: 2026-03-09 -- Smoke test all-pass, v2.0 AWS Migration complete (25-03)
-
-Progress: [██████████] 100% (v2.0 Phases 21-25 complete -- SHIPPED)
+No active milestone. v2.0 AWS Migration completed and archived.
 
 ## Milestones
 
 - **v1.0** -- SHIPPED 2026-01-15 (Phases 1-9)
 - **v1.1** -- SHIPPED 2026-01-20 (Phases 10-12)
 - **v1.2** -- SHIPPED 2026-01-27 (Phases 13-17)
-- **v1.3** -- PAUSED at Phase 19 (resume after v2.0)
-- **v2.0** -- SHIPPED 2026-03-09 (Phases 21-25)
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 17 (v2.0)
-- Average duration: 3 min (automated plans)
-- Total execution time: ~37 min + deployment debugging
-
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 21    | 01   | 3 min    | 2     | 7     |
-| 21    | 02   | 4 min    | 2     | 5     |
-| 21    | 03   | 2 min    | 2     | 3     |
-| 21    | 04   | 5 min    | 2     | 13    |
-| 21    | 05   | 1 min    | 2     | 3     |
-| 22    | 01   | 6 min    | 2     | 7     |
-| 22    | 02   | 3 min    | 2     | 2     |
-| 22    | 03   | 2 min    | 2     | 2     |
-| 23    | 01   | 2 min    | 2     | 2     |
-| 23    | 02   | 2 min    | 2     | 6     |
-| 23    | 03   | multi-session | 2 | 6   |
-| 24    | 01   | 3 min    | 2     | 1     |
-| 24    | 02   | 2 min    | 2     | 1     |
-| 24    | 03   | multi-session | 2 | 1   |
-| 25    | 01   | 83 min   | 2     | 2     |
-| 25    | 02   | 12 min   | 2     | 1     |
-| 25    | 03   | multi-session | 2 | 1   |
-
-*Updated after each plan completion*
+- **v1.3** -- PAUSED at Phase 19 (resume when ready)
+- **v2.0** -- SHIPPED 2026-03-09 (Phases 21-25) ✅ ARCHIVED
 
 ## Accumulated Context
 
 ### Decisions
 
-Key decisions for v2.0 (full log in PROJECT.md):
-- ECS Fargate for compute (containerized, Docker-ready)
-- RDS PostgreSQL for database (standard managed PG)
-- S3 for file storage (replaces @vercel/blob)
-- Amazon Bedrock for AI (replaces direct Anthropic SDK)
-- Internet-facing ALB (POC; switch to internal after VPN setup)
-- GitHub Actions for CI/CD with OIDC auth
-- CDK (TypeScript) for IaC
-- Phases 21 and 22 can run in parallel
-- [21-01] node:22-alpine for all Docker stages
-- [21-01] Standardize on DATABASE_URL only (removed POSTGRES_URL fallback)
-- [21-01] Health check aiEnabled uses MOCK_MODE flag instead of API key presence
-- [21-02] getStorageMode() made async for credential auto-detection
-- [21-02] S3 key format: uploads/{timestamp}-{filename}
-- [21-02] Server-side FormData upload replaces client-side Vercel Blob upload
-- [21-03] Factory functions (getAIProvider, getDocumentAnalyzer, getQuestionGenerator) are now async
-- [21-03] Bedrock model ID format: anthropic.claude-sonnet-4-20250514-v1:0
-- [21-03] AWS credential detection uses fromNodeProviderChain with module-level caching
-- [21-04] Fire-and-forget executor calls from server actions with .catch() error logging
-- [21-04] Subtask action uses IIFE wrapping executeSubtaskGeneration + finalizeSubtaskRun
-- [21-04] Logger uses AWS_REGION/NODE_ENV instead of VERCEL_REGION/VERCEL_ENV
-- [Phase 21]: Removed additional Vercel reference in heartbeat comment not identified in plan
-- [22-01] Literal region us-east-1 in stack env for deterministic synth
-- [22-01] S3 endpoint added to both PRIVATE_WITH_EGRESS and PRIVATE_ISOLATED subnets
-- [22-01] Bedrock endpoint ServiceName resolves to literal string with concrete region
-- [22-02] All stateful resources use RemovalPolicy.DESTROY for POC teardown
-- [22-02] DATABASE_URL secret is a placeholder; composed at container startup (Phase 23)
-- [22-02] CDK lifecycle policy serializes maxImageCount as countNumber in JSON
-- [Phase 22]: [22-03] HTTP/80 listener with default 503 fixed response; Phase 23 switches to forwarding
-- [Phase 22]: [22-03] Bedrock IAM policy uses resources: ['*'] (no resource-level permissions supported)
-- [Phase 22]: [22-03] 14 CfnOutputs with rf-prod-* export names for cross-stack references
-- [23-01] circuitBreaker rollback disabled for initial bootstrap (no image in ECR yet)
-- [23-01] Container environment uses literal values for non-sensitive config (NODE_ENV, PORT, AWS_REGION)
-- [23-02] require('./server.js') instead of exec to keep same process for SIGTERM handling
-- [23-02] Migration failure is non-fatal -- log and continue for resilience
-- [23-03] RDS force_ssl=1 requires pg adapter SSL: { rejectUnauthorized: false }
-- [23-03] ALB switched to internet-facing (POC) -- no VPN/Direct Connect available
-- [23-03] PrismaPg uses individual connection params (not URL) for reliable password handling
-- [23-03] Custom RDS parameter group created with force_ssl=0 temporarily
-- [23-03] rename_blob_to_storage migration rolled back; app works with original column names
-- [24-02] Push to main triggers deploy -- no PR checks or approval gates
-- [24-02] Workflow steps inline (not calling deploy.sh) -- deploy.sh remains for manual deploys
-- [24-02] Uses aws ecs update-service --force-new-deployment (CDK-managed task def)
-- [24-01] CDK FargateService uses minHealthyPercent/maxHealthyPercent props (not nested deploymentConfiguration)
-- [24-01] ECS/ContainerInsights namespace for RunningTaskCount metric (not AWS/ECS)
-- [24-01] Lambda calls internet-facing ALB directly (no VPC access needed)
-- [24-01] dbInstance.metric() used for RDS CPU alarm (type-safe CDK pattern)
-- [24-02] AWS_ACCOUNT_ID stored as GitHub repository secret for IAM role ARN
-- [24-03] No alarmEmail provided -- SNS topic created without email subscription (add later)
-- [24-03] GitHub AWS_ACCOUNT_ID repository secret confirmed set by user
-- [25-01] CDK parameter group replaces manually-created parameter group from Phase 23
-- [25-01] Application redeployment deferred to git push (Finch amd64 emulation too slow)
-- [25-02] Strategy B: full dump from Neon, restore to RDS, Prisma applies rename on restart
-- [25-02] pg_restore warnings about 'does not exist' treated as harmless (--clean --if-exists)
-- [25-02] User chose fresh start: skip Neon data migration, RDS schema correct from Prisma migrations
-- [25-03] Smoke test all-pass: Pre-Flight (VAL-04), Core Flow (VAL-01), MSS Flow (VAL-02), Data Integrity N/A (VAL-03), AI Verification (AI-01/AI-04)
+See .planning/PROJECT.md Key Decisions table for complete history.
 
 ### Pending Todos
 
@@ -143,7 +54,6 @@ Key decisions for v2.0 (full log in PROJECT.md):
 
 ## Session Continuity
 
-Last session: 2026-03-09T21:59:34Z
-Stopped at: Completed 25-03-PLAN.md (smoke test all-pass, v2.0 SHIPPED)
-Resume file: .planning/phases/25-validation-and-data-migration/25-03-SUMMARY.md
-Next: v2.0 complete. Resume v1.3 (Phase 19) or start new milestone when ready.
+Last session: 2026-03-09
+Stopped at: v2.0 milestone archived
+Next: `/gsd:new-milestone` to start next milestone, or resume v1.3 (Phase 19)
