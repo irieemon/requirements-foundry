@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
 status: completed
-stopped_at: Completed 24-03-PLAN.md
-last_updated: "2026-03-09T17:05:09.406Z"
+stopped_at: Phase 25 context gathered
+last_updated: "2026-03-09T17:25:23.191Z"
 last_activity: 2026-03-09 -- Deploy and verify CDK infrastructure (24-03)
 progress:
   total_phases: 5
@@ -135,7 +135,7 @@ Key decisions for v2.0 (full log in PROJECT.md):
 
 ## Session Continuity
 
-Last session: 2026-03-09T17:02:09.944Z
-Stopped at: Completed 24-03-PLAN.md
-Resume file: None
+Last session: 2026-03-09T17:25:23.179Z
+Stopped at: Phase 25 context gathered
+Resume file: .planning/phases/25-validation-and-data-migration/25-CONTEXT.md
 Next: Phase 25 (Monitoring and Observability) or milestone v2.0 wrap-up
