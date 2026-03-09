@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
 status: executing
-stopped_at: Completed 24-02-PLAN.md
-last_updated: "2026-03-09T15:51:10Z"
-last_activity: "2026-03-09 -- Deploy workflow created (24-02)"
+stopped_at: Completed 24-01-PLAN.md
+last_updated: "2026-03-09T15:53:04Z"
+last_activity: "2026-03-09 -- CDK infra: OIDC, Lambda cron, alarms, SNS (24-01)"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 13
-  completed_plans: 12
-  percent: 92
+  completed_plans: 13
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 24 of 25 (CI/CD and Operations)
-Plan: 2 of 2 in current phase (Plan 02 complete)
+Plan: 2 of 3 in current phase (Plans 01 and 02 complete)
 Status: Executing Phase 24
-Last activity: 2026-03-09 -- Deploy workflow created (24-02)
+Last activity: 2026-03-09 -- CDK infra: OIDC, Lambda cron, alarms, SNS (24-01)
 
-Progress: [█████████░] 92% (v2.0 Phases 21-23 complete, Phase 24 Plan 02 done)
+Progress: [██████████] 100% (v2.0 Phases 21-23 complete, Phase 24 Plans 01-02 done)
 
 ## Milestones
 
@@ -43,7 +43,7 @@ Progress: [█████████░] 92% (v2.0 Phases 21-23 complete, Phas
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12 (v2.0)
+- Total plans completed: 13 (v2.0)
 - Average duration: 3 min (automated plans)
 - Total execution time: ~37 min + deployment debugging
 
@@ -60,6 +60,7 @@ Progress: [█████████░] 92% (v2.0 Phases 21-23 complete, Phas
 | 23    | 01   | 2 min    | 2     | 2     |
 | 23    | 02   | 2 min    | 2     | 6     |
 | 23    | 03   | multi-session | 2 | 6   |
+| 24    | 01   | 3 min    | 2     | 1     |
 | 24    | 02   | 2 min    | 2     | 1     |
 
 *Updated after each plan completion*
@@ -111,6 +112,10 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [24-02] Push to main triggers deploy -- no PR checks or approval gates
 - [24-02] Workflow steps inline (not calling deploy.sh) -- deploy.sh remains for manual deploys
 - [24-02] Uses aws ecs update-service --force-new-deployment (CDK-managed task def)
+- [24-01] CDK FargateService uses minHealthyPercent/maxHealthyPercent props (not nested deploymentConfiguration)
+- [24-01] ECS/ContainerInsights namespace for RunningTaskCount metric (not AWS/ECS)
+- [24-01] Lambda calls internet-facing ALB directly (no VPC access needed)
+- [24-01] dbInstance.metric() used for RDS CPU alarm (type-safe CDK pattern)
 - [24-02] AWS_ACCOUNT_ID stored as GitHub repository secret for IAM role ARN
 
 ### Pending Todos
@@ -127,7 +132,7 @@ Key decisions for v2.0 (full log in PROJECT.md):
 
 ## Session Continuity
 
-Last session: 2026-03-09T15:51:10Z
-Stopped at: Completed 24-02-PLAN.md
-Resume file: .planning/phases/24-ci-cd-and-operations/24-02-SUMMARY.md
-Next: Phase 24 Plan 01 (OIDC IAM role) or Phase 25 (Monitoring and Observability)
+Last session: 2026-03-09T15:53:04Z
+Stopped at: Completed 24-01-PLAN.md
+Resume file: .planning/phases/24-ci-cd-and-operations/24-01-SUMMARY.md
+Next: Phase 24 Plan 03 (verification) or Phase 25 (Monitoring and Observability)

@@ -64,18 +64,18 @@ Requirements for AWS migration. Each maps to roadmap phases.
 ### CI/CD
 
 - [x] **CICD-01**: GitHub Actions workflow builds Docker image, pushes to ECR, and deploys to ECS on push to main
-- [ ] **CICD-02**: OIDC authentication between GitHub Actions and AWS (no long-lived credentials)
-- [ ] **CICD-03**: ECS rolling deployment with minimumHealthyPercent=100, maximumPercent=200
+- [x] **CICD-02**: OIDC authentication between GitHub Actions and AWS (no long-lived credentials)
+- [x] **CICD-03**: ECS rolling deployment with minimumHealthyPercent=100, maximumPercent=200
 
 ### Scheduled Tasks
 
-- [ ] **CRON-01**: Stale run recovery executes periodically (replaces Vercel Cron)
+- [x] **CRON-01**: Stale run recovery executes periodically (replaces Vercel Cron)
 
 ### Operations
 
-- [ ] **OPS-01**: CloudWatch Container Insights enabled on ECS cluster
-- [ ] **OPS-02**: CloudWatch alarms for critical metrics (task count = 0, ALB unhealthy targets, RDS CPU > 80%)
-- [ ] **OPS-03**: SNS topic delivers alarm notifications to email
+- [x] **OPS-01**: CloudWatch Container Insights enabled on ECS cluster
+- [x] **OPS-02**: CloudWatch alarms for critical metrics (task count = 0, ALB unhealthy targets, RDS CPU > 80%)
+- [x] **OPS-03**: SNS topic delivers alarm notifications to email
 
 ### Infrastructure as Code
 
@@ -170,12 +170,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CMP-03 | Phase 22 | Complete |
 | CMP-04 | Phase 23 | Complete |
 | CICD-01 | Phase 24 | Complete |
-| CICD-02 | Phase 24 | Pending |
-| CICD-03 | Phase 24 | Pending |
-| CRON-01 | Phase 24 | Pending |
-| OPS-01 | Phase 24 | Pending |
-| OPS-02 | Phase 24 | Pending |
-| OPS-03 | Phase 24 | Pending |
+| CICD-02 | Phase 24 | Complete |
+| CICD-03 | Phase 24 | Complete |
+| CRON-01 | Phase 24 | Complete |
+| OPS-01 | Phase 24 | Complete |
+| OPS-02 | Phase 24 | Complete |
+| OPS-03 | Phase 24 | Complete |
 | IAC-01 | Phase 22 | Complete |
 | IAC-02 | Phase 22 | Complete |
 | VAL-01 | Phase 25 | Pending |
