@@ -330,8 +330,8 @@ export class RequirementsFoundryStack extends cdk.Stack {
       ),
     });
 
-    // Minimum permissions: ECR push + ECS deploy
-    repository.grantPush(deployRole);
+    // Minimum permissions: ECR pull+push (Buildx needs pull for manifest checks) + ECS deploy
+    repository.grantPullPush(deployRole);
     deployRole.addToPolicy(new iam.PolicyStatement({
       actions: [
         'ecs:UpdateService',
