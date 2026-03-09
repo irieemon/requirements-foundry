@@ -84,10 +84,10 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 ### Validation
 
-- [ ] **VAL-01**: End-to-end smoke test passes: upload document, analyze cards, generate epics, generate stories, generate subtasks, JIRA export
-- [ ] **VAL-02**: MSS taxonomy import and mapping works on AWS
+- [x] **VAL-01**: End-to-end smoke test passes: upload document, analyze cards, generate epics, generate stories, generate subtasks, JIRA export
+- [x] **VAL-02**: MSS taxonomy import and mapping works on AWS
 - [x] **VAL-03**: All existing data accessible after database migration
-- [ ] **VAL-04**: Application accessible from corporate network via internal ALB
+- [x] **VAL-04**: Application accessible from corporate network via internal ALB
 
 ## v2 Requirements
 
@@ -178,10 +178,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPS-03 | Phase 24 | Complete |
 | IAC-01 | Phase 22 | Complete |
 | IAC-02 | Phase 22 | Complete |
-| VAL-01 | Phase 25 | Pending |
-| VAL-02 | Phase 25 | Pending |
+| VAL-01 | Phase 25 | Complete |
+| VAL-02 | Phase 25 | Complete |
 | VAL-03 | Phase 25 | Complete |
-| VAL-04 | Phase 25 | Pending |
+| VAL-04 | Phase 25 | Complete |
 
 **Coverage:**
 - v1 requirements: 46 total
