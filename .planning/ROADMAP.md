@@ -155,9 +155,9 @@ Plans:
   4. Prisma migrations run cleanly against RDS and schema matches expectations
 **Plans**: 3 plans
 Plans:
-- [ ] 24-01-PLAN.md — CDK: OIDC provider, IAM role, deployment config, cron Lambda, EventBridge, alarms, SNS
-- [ ] 24-02-PLAN.md — GitHub Actions deploy workflow (build, push ECR, deploy ECS)
-- [ ] 24-03-PLAN.md — Deploy CDK stack, verify infrastructure, user setup (SNS confirm, GitHub secret)
+- [ ] 25-01-PLAN.md — Technical debt cleanup (entrypoint.js, CDK force_ssl) and redeploy
+- [ ] 25-02-PLAN.md — Data migration from Neon to RDS via pg_dump/pg_restore
+- [ ] 25-03-PLAN.md — End-to-end smoke test walkthrough (all VAL requirements)
 
 ## Progress
 
@@ -192,4 +192,4 @@ Phases 21 and 22 can run in parallel. Phase 23 depends on both. Then 24, then 25
 | 22. Infrastructure Foundation | 3/3 | Complete    | 2026-03-05 | - |
 | 23. Compute and Deployment | 2/3 | In Progress|  | - |
 | 24. CI/CD and Operations | 3/3 | Complete    | 2026-03-09 | - |
-| 25. Validation and Data Migration | v2.0 | 0/? | Not started | - |
+| 25. Validation and Data Migration | v2.0 | 0/3 | Not started | - |
