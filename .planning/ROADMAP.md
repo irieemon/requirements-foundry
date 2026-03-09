@@ -76,7 +76,7 @@ Paused at Phase 19 for AWS migration priority. Resume after v2.0 ships.
 - [x] **Phase 22: Infrastructure Foundation** - CDK project with VPC, networking, RDS, S3, IAM, secrets, ECR (completed 2026-03-05)
 - [ ] **Phase 23: Compute and Deployment** - Wire ECS Fargate service to infrastructure, deploy running application
 - [x] **Phase 24: CI/CD and Operations** - Automated deployments, stale run recovery, monitoring and alarms (completed 2026-03-09)
-- [ ] **Phase 25: Validation and Data Migration** - End-to-end smoke tests, database migration from Neon to RDS
+- [ ] **Phase 25: Validation and Data Migration** - End-to-end smoke tests, database migration from Neon to RDS (in progress)
 
 ## Phase Details
 
@@ -155,7 +155,7 @@ Plans:
   4. Prisma migrations run cleanly against RDS and schema matches expectations
 **Plans**: 3 plans
 Plans:
-- [ ] 25-01-PLAN.md — Technical debt cleanup (entrypoint.js, CDK force_ssl) and redeploy
+- [x] 25-01-PLAN.md — Technical debt cleanup (entrypoint.js, CDK force_ssl) and redeploy
 - [ ] 25-02-PLAN.md — Data migration from Neon to RDS via pg_dump/pg_restore
 - [ ] 25-03-PLAN.md — End-to-end smoke test walkthrough (all VAL requirements)
 
@@ -192,4 +192,4 @@ Phases 21 and 22 can run in parallel. Phase 23 depends on both. Then 24, then 25
 | 22. Infrastructure Foundation | 3/3 | Complete    | 2026-03-05 | - |
 | 23. Compute and Deployment | 2/3 | In Progress|  | - |
 | 24. CI/CD and Operations | 3/3 | Complete    | 2026-03-09 | - |
-| 25. Validation and Data Migration | v2.0 | 0/3 | Not started | - |
+| 25. Validation and Data Migration | v2.0 | 1/3 | In Progress | - |

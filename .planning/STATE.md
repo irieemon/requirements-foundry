@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
-status: completed
-stopped_at: Phase 25 context gathered
-last_updated: "2026-03-09T17:25:23.191Z"
-last_activity: 2026-03-09 -- Deploy and verify CDK infrastructure (24-03)
+status: in-progress
+stopped_at: Completed 25-01-PLAN.md (app deploy pending git push)
+last_updated: "2026-03-09T20:33:00Z"
+last_activity: 2026-03-09 -- Tech debt cleanup and CDK force_ssl deploy (25-01)
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 14
-  completed_plans: 13
-  percent: 100
+  total_plans: 15
+  completed_plans: 14
+  percent: 93
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** The application runs reliably on AWS infrastructure, accessible to internal corporate users, with all existing features working identically.
-**Current focus:** v2.0 AWS Migration - Phase 24 IN PROGRESS (CI/CD Pipeline)
+**Current focus:** v2.0 AWS Migration - Phase 25 IN PROGRESS (Validation and Data Migration)
 
 ## Current Position
 
-Phase: 24 of 25 (CI/CD and Operations)
-Plan: 3 of 3 in current phase (Phase 24 COMPLETE)
-Status: Phase 24 Complete
-Last activity: 2026-03-09 -- Deploy and verify CDK infrastructure (24-03)
+Phase: 25 of 25 (Validation and Data Migration)
+Plan: 1 of 3 in current phase (Plan 25-01 complete, app deploy pending)
+Status: Phase 25 In Progress
+Last activity: 2026-03-09 -- Tech debt cleanup and CDK force_ssl deploy (25-01)
 
-Progress: [██████████] 100% (v2.0 Phases 21-24 complete)
+Progress: [█████████░] 93% (v2.0 Phases 21-24 complete, Phase 25 in progress)
 
 ## Milestones
 
@@ -63,6 +63,7 @@ Progress: [██████████] 100% (v2.0 Phases 21-24 complete)
 | 24    | 01   | 3 min    | 2     | 1     |
 | 24    | 02   | 2 min    | 2     | 1     |
 | 24    | 03   | multi-session | 2 | 1   |
+| 25    | 01   | 83 min   | 2     | 2     |
 
 *Updated after each plan completion*
 
@@ -120,13 +121,13 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [24-02] AWS_ACCOUNT_ID stored as GitHub repository secret for IAM role ARN
 - [24-03] No alarmEmail provided -- SNS topic created without email subscription (add later)
 - [24-03] GitHub AWS_ACCOUNT_ID repository secret confirmed set by user
+- [25-01] CDK parameter group replaces manually-created parameter group from Phase 23
+- [25-01] Application redeployment deferred to git push (Finch amd64 emulation too slow)
 
 ### Pending Todos
 
-- Re-enable rds.force_ssl=1 after deploying SSL code fix
-- Rebuild Docker image with SSL fix in lib/db.ts
-- Remove entrypoint.js debug pg connection test
-- Apply rename_blob_to_storage migration after code fix deploy
+- Push to main to deploy entrypoint.js cleanup and trigger rename_blob_to_storage migration
+- Verify container starts cleanly after push (no debug pg test output in logs)
 
 ### Blockers/Concerns
 
@@ -135,7 +136,7 @@ Key decisions for v2.0 (full log in PROJECT.md):
 
 ## Session Continuity
 
-Last session: 2026-03-09T17:25:23.179Z
-Stopped at: Phase 25 context gathered
-Resume file: .planning/phases/25-validation-and-data-migration/25-CONTEXT.md
-Next: Phase 25 (Monitoring and Observability) or milestone v2.0 wrap-up
+Last session: 2026-03-09T20:33:00Z
+Stopped at: Completed 25-01-PLAN.md (app deploy pending git push)
+Resume file: .planning/phases/25-validation-and-data-migration/25-01-SUMMARY.md
+Next: Push to main to deploy app, then 25-02 (data migration from Neon to RDS)

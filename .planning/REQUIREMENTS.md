@@ -32,7 +32,7 @@ Requirements for AWS migration. Each maps to roadmap phases.
 - [x] **DB-01**: RDS PostgreSQL instance (db.t4g.micro, single-AZ) in private subnet
 - [x] **DB-02**: Database subnet group using private subnets
 - [ ] **DB-03**: Database migrated from Neon to RDS via pg_dump/pg_restore
-- [ ] **DB-04**: Prisma migrations run successfully against RDS instance
+- [x] **DB-04**: Prisma migrations run successfully against RDS instance
 
 ### Storage
 
@@ -153,7 +153,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DB-01 | Phase 22 | Complete |
 | DB-02 | Phase 22 | Complete |
 | DB-03 | Phase 25 | Pending |
-| DB-04 | Phase 25 | Pending |
+| DB-04 | Phase 25 | Complete |
 | STOR-01 | Phase 22 | Complete |
 | STOR-02 | Phase 23 | Complete |
 | STOR-03 | Phase 23 | Complete |
