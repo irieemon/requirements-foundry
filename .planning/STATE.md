@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
-status: verifying
-stopped_at: Phase 24 context gathered
-last_updated: "2026-03-09T15:32:57.170Z"
-last_activity: "2026-03-09 -- Full E2E verification: upload, AI generation, JIRA export"
+status: executing
+stopped_at: Completed 24-02-PLAN.md
+last_updated: "2026-03-09T15:51:10Z"
+last_activity: "2026-03-09 -- Deploy workflow created (24-02)"
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 11
-  completed_plans: 10
-  percent: 100
+  total_plans: 13
+  completed_plans: 12
+  percent: 92
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** The application runs reliably on AWS infrastructure, accessible to internal corporate users, with all existing features working identically.
-**Current focus:** v2.0 AWS Migration - Phase 23 COMPLETE, ready for Phase 24 (CI/CD)
+**Current focus:** v2.0 AWS Migration - Phase 24 IN PROGRESS (CI/CD Pipeline)
 
 ## Current Position
 
-Phase: 23 of 25 (Compute and Deployment) -- COMPLETE
-Plan: 3 of 3 in current phase (all plans complete)
-Status: Phase 23 verified end-to-end
-Last activity: 2026-03-09 -- Full E2E verification: upload, AI generation, JIRA export
+Phase: 24 of 25 (CI/CD and Operations)
+Plan: 2 of 2 in current phase (Plan 02 complete)
+Status: Executing Phase 24
+Last activity: 2026-03-09 -- Deploy workflow created (24-02)
 
-Progress: [██████████] 100% (v2.0 Phases 21-23 complete)
+Progress: [█████████░] 92% (v2.0 Phases 21-23 complete, Phase 24 Plan 02 done)
 
 ## Milestones
 
@@ -43,9 +43,9 @@ Progress: [██████████] 100% (v2.0 Phases 21-23 complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11 (v2.0)
+- Total plans completed: 12 (v2.0)
 - Average duration: 3 min (automated plans)
-- Total execution time: ~35 min + deployment debugging
+- Total execution time: ~37 min + deployment debugging
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -60,6 +60,7 @@ Progress: [██████████] 100% (v2.0 Phases 21-23 complete)
 | 23    | 01   | 2 min    | 2     | 2     |
 | 23    | 02   | 2 min    | 2     | 6     |
 | 23    | 03   | multi-session | 2 | 6   |
+| 24    | 02   | 2 min    | 2     | 1     |
 
 *Updated after each plan completion*
 
@@ -107,6 +108,10 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [23-03] PrismaPg uses individual connection params (not URL) for reliable password handling
 - [23-03] Custom RDS parameter group created with force_ssl=0 temporarily
 - [23-03] rename_blob_to_storage migration rolled back; app works with original column names
+- [24-02] Push to main triggers deploy -- no PR checks or approval gates
+- [24-02] Workflow steps inline (not calling deploy.sh) -- deploy.sh remains for manual deploys
+- [24-02] Uses aws ecs update-service --force-new-deployment (CDK-managed task def)
+- [24-02] AWS_ACCOUNT_ID stored as GitHub repository secret for IAM role ARN
 
 ### Pending Todos
 
@@ -122,7 +127,7 @@ Key decisions for v2.0 (full log in PROJECT.md):
 
 ## Session Continuity
 
-Last session: 2026-03-09T15:32:57.155Z
-Stopped at: Phase 24 context gathered
-Resume file: .planning/phases/24-ci-cd-and-operations/24-CONTEXT.md
-Next: Phase 24 (CI/CD Pipeline) or Phase 25 (Monitoring and Observability)
+Last session: 2026-03-09T15:51:10Z
+Stopped at: Completed 24-02-PLAN.md
+Resume file: .planning/phases/24-ci-cd-and-operations/24-02-SUMMARY.md
+Next: Phase 24 Plan 01 (OIDC IAM role) or Phase 25 (Monitoring and Observability)

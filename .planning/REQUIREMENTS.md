@@ -63,7 +63,7 @@ Requirements for AWS migration. Each maps to roadmap phases.
 
 ### CI/CD
 
-- [ ] **CICD-01**: GitHub Actions workflow builds Docker image, pushes to ECR, and deploys to ECS on push to main
+- [x] **CICD-01**: GitHub Actions workflow builds Docker image, pushes to ECR, and deploys to ECS on push to main
 - [ ] **CICD-02**: OIDC authentication between GitHub Actions and AWS (no long-lived credentials)
 - [ ] **CICD-03**: ECS rolling deployment with minimumHealthyPercent=100, maximumPercent=200
 
@@ -169,7 +169,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CMP-02 | Phase 22 | Complete |
 | CMP-03 | Phase 22 | Complete |
 | CMP-04 | Phase 23 | Complete |
-| CICD-01 | Phase 24 | Pending |
+| CICD-01 | Phase 24 | Complete |
 | CICD-02 | Phase 24 | Pending |
 | CICD-03 | Phase 24 | Pending |
 | CRON-01 | Phase 24 | Pending |
