@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
-status: between_milestones
-stopped_at: v2.0 milestone archived
-last_updated: "2026-03-09T22:30:00.000Z"
-last_activity: 2026-03-09 -- v2.0 AWS Migration milestone completed and archived
+milestone: v3.0
+milestone_name: Authentication & Multi-User
+status: defining_requirements
+stopped_at: null
+last_updated: "2026-03-09T23:00:00.000Z"
+last_activity: 2026-03-09 -- Milestone v3.0 started
 progress:
   total_phases: 0
   completed_phases: 0
@@ -20,12 +20,15 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-03-09)
 
-**Core value:** The application runs reliably on AWS infrastructure, accessible to internal corporate users, with all existing features working identically.
-**Current focus:** Between milestones — v2.0 shipped, ready for next milestone
+**Core value:** Internal corporate users authenticate via Okta SSO and see only their own projects, with admin oversight across all users.
+**Current focus:** v3.0 Authentication & Multi-User — Defining requirements
 
 ## Current Position
 
-No active milestone. v2.0 AWS Migration completed and archived.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-09 — Milestone v3.0 started
 
 ## Milestones
 
@@ -34,6 +37,7 @@ No active milestone. v2.0 AWS Migration completed and archived.
 - **v1.2** -- SHIPPED 2026-01-27 (Phases 13-17)
 - **v1.3** -- PAUSED at Phase 19 (resume when ready)
 - **v2.0** -- SHIPPED 2026-03-09 (Phases 21-25) ✅ ARCHIVED
+- **v3.0** -- ACTIVE (defining requirements)
 
 ## Accumulated Context
 
@@ -51,9 +55,10 @@ See .planning/PROJECT.md Key Decisions table for complete history.
 
 - Finch VM networking unreliable for cross-platform builds (amd64 on ARM)
 - Corporate VPN routing to internal ALB not available (using internet-facing as workaround)
+- Okta SAML app integration requires IT team action (external dependency)
 
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: v2.0 milestone archived
-Next: `/gsd:new-milestone` to start next milestone, or resume v1.3 (Phase 19)
+Stopped at: Defining requirements for v3.0
+Next: Complete requirements → roadmap → `/gsd:plan-phase [N]`

@@ -6,7 +6,19 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 
 ## Core Value
 
-**The application runs reliably on AWS infrastructure, accessible to internal corporate users, with all existing features working identically.**
+**Internal corporate users authenticate via Okta SSO and see only their own projects, with admin oversight across all users.**
+
+## Current Milestone: v3.0 Authentication & Multi-User
+
+**Goal:** Add Cognito + Okta SAML SSO authentication with per-user project isolation and admin role
+
+**Target features:**
+- Cognito User Pool with Okta SAML identity provider (seamless SSO)
+- Per-user project isolation (enforce Project.userId)
+- Admin role via Okta group (admins see all projects)
+- Public landing page with "Sign in with Okta" button
+- All app routes protected (redirect unauthenticated users)
+- Default admin: sean.mcinerney@merkle.com
 
 ## Requirements
 
@@ -53,11 +65,18 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 
 ### Active
 
-- [ ] Resume v1.3 Contextual Upload (paused at Phase 19)
-- [ ] Authentication via Cognito + Okta SAML SSO
-- [ ] Multi-AZ RDS for high availability
-- [ ] Custom domain via Route 53
-- [ ] Auto-scaling for ECS
+- [ ] Cognito User Pool with Okta SAML SSO (seamless corporate login)
+- [ ] Per-user project isolation (enforce Project.userId)
+- [ ] Admin role via Okta group membership
+- [ ] Public landing page with SSO login
+- [ ] Protected routes with auth middleware
+
+### Deferred
+
+- Resume v1.3 Contextual Upload (paused at Phase 19)
+- Multi-AZ RDS for high availability
+- Custom domain via Route 53
+- Auto-scaling for ECS
 
 ### Out of Scope
 
@@ -131,4 +150,4 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 - **No breaking schema changes**: Prisma migrations handle column renames
 
 ---
-*Last updated: 2026-03-09 after v2.0 AWS Migration milestone*
+*Last updated: 2026-03-09 after v3.0 Authentication milestone started*
