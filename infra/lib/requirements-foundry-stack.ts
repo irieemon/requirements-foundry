@@ -383,7 +383,80 @@ exports.handler = async () => {
       targets: [new targets.LambdaFunction(cronLambda)],
     });
 
-    // Stack Outputs (for Phase 23)
+    // SNS Topic for alarm notifications (OPS-03)
+    const alarmEmail = this.node.tryGetContext('alarmEmail');
+
+    const alarmTopic = new sns.Topic(this, 'AlarmTopic', {
+      topicName: 'requirements-foundry-alarms',
+    });
+
+    if (alarmEmail) {
+      alarmTopic.addSubscription(
+        new sns_subscriptions.EmailSubscription(alarmEmail),
+      );
+    }
+
+    const snsAction = new cloudwatch_actions.SnsAction(alarmTopic);
+
+    // Alarm 1: ECS running task count = 0 (OPS-02)
+    // Uses ECS/ContainerInsights namespace (Container Insights already enabled on cluster)
+    const taskCountAlarm = new cloudwatch.Alarm(this, 'EcsTaskCountAlarm', {
+      alarmName: 'rf-prod-ecs-no-running-tasks',
+      metric: new cloudwatch.Metric({
+        namespace: 'ECS/ContainerInsights',
+        metricName: 'RunningTaskCount',
+        dimensionsMap: {
+          ClusterName: cluster.clusterName,
+          ServiceName: service.serviceName,
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(1),
+      }),
+      threshold: 0,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
+      evaluationPeriods: 1,
+      datapointsToAlarm: 1,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
+    });
+    taskCountAlarm.addAlarmAction(snsAction);
+
+    // Alarm 2: ALB unhealthy target count > 0 (OPS-02)
+    const unhealthyTargetAlarm = new cloudwatch.Alarm(this, 'AlbUnhealthyTargetAlarm', {
+      alarmName: 'rf-prod-alb-unhealthy-targets',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ApplicationELB',
+        metricName: 'UnHealthyHostCount',
+        dimensionsMap: {
+          TargetGroup: targetGroup.targetGroupFullName,
+          LoadBalancer: alb.loadBalancerFullName,
+        },
+        statistic: 'Maximum',
+        period: cdk.Duration.minutes(1),
+      }),
+      threshold: 0,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      evaluationPeriods: 1,
+      datapointsToAlarm: 1,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+    unhealthyTargetAlarm.addAlarmAction(snsAction);
+
+    // Alarm 3: RDS CPU > 80% (OPS-02)
+    const rdsCpuAlarm = new cloudwatch.Alarm(this, 'RdsCpuAlarm', {
+      alarmName: 'rf-prod-rds-high-cpu',
+      metric: dbInstance.metric('CPUUtilization', {
+        statistic: 'Average',
+        period: cdk.Duration.minutes(1),
+      }),
+      threshold: 80,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      evaluationPeriods: 1,
+      datapointsToAlarm: 1,
+      treatMissingData: cloudwatch.TreatMissingData.MISSING,
+    });
+    rdsCpuAlarm.addAlarmAction(snsAction);
+
+    // Stack Outputs
     new cdk.CfnOutput(this, 'VpcId', { value: this.vpc.vpcId, exportName: 'rf-prod-vpc-id' });
     new cdk.CfnOutput(this, 'AlbDnsName', { value: alb.loadBalancerDnsName, exportName: 'rf-prod-alb-dns' });
     new cdk.CfnOutput(this, 'AlbArn', { value: alb.loadBalancerArn, exportName: 'rf-prod-alb-arn' });
@@ -400,6 +473,9 @@ exports.handler = async () => {
     new cdk.CfnOutput(this, 'EcsSgId', { value: this.ecsSg.securityGroupId, exportName: 'rf-prod-ecs-sg-id' });
     new cdk.CfnOutput(this, 'ServiceName', { value: service.serviceName, exportName: 'rf-prod-service-name' });
     new cdk.CfnOutput(this, 'LogGroupName', { value: logGroup.logGroupName, exportName: 'rf-prod-log-group' });
+    new cdk.CfnOutput(this, 'GitHubActionsRoleArn', { value: deployRole.roleArn, exportName: 'rf-prod-github-role-arn' });
+    new cdk.CfnOutput(this, 'CronSecretArn', { value: cronSecret.secretArn, exportName: 'rf-prod-cron-secret-arn' });
+    new cdk.CfnOutput(this, 'AlarmTopicArn', { value: alarmTopic.topicArn, exportName: 'rf-prod-alarm-topic-arn' });
 
     // Tags
     cdk.Tags.of(this).add('Project', 'requirements-foundry');
