@@ -34,16 +34,13 @@ export class RequirementsFoundryStack extends cdk.Stack {
       ],
     });
 
-    // ALB Security Group: allow TCP/80 from RFC1918 ranges (corporate network)
+    // ALB Security Group: allow TCP/80 from anywhere (POC - restrict after VPN setup)
     this.albSg = new ec2.SecurityGroup(this, 'AlbSg', {
       vpc: this.vpc,
-      securityGroupName: 'requirements-foundry-prod-alb-sg',
-      description: 'ALB security group - allows HTTP from corporate networks',
+      description: 'ALB security group - allows HTTP (POC: open to internet)',
       allowAllOutbound: true,
     });
-    this.albSg.addIngressRule(ec2.Peer.ipv4('10.0.0.0/8'), ec2.Port.tcp(80), 'Allow HTTP from 10.0.0.0/8');
-    this.albSg.addIngressRule(ec2.Peer.ipv4('172.16.0.0/12'), ec2.Port.tcp(80), 'Allow HTTP from 172.16.0.0/12');
-    this.albSg.addIngressRule(ec2.Peer.ipv4('192.168.0.0/16'), ec2.Port.tcp(80), 'Allow HTTP from 192.168.0.0/16');
+    this.albSg.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Allow HTTP from anywhere (POC)');
 
     // ECS Security Group: allow TCP/3000 from ALB only
     this.ecsSg = new ec2.SecurityGroup(this, 'EcsSg', {
@@ -157,18 +154,16 @@ export class RequirementsFoundryStack extends cdk.Stack {
       description: 'ECR repository URI for container images',
     });
 
-    // Internal ALB (NET-02)
+    // Internet-facing ALB (POC - switch to internal after VPN setup)
     const alb = new elbv2.ApplicationLoadBalancer(this, 'Alb', {
-      loadBalancerName: 'requirements-foundry-prod-alb',
       vpc: this.vpc,
-      internetFacing: false,
+      internetFacing: true,
       securityGroup: this.albSg,
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
     });
 
     // ALB Target Group
     const targetGroup = new elbv2.ApplicationTargetGroup(this, 'TargetGroup', {
-      targetGroupName: 'requirements-foundry-prod-tg',
       vpc: this.vpc,
       port: 3000,
       protocol: elbv2.ApplicationProtocol.HTTP,
@@ -214,6 +209,8 @@ export class RequirementsFoundryStack extends cdk.Stack {
       roleName: 'requirements-foundry-prod-task',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
+    // Secrets Manager read for RDS credentials (used by entrypoint.js at runtime)
+    dbInstance.secret!.grantRead(taskRole);
     // S3 read/write for file uploads
     bucket.grantReadWrite(taskRole);
     // Bedrock invoke model
@@ -241,6 +238,10 @@ export class RequirementsFoundryStack extends cdk.Stack {
       memoryLimitMiB: 1024,
       executionRole: taskExecutionRole,
       taskRole: taskRole,
+      runtimePlatform: {
+        cpuArchitecture: ecs.CpuArchitecture.ARM64,
+        operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
+      },
     });
 
     // Container
@@ -262,7 +263,7 @@ export class RequirementsFoundryStack extends cdk.Stack {
       serviceName: 'requirements-foundry-prod-service',
       cluster,
       taskDefinition,
-      desiredCount: 0, // Start at 0; scale to 1 after first Docker image push
+      desiredCount: 1,
       securityGroups: [this.ecsSg],
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       assignPublicIp: false,

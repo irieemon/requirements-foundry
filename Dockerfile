@@ -30,17 +30,15 @@ COPY --from=builder /app/public ./public
 
 # Copy Prisma schema and generated client
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Copy entrypoint script
+# Overlay full node_modules from deps stage (ensures prisma CLI + all deps available)
+# Standalone's traced node_modules gets overwritten but all runtime deps are superset
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy entrypoint script, migration files, and Prisma config
 COPY entrypoint.js ./
-
-# Copy Prisma CLI for migrate deploy at startup
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
-
-# Copy migration files
 COPY --from=builder /app/prisma/migrations ./prisma/migrations
+COPY --from=builder /app/prisma.config.ts ./
 
 USER nextjs
 

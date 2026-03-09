@@ -6,7 +6,7 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Create the PostgreSQL adapter with connection string from environment
+// Create the PostgreSQL adapter with connection parameters from environment
 function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
 
@@ -14,7 +14,17 @@ function createPrismaClient(): PrismaClient {
     throw new Error("DATABASE_URL environment variable is required");
   }
 
-  const adapter = new PrismaPg({ connectionString });
+  // Parse URL and pass individual params to pg for reliable credential handling.
+  // RDS has rds.force_ssl=1, so SSL is required for all connections.
+  const url = new URL(connectionString);
+  const adapter = new PrismaPg({
+    host: url.hostname,
+    port: parseInt(url.port) || 5432,
+    database: url.pathname.slice(1),
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    ssl: { rejectUnauthorized: false },
+  });
 
   return new PrismaClient({
     adapter,

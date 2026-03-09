@@ -14,22 +14,31 @@ ECR_REPO="requirements-foundry-prod"
 CLUSTER="requirements-foundry-prod-cluster"
 SERVICE="requirements-foundry-prod-service"
 
+# Use finch if docker is not available
+if command -v docker &>/dev/null; then
+  CONTAINER_CLI="docker"
+elif command -v finch &>/dev/null; then
+  CONTAINER_CLI="finch"
+else
+  echo "Error: neither docker nor finch found" && exit 1
+fi
+
 echo "==> Getting AWS account ID..."
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 ECR_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
 
 echo "==> Building Docker image..."
-docker build -t "${ECR_REPO}:latest" .
+${CONTAINER_CLI} build --platform linux/amd64 -t "${ECR_REPO}:latest" .
 
 echo "==> Authenticating with ECR..."
 aws ecr get-login-password --region "${AWS_REGION}" | \
-  docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+  ${CONTAINER_CLI} login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
 echo "==> Tagging image..."
-docker tag "${ECR_REPO}:latest" "${ECR_URI}:latest"
+${CONTAINER_CLI} tag "${ECR_REPO}:latest" "${ECR_URI}:latest"
 
 echo "==> Pushing to ECR..."
-docker push "${ECR_URI}:latest"
+${CONTAINER_CLI} push "${ECR_URI}:latest"
 
 echo "==> Updating ECS service (desired count 1, force new deployment)..."
 aws ecs update-service \
