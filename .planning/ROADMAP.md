@@ -138,7 +138,11 @@ Plans:
   2. GitHub Actions authenticates to AWS via OIDC (no long-lived credentials stored in GitHub secrets)
   3. Stale run recovery executes periodically and cleans up stuck runs (verifiable by checking recovered run logs)
   4. CloudWatch alarms fire when ECS task count drops to 0 or ALB has unhealthy targets, and SNS delivers email notification
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 24-01-PLAN.md — CDK: OIDC provider, IAM role, deployment config, cron Lambda, EventBridge, alarms, SNS
+- [ ] 24-02-PLAN.md — GitHub Actions deploy workflow (build, push ECR, deploy ECS)
+- [ ] 24-03-PLAN.md — Deploy CDK stack, verify infrastructure, user setup (SNS confirm, GitHub secret)
 
 ### Phase 25: Validation and Data Migration
 **Goal**: All existing features work identically on AWS, and production data is migrated from Neon to RDS
@@ -149,7 +153,11 @@ Plans:
   2. MSS taxonomy import and mapping to epics/stories works correctly on AWS
   3. After `pg_dump`/`pg_restore` from Neon to RDS, all existing projects, cards, epics, stories, and subtasks are accessible
   4. Prisma migrations run cleanly against RDS and schema matches expectations
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 24-01-PLAN.md — CDK: OIDC provider, IAM role, deployment config, cron Lambda, EventBridge, alarms, SNS
+- [ ] 24-02-PLAN.md — GitHub Actions deploy workflow (build, push ECR, deploy ECS)
+- [ ] 24-03-PLAN.md — Deploy CDK stack, verify infrastructure, user setup (SNS confirm, GitHub secret)
 
 ## Progress
 
@@ -183,5 +191,5 @@ Phases 21 and 22 can run in parallel. Phase 23 depends on both. Then 24, then 25
 | 21. Application Code Migration | 5/5 | Complete    | 2026-03-05 | - |
 | 22. Infrastructure Foundation | 3/3 | Complete    | 2026-03-05 | - |
 | 23. Compute and Deployment | 2/3 | In Progress|  | - |
-| 24. CI/CD and Operations | v2.0 | 0/? | Not started | - |
+| 24. CI/CD and Operations | v2.0 | 0/3 | Not started | - |
 | 25. Validation and Data Migration | v2.0 | 0/? | Not started | - |
