@@ -9,6 +9,13 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cloudwatch_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as sns_subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import { Construct } from 'constructs';
 
 export class RequirementsFoundryStack extends cdk.Stack {
@@ -244,6 +251,16 @@ export class RequirementsFoundryStack extends cdk.Stack {
       },
     });
 
+    // CRON_SECRET in Secrets Manager (for Lambda cron caller + ECS container validation)
+    const cronSecret = new secretsmanager.Secret(this, 'CronSecret', {
+      secretName: 'requirements-foundry-prod/cron-secret',
+      generateSecretString: { excludePunctuation: true, passwordLength: 32 },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Grant task execution role read access to CRON_SECRET
+    cronSecret.grantRead(taskExecutionRole);
+
     // Container
     taskDefinition.addContainer('AppContainer', {
       image: ecs.ContainerImage.fromEcrRepository(repository, 'latest'),
@@ -254,6 +271,9 @@ export class RequirementsFoundryStack extends cdk.Stack {
         AWS_REGION: 'us-east-1',
         S3_BUCKET_NAME: bucket.bucketName,
         RDS_SECRET_NAME: 'requirements-foundry-prod/rds-credentials',
+      },
+      secrets: {
+        CRON_SECRET: ecs.Secret.fromSecretsManager(cronSecret),
       },
       portMappings: [{ containerPort: 3000, protocol: ecs.Protocol.TCP }],
     });
@@ -268,10 +288,100 @@ export class RequirementsFoundryStack extends cdk.Stack {
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       assignPublicIp: false,
       circuitBreaker: { enable: true, rollback: false },
+      minHealthyPercent: 100,
+      maxHealthyPercent: 200,
     });
 
     // Wire Fargate service to ALB target group
     service.attachToApplicationTargetGroup(targetGroup);
+
+    // --- Phase 24: CI/CD and Operations Infrastructure ---
+
+    // GitHub OIDC Provider + IAM Role (CICD-02)
+    const githubRepo = this.node.tryGetContext('githubRepo') || 'irieemon/requirements-foundry';
+
+    const oidcProvider = new iam.OpenIdConnectProvider(this, 'GitHubOidc', {
+      url: 'https://token.actions.githubusercontent.com',
+      clientIds: ['sts.amazonaws.com'],
+    });
+
+    const deployRole = new iam.Role(this, 'GitHubActionsRole', {
+      roleName: 'requirements-foundry-github-actions',
+      assumedBy: new iam.WebIdentityPrincipal(
+        oidcProvider.openIdConnectProviderArn,
+        {
+          StringEquals: {
+            'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
+          },
+          StringLike: {
+            'token.actions.githubusercontent.com:sub': `repo:${githubRepo}:ref:refs/heads/main`,
+          },
+        },
+      ),
+    });
+
+    // Minimum permissions: ECR push + ECS deploy
+    repository.grantPush(deployRole);
+    deployRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        'ecs:UpdateService',
+        'ecs:DescribeServices',
+        'ecs:DescribeTaskDefinition',
+      ],
+      resources: ['*'],
+    }));
+
+    // Lambda cron caller function (CRON-01)
+    const cronLambda = new lambda.Function(this, 'CronCallerLambda', {
+      functionName: 'requirements-foundry-cron-caller',
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromInline(`
+const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
+const http = require('http');
+
+exports.handler = async () => {
+  const sm = new SecretsManagerClient({});
+  const { SecretString } = await sm.send(
+    new GetSecretValueCommand({ SecretId: process.env.SECRET_NAME })
+  );
+
+  return new Promise((resolve, reject) => {
+    const req = http.request(process.env.ENDPOINT_URL, {
+      method: 'GET',
+      headers: { 'Authorization': 'Bearer ' + SecretString },
+      timeout: 25000,
+    }, (res) => {
+      let body = '';
+      res.on('data', d => body += d);
+      res.on('end', () => {
+        console.log('Status:', res.statusCode, 'Body:', body);
+        resolve({ statusCode: res.statusCode, body });
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+    req.end();
+  });
+};
+      `),
+      environment: {
+        SECRET_NAME: cronSecret.secretName,
+        ENDPOINT_URL: `http://${alb.loadBalancerDnsName}/api/cron/recover-stale-runs`,
+      },
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 128,
+    });
+
+    // Grant Lambda read access to the cron secret
+    cronSecret.grantRead(cronLambda);
+
+    // EventBridge rule: every 5 minutes (CRON-01)
+    new events.Rule(this, 'CronSchedule', {
+      ruleName: 'requirements-foundry-cron-schedule',
+      schedule: events.Schedule.rate(cdk.Duration.minutes(5)),
+      targets: [new targets.LambdaFunction(cronLambda)],
+    });
 
     // Stack Outputs (for Phase 23)
     new cdk.CfnOutput(this, 'VpcId', { value: this.vpc.vpcId, exportName: 'rf-prod-vpc-id' });
