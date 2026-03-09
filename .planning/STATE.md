@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AWS Migration
 status: executing
-stopped_at: "25-02-PLAN.md Task 2 checkpoint:human-action (data migration)"
-last_updated: "2026-03-09T21:25:45Z"
-last_activity: 2026-03-09 -- Neon-to-RDS migration script created (25-02)
+stopped_at: "Completed 25-02-PLAN.md (user chose fresh start)"
+last_updated: "2026-03-09T21:33:20Z"
+last_activity: 2026-03-09 -- Data migration plan complete, user chose fresh DB (25-02)
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 17
-  completed_plans: 15
-  percent: 93
+  completed_plans: 16
+  percent: 94
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 25 of 25 (Validation and Data Migration)
-Plan: 2 of 3 in current phase (Plan 25-02 awaiting human action for data migration)
+Plan: 3 of 3 in current phase (Plan 25-02 complete, 25-03 next)
 Status: Phase 25 In Progress
-Last activity: 2026-03-09 -- Neon-to-RDS migration script created (25-02)
+Last activity: 2026-03-09 -- Data migration plan complete, user chose fresh DB (25-02)
 
-Progress: [█████████░] 93% (v2.0 Phases 21-24 complete, Phase 25 in progress)
+Progress: [█████████░] 94% (v2.0 Phases 21-24 complete, Phase 25 in progress)
 
 ## Milestones
 
@@ -43,7 +43,7 @@ Progress: [█████████░] 93% (v2.0 Phases 21-24 complete, Phas
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15 (v2.0)
+- Total plans completed: 16 (v2.0)
 - Average duration: 3 min (automated plans)
 - Total execution time: ~37 min + deployment debugging
 
@@ -64,7 +64,7 @@ Progress: [█████████░] 93% (v2.0 Phases 21-24 complete, Phas
 | 24    | 02   | 2 min    | 2     | 1     |
 | 24    | 03   | multi-session | 2 | 1   |
 | 25    | 01   | 83 min   | 2     | 2     |
-| 25    | 02   | 2 min    | 1     | 1     |
+| 25    | 02   | 12 min   | 2     | 1     |
 
 *Updated after each plan completion*
 
@@ -126,11 +126,13 @@ Key decisions for v2.0 (full log in PROJECT.md):
 - [25-01] Application redeployment deferred to git push (Finch amd64 emulation too slow)
 - [25-02] Strategy B: full dump from Neon, restore to RDS, Prisma applies rename on restart
 - [25-02] pg_restore warnings about 'does not exist' treated as harmless (--clean --if-exists)
+- [25-02] User chose fresh start: skip Neon data migration, RDS schema correct from Prisma migrations
 
 ### Pending Todos
 
 - Push to main to deploy entrypoint.js cleanup and trigger rename_blob_to_storage migration
 - Verify container starts cleanly after push (no debug pg test output in logs)
+- Verify storageUrl/storageKey columns exist after rename migration applies
 
 ### Blockers/Concerns
 
@@ -139,7 +141,7 @@ Key decisions for v2.0 (full log in PROJECT.md):
 
 ## Session Continuity
 
-Last session: 2026-03-09T21:25:45Z
-Stopped at: 25-02-PLAN.md Task 2 checkpoint:human-action (data migration from Neon to RDS)
+Last session: 2026-03-09T21:33:20Z
+Stopped at: Completed 25-02-PLAN.md (user chose fresh start)
 Resume file: .planning/phases/25-validation-and-data-migration/25-02-SUMMARY.md
-Next: User runs migration script with Neon credentials, then 25-03 (smoke testing)
+Next: Execute 25-03 (smoke testing)
