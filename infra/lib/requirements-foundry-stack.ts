@@ -93,6 +93,15 @@ export class RequirementsFoundryStack extends cdk.Stack {
       privateDnsEnabled: true,
     });
 
+    // RDS Parameter Group - enforce SSL connections (DB-04)
+    const parameterGroup = new rds.ParameterGroup(this, 'DatabaseParameterGroup', {
+      engine: rds.DatabaseInstanceEngine.postgres({ version: rds.PostgresEngineVersion.VER_16_3 }),
+      description: 'Requirements Foundry RDS parameter group',
+      parameters: {
+        'rds.force_ssl': '1',
+      },
+    });
+
     // RDS PostgreSQL (DB-01, DB-02)
     const dbInstance = new rds.DatabaseInstance(this, 'Database', {
       instanceIdentifier: 'requirements-foundry-prod-rds',
@@ -101,6 +110,7 @@ export class RequirementsFoundryStack extends cdk.Stack {
       vpc: this.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [this.rdsSg],
+      parameterGroup,
       databaseName: 'requirements_foundry',
       credentials: rds.Credentials.fromGeneratedSecret('postgres', {
         secretName: 'requirements-foundry-prod/rds-credentials',
