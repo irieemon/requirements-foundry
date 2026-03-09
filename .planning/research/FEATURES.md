@@ -1,218 +1,210 @@
-# Feature Landscape: Next.js AWS Migration (Vercel to ECS Fargate)
+# Feature Research: Authentication & Multi-User
 
-**Domain:** Corporate internal deployment -- migrating Next.js app from Vercel to AWS
-**Researched:** 2026-03-05
+**Domain:** SSO authentication, per-user data isolation, and admin role management for an existing internal Next.js application
+**Researched:** 2026-03-09
+**Confidence:** HIGH
 
-## Table Stakes
+## Feature Landscape
 
-Features that are non-negotiable for a working corporate AWS deployment. Missing any of these means the app cannot run or cannot be accessed.
+### Table Stakes (Users Expect These)
 
-### Compute and Container Infrastructure
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Dockerfile with standalone output | Next.js requires `output: "standalone"` for container deployment; produces minimal image with only runtime files | Low | Use `node:20-alpine` base, single-stage build is fine since CI handles the build step. Port 3000. |
-| ECR repository | Container images must be stored somewhere AWS can pull from | Low | One repo, tag with commit SHA for traceability |
-| ECS Fargate service + task definition | The actual compute. Fargate = no server management, just define CPU/memory | Medium | Start with 0.5 vCPU / 1GB RAM, adjust based on load. Single task for POC. |
-| ECS cluster | Logical grouping for Fargate tasks | Low | One cluster, one service |
-| Health check endpoint | ALB and ECS need to verify the app is alive | Low | Simple `/api/health` route returning 200. ECS uses this to restart unhealthy tasks. |
-
-### Networking and Access
+Features users assume exist. Missing these = product feels incomplete.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| VPC with private subnets | Corporate internal-only access requires private networking | Medium | Minimum 2 private subnets across 2 AZs (AWS requires this even for single-task POC). No public subnets needed if using VPN/DirectConnect. |
-| Internal Application Load Balancer | Routes traffic to ECS tasks, provides stable endpoint | Medium | Internal scheme ALB. Listener on port 80 (or 443 with ACM cert). Target group pointing to ECS service on port 3000. |
-| NAT Gateway OR VPC Endpoints | Tasks in private subnets need outbound access to AWS services (ECR, S3, Bedrock, CloudWatch) | Medium | **Decision point:** NAT Gateway is simpler but costs ~$32/mo + data transfer. VPC endpoints are cheaper for steady traffic but require more setup. For POC, NAT Gateway is the pragmatic choice. |
-| Security groups | Network-level access control between ALB, ECS tasks, RDS, and VPC endpoints | Medium | Minimum 3 SGs: ALB (inbound from corporate CIDR), ECS tasks (inbound from ALB SG only), RDS (inbound from ECS SG only). |
+| SSO login via Okta | Corporate users expect single click into the app using their existing Okta credentials. No separate username/password. | MEDIUM | Cognito User Pool with Okta as SAML 2.0 IdP. Cognito handles the SAML assertion exchange. User redirects to Okta, authenticates, returns with tokens. |
+| Public landing page with "Sign in with Okta" button | Users need an unauthenticated entry point that clearly communicates how to access the app. | LOW | Simple page with branding and a single CTA button. The button triggers redirect to the Cognito authorize endpoint with `identity_provider=Okta`. |
+| Protected routes (redirect to login) | Unauthenticated users hitting any app route must be redirected to login. No partial access. | MEDIUM | Next.js middleware checks for valid session token on every request. Matcher config excludes `/`, `/api/auth/*`, and static assets. Redirect to `/` (landing page) if no valid session. |
+| Per-user project isolation | Each user sees only their own projects. Clicking around the app should never reveal another user's data. | MEDIUM | The `Project.userId` field already exists (nullable). Migration: make it required, populate existing projects with the default admin user. All Prisma queries add `where: { userId }` filter. |
+| Session persistence across page reloads | Users expect to stay logged in after refreshing or closing/reopening the browser tab within a reasonable window. | LOW | Cognito issues access tokens (1hr default) and refresh tokens (30 days default). Store tokens in httpOnly cookies. Refresh silently before expiry. |
+| Logout that actually logs out | Clicking "Sign Out" must clear the session AND the Cognito/Okta session so the user is truly logged out, not auto-re-authenticated. | LOW | Call Cognito's `/logout` endpoint with redirect, which clears the Cognito session. For full Okta logout, redirect to Okta's SLO endpoint. Store logout redirect URI in Cognito app client config. |
+| User identity display | Show who is logged in (name/email) in the app header. Users need to confirm they are in the right account. | LOW | Extract `email` and `name` from the Cognito ID token claims. Display in the existing sidebar/header. |
+| Admin: view all projects | Admin users need to see every project across all users for oversight, troubleshooting, and governance. | LOW | Admin role bypasses the `userId` filter. Query all projects when `role === 'admin'`. Show the project owner's email alongside each project for context. |
 
-### Database
+### Differentiators (Competitive Advantage)
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| RDS PostgreSQL instance | Direct replacement for current Neon/Vercel Postgres. Prisma works identically. | Medium | `db.t4g.micro` for POC. Single-AZ. Private subnet group. No public accessibility. |
-| Database subnet group | RDS requires subnets to be explicitly designated | Low | Use the same private subnets as ECS |
-| Database migration path | Existing data from Neon needs to come over | Medium | `pg_dump` from Neon, `pg_restore` to RDS. Run Prisma migrations after. One-time operation. |
-
-### File Storage
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| S3 bucket for file uploads | Drop-in replacement for `@vercel/blob`. Documents are uploaded and extracted. | Low | Private bucket, no public access. Use AWS SDK v3 `@aws-sdk/client-s3` with presigned URLs for uploads if needed, or server-side upload from the API route. |
-| S3 storage adapter | Code change to replace `@vercel/blob` calls with S3 SDK calls | Medium | Replace `put()`, `del()`, `list()` in `lib/storage/index.ts`. The adapter pattern already exists -- swap implementation. |
-
-### AI Integration
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Amazon Bedrock for Claude | Replaces direct Anthropic API. Keeps all AI traffic within AWS network. | Medium | Use `@aws-sdk/client-bedrock-runtime`. The API shape is similar but not identical to Anthropic SDK -- `InvokeModel` / `InvokeModelWithResponseStream` instead of `messages.create()`. Must complete Anthropic FTU (First Time Use) form in Bedrock console. |
-| IAM role for Bedrock access | ECS task role needs permission to invoke Bedrock models | Low | `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` on the model ARN. No API keys needed -- uses IAM credential chain automatically. |
-
-### Secrets and Configuration
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| AWS Secrets Manager for sensitive values | Database credentials, any API keys. ECS natively injects from Secrets Manager into container env vars at task startup. | Low | Store `DATABASE_URL`, any remaining API keys. Reference in task definition via `secrets` block. |
-| SSM Parameter Store for non-sensitive config | App configuration that isn't secret (region, bucket name, feature flags) | Low | Free tier. Reference in task definition via `secrets` block (same mechanism). Use for `S3_BUCKET_NAME`, `AWS_REGION`, `APP_ENV`, etc. |
-| IAM task execution role | ECS needs permissions to pull images from ECR and read secrets | Low | Standard `AmazonECSTaskExecutionRolePolicy` plus Secrets Manager / SSM read permissions. |
-| IAM task role | The running container needs permissions for S3, Bedrock, CloudWatch | Low | Separate from execution role. Principle of least privilege. |
-
-### Logging
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| CloudWatch Logs via awslogs driver | ECS Fargate natively sends container stdout/stderr to CloudWatch Logs. Zero application code changes. | Low | Configure `logConfiguration` in task definition with `awslogs` driver. Log group `/ecs/requirements-foundry`. |
-| Structured logging from Next.js | JSON-formatted logs so CloudWatch can parse and filter them | Low | `console.log(JSON.stringify({...}))` or use `pino` with JSON output. Not strictly required for POC but makes debugging much easier. |
-
-### CI/CD Pipeline
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| GitHub Actions workflow | Build, push to ECR, deploy to ECS on push to main | Medium | Use official AWS actions: `aws-actions/configure-aws-credentials` (OIDC), `aws-actions/amazon-ecr-login`, `aws-actions/amazon-ecs-render-task-definition`, `aws-actions/amazon-ecs-deploy-task-definition`. |
-| OIDC authentication for GitHub Actions | No long-lived AWS credentials stored in GitHub. IAM OIDC provider trusts GitHub. | Medium | More secure than access keys. One-time setup of IAM OIDC provider + IAM role with trust policy for the specific repo. |
-| ECR image lifecycle policy | Prevent unbounded image storage costs | Low | Keep last 10 tagged images, expire untagged after 1 day |
-
-### Scheduled Tasks
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| ECS Scheduled Task or EventBridge rule for stale run recovery | Replaces Vercel Cron. The app has a `/api/cron/recover-stale-runs` endpoint that must run periodically. | Medium | EventBridge rule triggers ECS RunTask on schedule. Alternatively, could be a simple `curl` from a Lambda on a schedule hitting the API endpoint through the ALB. Lambda approach is simpler for POC. |
-
-### Infrastructure as Code
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Terraform or CloudFormation for all infrastructure | Reproducibility, version control, no ClickOps | High | This is the single highest-complexity table-stakes item. Covers VPC, subnets, ALB, ECS, RDS, S3, IAM, security groups, secrets, log groups. Terraform recommended over CloudFormation for better DX and state management. |
-
-## Differentiators
-
-Features that improve operations and reliability but are not strictly required for POC launch.
+Features that set the product apart from a basic auth implementation. Not required for launch, but valuable.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| CloudWatch Container Insights | CPU/memory metrics per task, service-level dashboards, deployment tracking | Low | Toggle on at cluster level. ~$0.50/month for a single service. Worth enabling from day one. |
-| CloudWatch alarms for critical metrics | Get notified when tasks fail, CPU spikes, or unhealthy targets appear | Medium | Alarms on: ECS service running task count = 0, ALB target unhealthy count > 0, RDS CPU > 80%. SNS topic to email. |
-| Blue/green or rolling deployment in ECS | Zero-downtime deployments. ECS supports rolling update by default. | Low | ECS rolling update is actually the default -- just configure `minimumHealthyPercent: 100` and `maximumPercent: 200` in service config. Free. |
-| RDS automated backups | Point-in-time recovery for the database | Low | Enabled by default on RDS. 7-day retention is free. Just don't disable it. |
-| CloudWatch log metric filters | Extract application-level metrics from logs (error rates, AI call durations) | Medium | Create metric filters on log group patterns like `"level":"error"` or `"duration"`. Feeds into alarms. |
-| Multi-AZ RDS | Database survives AZ failure | Low | Toggle on RDS creation. Doubles cost (~$15/mo to ~$30/mo for t4g.micro). Not needed for POC but easy to enable later. |
-| S3 versioning | Recover accidentally deleted uploaded documents | Low | Toggle on bucket. Minimal cost for internal app volume. |
-| SSM Session Manager for ECS Exec | Shell into running container for debugging without SSH | Medium | Requires `enableExecuteCommand` on ECS service + SSM VPC endpoint. Very useful for debugging but not launch-critical. |
-| Terraform remote state (S3 + DynamoDB) | State locking and team collaboration for IaC | Medium | S3 bucket for state file, DynamoDB table for locking. Standard practice but can start with local state for POC. |
-| GitHub Actions environment protection rules | Require approval before deploying to production | Low | GitHub-native feature. Add manual approval gate on the deploy job. |
-| Custom CloudWatch dashboard | Single-pane view of app health | Medium | Combine ECS metrics, ALB metrics, RDS metrics, error log counts. Nice for demos and monitoring but not required. |
+| Admin role derived from Okta group membership | No local role management UI needed. Okta admins manage who is an admin via Okta group assignment. Zero operational overhead. | MEDIUM | Okta sends group membership as a SAML attribute. Map it to a Cognito custom attribute (`custom:groups`). App reads this claim from the ID token to determine admin status. The `cognito:groups` claim does NOT contain Okta groups -- must use the custom attribute. |
+| Automatic user provisioning on first login | No user invite flow needed. Any Merkle employee assigned the Okta app automatically gets an account on first login. | LOW | Cognito auto-creates a user profile on first SAML federation. The app creates a local user record (if needed) on first authenticated request. No manual provisioning step. |
+| Admin project management (view/reassign) | Admin can see which user owns which project and potentially reassign orphaned projects. | MEDIUM | Useful when employees leave. Admin UI shows all projects with owner info. Reassignment updates `Project.userId`. |
+| Direct IdP redirect (skip Cognito hosted UI) | Users go straight to Okta login instead of seeing the generic Cognito hosted UI. Feels like a native SSO experience. | LOW | Use the Cognito `/oauth2/authorize` endpoint with `identity_provider=Okta` parameter to bypass the hosted UI entirely. The user never sees a Cognito-branded page. |
+| Graceful session expiry handling | Instead of a jarring error when the token expires, silently refresh or show a "Session expired, click to re-authenticate" modal. | LOW | Check token expiry on each request in middleware. If access token expired but refresh token valid, refresh silently. If refresh token expired, redirect to login with a `?expired=true` query param for a friendly message on the landing page. |
 
-## Anti-Features
+### Anti-Features (Commonly Requested, Often Problematic)
 
-Features to explicitly NOT build for the POC migration. These add complexity without value at this stage.
+Features that seem good but create problems in this context.
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| CloudFront CDN | Internal-only app, no public internet users. CloudFront adds complexity and cost for zero benefit on VPN-accessed apps. | Serve static assets directly from Next.js via ALB. |
-| WAF (Web Application Firewall) | Internal network already protected by corporate firewall/VPN. WAF rules add cost and debugging complexity. | Rely on security groups and private networking. |
-| Route 53 custom domain | Requires DNS zone setup, certificate management, and potentially cross-account delegation. Overkill for POC. | Use ALB DNS name directly (or add a CNAME in corporate DNS manually if needed). |
-| Auto-scaling policies | Single internal team of users. Traffic is predictable and low. Auto-scaling adds config complexity. | Fixed task count of 1 (or 2 if availability matters). Scale manually if needed. |
-| Multi-region deployment | POC runs in us-east-1 only. Multi-region adds massive complexity for DR scenarios irrelevant to an internal tool. | Single region, accept the risk for POC. |
-| Custom VPC flow logs analysis | Useful for security audits but excessive for POC. Generates high volume of log data. | Enable flow logs to S3 (cheap) but don't build analysis tooling. |
-| ElastiCache / Redis | The app uses polling, not sessions. No caching layer needed. | PostgreSQL handles all data. Next.js in-memory cache is sufficient. |
-| ECS Service Connect / App Mesh | Service mesh is for multi-service architectures. This is a single service. | Direct ALB-to-ECS routing. |
-| Cognito + Okta SSO | Explicitly deferred to a future milestone per project constraints. Architecture should accommodate it but don't build it now. | No auth for POC. Ensure ALB and security groups restrict to corporate network. |
-| Lambda@Edge for middleware | Over-engineering. Next.js middleware runs fine in the container. | Standard Next.js middleware in the container. |
-| RDS Proxy | Useful for serverless with many short-lived connections. ECS Fargate tasks are long-lived -- single Prisma connection pool is fine. | Prisma connection pooling in the container (already configured). |
-| Separate staging environment | Focus on getting one environment working first. Staging can be a second ECS service later. | Single environment. Use feature flags if needed. |
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Local username/password registration | "What if someone doesn't have Okta?" | This is an internal corporate tool. Everyone has Okta. Local passwords create a security liability, bypass SSO compliance, and add password reset/storage complexity. | Only Okta SAML. If someone needs access, they get assigned the Okta app by IT. |
+| Granular per-resource permissions (ACLs) | "Users should control who sees each project" | Massive complexity for a tool where projects are personal workspaces. ACLs need a sharing UI, permission checks on every query, invitation flows, and conflict resolution. | Simple model: users own projects, admins see all. If sharing is ever needed, add it as a separate milestone. |
+| Custom role management UI | "Admins should be able to assign roles in the app" | Duplicates Okta group management. Creates sync issues between Okta and the app. Who is the source of truth? | Roles come from Okta groups exclusively. Admin adds/removes users from the Okta group. Single source of truth. |
+| Multi-factor authentication in the app | "Add MFA for security" | MFA is Okta's responsibility. Okta already enforces org-wide MFA policies. Adding MFA at the app level is redundant and confusing. | Rely on Okta's MFA policies. The app trusts the SAML assertion. |
+| PostgreSQL Row-Level Security (RLS) | "Database-level isolation is more secure" | RLS with Prisma is awkward. Prisma does not natively support `SET app.current_tenant`. Requires raw SQL for session variables per transaction. Adds significant complexity to every query path for marginal security gain in an internal tool. | Application-level filtering via a helper function that injects `userId` into every query. Simpler, testable, sufficient for internal use. |
+| Real-time session sync across tabs | "If I log out in one tab, all tabs should log out" | Requires BroadcastChannel API or localStorage event listeners. Edge cases with stale tabs. Over-engineering for an internal tool. | Each tab checks its own session on next request. Slightly stale but simple and reliable. |
+| User management CRUD in the app | "Admins should manage users within the app" | Cognito/Okta IS the user directory. Building local user CRUD duplicates it and creates sync nightmares. | Users are auto-provisioned on first login. Admin sees users via the Okta admin console. The app only stores the userId reference on projects. |
 
 ## Feature Dependencies
 
 ```
-Dockerfile (standalone build)
-  --> ECR repository
-    --> ECS task definition (references ECR image)
-      --> ECS service (runs task definition)
-        --> ALB target group (routes to ECS service)
+[Cognito User Pool + Okta SAML Config]
+    |
+    +--requires--> [Landing Page with SSO Button]
+    |
+    +--requires--> [Token Handling (cookies, refresh)]
+                       |
+                       +--requires--> [Next.js Auth Middleware (protected routes)]
+                       |                   |
+                       |                   +--requires--> [Per-User Project Isolation]
+                       |                   |                   |
+                       |                   |                   +--requires--> [Admin Override (view all)]
+                       |                   |
+                       |                   +--requires--> [User Identity Display in Header]
+                       |
+                       +--requires--> [Logout Flow]
 
-VPC + Subnets
-  --> Security groups (reference VPC)
-  --> NAT Gateway or VPC Endpoints (enable outbound from private subnets)
-  --> ALB (deployed into subnets)
-  --> ECS service (deployed into subnets)
-  --> RDS instance (deployed into DB subnet group)
-
-IAM task execution role
-  --> ECS task definition (pulls images, reads secrets)
-
-IAM task role
-  --> S3 access (file uploads)
-  --> Bedrock access (AI calls)
-  --> CloudWatch Logs (container logging)
-
-Secrets Manager + Parameter Store
-  --> ECS task definition (injects env vars at startup)
-  --> Requires: DATABASE_URL, S3_BUCKET_NAME, AWS_REGION, etc.
-
-RDS PostgreSQL
-  --> DATABASE_URL secret in Secrets Manager
-  --> Prisma schema migration (one-time)
-
-S3 bucket
-  --> Storage adapter code change (replaces @vercel/blob)
-
-Bedrock access
-  --> AI provider code change (replaces @anthropic-ai/sdk)
-  --> FTU form completion in Bedrock console
-
-GitHub Actions CI/CD
-  --> OIDC provider in IAM
-  --> ECR repository (push target)
-  --> ECS service (deploy target)
-
-EventBridge scheduled rule
-  --> Stale run recovery (replaces Vercel Cron)
-  --> Requires: ECS service running first
+[Okta Group Attribute Mapping]
+    +--requires--> [Admin Role Detection from Token]
+                       +--requires--> [Admin Override (view all)]
+                       +--requires--> [Admin Project Management]
 ```
 
-## MVP Recommendation
+### Dependency Notes
 
-### Phase 1: Infrastructure Foundation
-Prioritize in this order:
-1. **VPC, subnets, security groups, NAT Gateway** -- nothing works without networking
-2. **RDS PostgreSQL** -- database must exist before the app can start
-3. **S3 bucket** -- file storage must exist before uploads work
-4. **Secrets Manager entries** -- credentials must be stored before task definition references them
-5. **IAM roles** (execution + task) -- permissions must exist before ECS can run
+- **Auth Middleware requires Token Handling:** Middleware must be able to validate tokens before it can protect routes. Token storage (cookies) and validation logic must exist first.
+- **Per-User Isolation requires Auth Middleware:** You cannot filter by `userId` until you know who the user is. Auth middleware extracts the user identity from the token.
+- **Admin Override requires both Per-User Isolation AND Okta Group Mapping:** Admin needs the role claim from Okta AND the isolation logic must have an admin bypass path.
+- **Landing Page requires Cognito User Pool:** The SSO button URL includes the Cognito domain, client ID, and redirect URI -- all from the User Pool configuration.
+- **Logout requires Token Handling:** Must know where tokens are stored to clear them, and must know the Cognito logout endpoint URL.
 
-### Phase 2: Application Containerization
-1. **Dockerfile with standalone output** -- build the container
-2. **Code changes: S3 adapter, Bedrock provider, database connection** -- make the app AWS-native
-3. **ECR repository** -- push the image
-4. **ECS task definition + service** -- run the container
-5. **Internal ALB** -- expose the app to the corporate network
+## MVP Definition
 
-### Phase 3: CI/CD and Operations
-1. **GitHub Actions workflow** -- automate build and deploy
-2. **OIDC authentication** -- secure the pipeline
-3. **CloudWatch Logs** -- see what the app is doing
-4. **EventBridge scheduled task** -- restore cron functionality
-5. **Container Insights** -- basic operational visibility
+### Launch With (v3.0)
 
-### Phase 4: IaC Codification
-1. **Terraform modules for all infrastructure** -- make it reproducible
-2. **Remote state backend** -- enable team collaboration
+Everything needed for the app to be usable by multiple authenticated users.
 
-**Defer:** Cognito/Okta SSO, custom domain, auto-scaling, multi-AZ RDS, WAF, CloudFront, staging environment. All are future milestone material.
+- [ ] Cognito User Pool with Okta SAML IdP -- the authentication backbone
+- [ ] Public landing page with "Sign in with Okta" button -- entry point
+- [ ] Direct IdP redirect (bypass Cognito hosted UI) -- seamless UX
+- [ ] Token handling in httpOnly cookies with silent refresh -- session persistence
+- [ ] Next.js middleware protecting all app routes -- security gate
+- [ ] Per-user project isolation (enforce `Project.userId`) -- data separation
+- [ ] Admin role from Okta group claim (`custom:okta_groups`) -- role detection
+- [ ] Admin bypass to view all projects -- oversight capability
+- [ ] User identity display in header/sidebar -- "who am I"
+- [ ] Logout flow (clear Cognito session + cookies) -- clean exit
+- [ ] Migration: populate existing projects with default admin userId -- data continuity
+
+### Add After Validation (v3.x)
+
+Features to add once core auth is working and stable.
+
+- [ ] Admin project reassignment UI -- triggered when an employee leaves and projects need a new owner
+- [ ] Session expiry modal (friendly UX) -- triggered when users report confusion about being redirected to login
+- [ ] Audit log for admin actions -- triggered when compliance or governance asks "who did what"
+
+### Future Consideration (v4+)
+
+Features to defer until there is clear demand.
+
+- [ ] Project sharing between users -- only if collaboration becomes a real need
+- [ ] Fine-grained permissions (viewer/editor roles) -- only if sharing is built
+- [ ] User activity dashboard for admins -- only if admin oversight needs grow beyond "view all projects"
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Cognito + Okta SAML setup | HIGH | MEDIUM | P1 |
+| Landing page with SSO button | HIGH | LOW | P1 |
+| Direct IdP redirect (bypass hosted UI) | MEDIUM | LOW | P1 |
+| Next.js auth middleware | HIGH | MEDIUM | P1 |
+| Token handling (cookies, refresh) | HIGH | MEDIUM | P1 |
+| Per-user project isolation | HIGH | MEDIUM | P1 |
+| Okta group to admin role mapping | HIGH | MEDIUM | P1 |
+| Admin view all projects | HIGH | LOW | P1 |
+| User identity in header | MEDIUM | LOW | P1 |
+| Logout flow | HIGH | LOW | P1 |
+| Existing data migration | HIGH | LOW | P1 |
+| Admin project reassignment | MEDIUM | MEDIUM | P2 |
+| Session expiry UX | LOW | LOW | P2 |
+| Audit logging | LOW | MEDIUM | P3 |
+
+**Priority key:**
+- P1: Must have for launch (v3.0)
+- P2: Should have, add when possible
+- P3: Nice to have, future consideration
+
+## Implementation Notes
+
+### Cognito + Okta SAML Flow (How It Works)
+
+1. User clicks "Sign in with Okta" on landing page
+2. Browser redirects to Cognito's `/oauth2/authorize` endpoint with `identity_provider=Okta`
+3. Cognito redirects to Okta's SAML sign-on URL
+4. User authenticates with Okta (Okta handles MFA if configured)
+5. Okta posts a SAML assertion back to Cognito's `/saml2/idpresponse` endpoint
+6. Cognito validates the assertion, creates/updates the user profile
+7. Cognito redirects back to the app's callback URL with an authorization code
+8. App exchanges the code for tokens (ID token, access token, refresh token)
+9. App stores tokens in httpOnly cookies and redirects to the dashboard
+
+### Per-User Isolation Strategy
+
+The `Project` model already has `userId String?` with an index. The migration strategy:
+
+1. Add a Prisma migration making `userId` required (with a default value for existing rows)
+2. Create a helper function like `getSessionUser()` that extracts userId and role from the token
+3. Create a data access layer (e.g., `getProjectsForUser(userId, isAdmin)`) that wraps queries
+4. All project queries go through this layer, which adds `where: { userId }` for regular users
+5. Admin users skip the userId filter (or optionally filter by a selected user)
+6. Server actions call `getSessionUser()` before any database operation
+
+### Admin Role Detection
+
+Okta groups flow through SAML as an attribute statement. The critical mapping chain:
+
+1. **In Okta:** Configure the SAML app to send a `groups` attribute containing the user's Okta group names
+2. **In Cognito:** Map the SAML `groups` attribute to a custom attribute `custom:okta_groups`
+3. **In the app:** Read `custom:okta_groups` from the ID token. Check if it contains the admin group name (e.g., `RequirementsFoundry-Admins`)
+4. **Important:** Do NOT rely on `cognito:groups` -- it only contains Cognito-side groups, not Okta groups. This is a known limitation that catches many teams.
+
+### Existing Schema Compatibility
+
+The schema is well-prepared for auth. Key observations:
+
+- `Project.userId` already exists as nullable with an index -- just needs to become required
+- No other models need a `userId` -- all data chains through `Project` (Project -> Upload -> Card, Project -> Epic -> Story -> Subtask)
+- The cascade delete structure means isolating at the Project level isolates everything
+- MSS taxonomy tables (`MssServiceLine`, `MssServiceArea`, `MssActivity`) are global (shared across users) -- no isolation needed
+- `PromptTemplate` is also global -- no isolation needed
+- The `Run` model links to `Project`, so run isolation is automatic via project isolation
+
+### CDK Infrastructure Addition
+
+The Cognito User Pool and Okta SAML IdP configuration should be added to the existing CDK stack (already used for ECS, RDS, S3, etc.). Key CDK constructs:
+
+- `cognito.UserPool` -- the user pool
+- `cognito.UserPoolIdentityProviderSaml` -- Okta as SAML IdP
+- `cognito.UserPoolClient` -- app client with OAuth settings
+- `cognito.UserPoolDomain` -- Cognito domain for the hosted UI endpoints (needed even when bypassing hosted UI)
 
 ## Sources
 
-- [AWS ECS Fargate private subnet setup](https://repost.aws/knowledge-center/ecs-fargate-tasks-private-subnet) -- HIGH confidence
-- [ECS task networking for Fargate](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/fargate-task-networking.html) -- HIGH confidence
-- [VPC endpoints for ECS](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/vpc-endpoints.html) -- HIGH confidence
-- [CloudWatch logging for ECS](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_awslogs.html) -- HIGH confidence
-- [Passing secrets to ECS tasks](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specifying-sensitive-data.html) -- HIGH confidence
-- [GitHub Actions ECS deployment](https://docs.github.com/en/actions/deployment/deploying-to-your-cloud-provider/deploying-to-amazon-elastic-container-service) -- HIGH confidence
-- [AWS blog: CI/CD for ECS with GitHub Actions](https://aws.amazon.com/blogs/containers/create-a-ci-cd-pipeline-for-amazon-ecs-with-github-actions-and-aws-codebuild-tests/) -- HIGH confidence
-- [Secrets Manager vs Parameter Store](https://aws.amazon.com/blogs/security/how-to-choose-the-right-aws-service-for-managing-secrets-and-configurations/) -- HIGH confidence
-- [Claude on Amazon Bedrock](https://platform.claude.com/docs/en/build-with-claude/claude-on-amazon-bedrock) -- HIGH confidence
-- [Next.js standalone deployment docs](https://nextjs.org/docs/app/getting-started/deploying) -- HIGH confidence
-- [Container Insights for ECS](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContainerInsights.html) -- HIGH confidence
-- [Configuring ECS Fargate with private subnets](https://tinfoilcipher.co.uk/2025/01/29/configuring-ecs-fargate-and-ecr-with-private-subnets/) -- MEDIUM confidence
-- [Next.js ECS Fargate deployment guide](https://medium.com/@redrobotdev/next-js-deployment-using-ecs-with-fargate-1a730a8d0cb1) -- MEDIUM confidence
-- [Best practices for secrets management in ECS Fargate](https://elasticscale.com/blog/best-practices-for-secrets-management-in-ecs-fargate-at-scale/) -- MEDIUM confidence
+- [AWS re:Post: Set Up Okta as a SAML IdP in Cognito](https://repost.aws/knowledge-center/cognito-okta-saml-identity-provider) -- HIGH confidence
+- [AWS Docs: Using SAML IdPs with a User Pool](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-saml-idp.html) -- HIGH confidence
+- [AWS Docs: Add a SAML 2.0 IdP Tutorial](https://docs.aws.amazon.com/cognito/latest/developerguide/tutorial-create-user-pool-saml-idp.html) -- HIGH confidence
+- [AWS Blog: Hosted UI vs Custom UI in Cognito](https://aws.amazon.com/blogs/security/use-the-hosted-ui-or-create-a-custom-ui-in-amazon-cognito/) -- HIGH confidence
+- [Medium: Using SAML IdP Group Mappings with AWS Cognito](https://medium.com/geekculture/using-saml-idp-group-mappings-with-aws-cognito-34e297cf1aa8) -- MEDIUM confidence
+- [Okta Dev Forum: Okta SAML attributes, Cognito and access tokens](https://devforum.okta.com/t/okta-saml-attributes-cognito-and-acces-tokens/22085) -- MEDIUM confidence
+- [NextAuth.js: Amazon Cognito Provider](https://next-auth.js.org/providers/cognito) -- HIGH confidence
+- [Next.js Docs: Middleware](https://nextjs.org/docs/14/app/building-your-application/routing/middleware) -- HIGH confidence
+- [ZenStack: Multi-Tenancy Approaches with Prisma](https://zenstack.dev/blog/multi-tenant) -- MEDIUM confidence
+- [DEV.to: Multi-Tenant SaaS with Next.js 16, Prisma 7, and Auth.js](https://dev.to/frostbyte_nz/how-we-built-a-multi-tenant-saas-with-nextjs-16-prisma-7-and-authjs-57gj) -- MEDIUM confidence
+
+---
+*Feature research for: Authentication & Multi-User (v3.0 milestone)*
+*Researched: 2026-03-09*

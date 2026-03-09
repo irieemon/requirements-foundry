@@ -1,349 +1,720 @@
-# Architecture Patterns
+# Architecture Research: Cognito + Okta SAML SSO Integration
 
-**Domain:** Internal corporate Next.js application on AWS ECS Fargate
-**Researched:** 2026-03-05
-**Overall confidence:** HIGH
+**Domain:** Authentication & multi-user isolation for existing Next.js on ECS Fargate
+**Researched:** 2026-03-09
+**Confidence:** HIGH
 
-## Recommended Architecture
-
-### Network Topology: Internal-Only VPC with Private Subnets + NAT
+## System Overview
 
 ```
-Corporate Network (VPN/DirectConnect)
-        |
-        v
-+-----------------------------------------------+
-|  VPC: 10.0.0.0/16  (us-east-1)               |
-|                                                |
-|  +-- Private Subnets (Application) ----------+ |
-|  |  10.0.1.0/24 (us-east-1a)                 | |
-|  |  10.0.2.0/24 (us-east-1b)                 | |
-|  |                                             | |
-|  |  [Internal ALB] <-- corporate traffic       | |
-|  |       |                                     | |
-|  |       v                                     | |
-|  |  [ECS Fargate Service]                      | |
-|  |    Task 1 (Next.js container)               | |
-|  |    Task 2 (Next.js container)               | |
-|  |       |          |           |              | |
-|  |       v          v           v              | |
-|  |   [RDS PG]   [S3 Endpt]  [Bedrock Endpt]   | |
-|  +---------------------------------------------+ |
-|                                                |
-|  +-- Private Subnets (Database) -------------+ |
-|  |  10.0.3.0/24 (us-east-1a)                 | |
-|  |  10.0.4.0/24 (us-east-1b)                 | |
-|  |                                             | |
-|  |  [RDS PostgreSQL]                           | |
-|  +---------------------------------------------+ |
-|                                                |
-|  +-- Private Subnets (NAT/Egress) -----------+ |
-|  |  10.0.5.0/24 (us-east-1a)                 | |
-|  |                                             | |
-|  |  [NAT Gateway] --> Internet Gateway         | |
-|  |  (for ECR pulls, npm, external APIs)        | |
-|  +---------------------------------------------+ |
-+-----------------------------------------------+
-
-VPC Endpoints (PrivateLink):
-  - com.amazonaws.us-east-1.s3 (Gateway - FREE)
-  - com.amazonaws.us-east-1.bedrock-runtime (Interface)
-  - com.amazonaws.us-east-1.ecr.api (Interface)
-  - com.amazonaws.us-east-1.ecr.dkr (Interface)
-  - com.amazonaws.us-east-1.logs (Interface)
-  - com.amazonaws.us-east-1.secretsmanager (Interface)
+┌──────────────────────────────────────────────────────────────────────┐
+│                         Internet / Corporate Network                  │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   Browser ──► ALB (port 80) ──► ECS Fargate (port 3000)              │
+│      │                              │                                │
+│      │    ┌─────────────────┐       │   ┌──────────────────┐         │
+│      └───►│ Cognito Hosted  │       ├──►│ Next.js          │         │
+│           │ UI (SAML SSO)   │       │   │ middleware.ts     │         │
+│           │                 │       │   │ (JWT verify)      │         │
+│           │ ┌─────────────┐ │       │   └────────┬─────────┘         │
+│           │ │ Okta SAML   │ │       │            │                   │
+│           │ │ IdP         │ │       │   ┌────────▼─────────┐         │
+│           │ └─────────────┘ │       │   │ Server Actions    │         │
+│           └────────┬────────┘       │   │ + API Routes      │         │
+│                    │                │   │ (userId filter)    │         │
+│                    │ auth code      │   └────────┬─────────┘         │
+│                    ▼                │            │                   │
+│           ┌────────────────┐        │   ┌────────▼─────────┐         │
+│           │ /api/auth/     │────────┘   │ Prisma (RDS PG)  │         │
+│           │ callback       │            │ WHERE userId=X    │         │
+│           │ (token exchange)│           └──────────────────┘         │
+│           └────────────────┘                                         │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-**Why this topology:** The app is internal-only (corporate VPN access), so the ALB is internal (no internet-facing). A NAT Gateway in a separate subnet provides outbound internet for container image pulls from ECR and any external dependencies. VPC endpoints keep AWS service traffic (S3, Bedrock, ECR, Secrets Manager) on the AWS backbone network, reducing NAT costs and improving security. RDS sits in its own subnet group for network isolation.
+### Authentication Flow (Step by Step)
 
-**POC simplification:** For the initial POC, a single AZ is acceptable per the project constraints. The architecture above shows two AZs because ALB requires a minimum of two subnets in different AZs, but only one AZ needs active ECS tasks and RDS can be single-AZ (no Multi-AZ failover).
-
-### Component Boundaries
-
-| Component | Responsibility | Communicates With | Subnet |
-|-----------|---------------|-------------------|--------|
-| Internal ALB | Route HTTP/HTTPS traffic from corporate network to ECS tasks | ECS Fargate tasks | Private (app) |
-| ECS Fargate Service | Run Next.js container (SSR + API routes) | ALB (inbound), RDS, S3, Bedrock, Secrets Manager | Private (app) |
-| RDS PostgreSQL | Persistent data store (projects, uploads, cards, epics, stories, runs, MSS) | ECS tasks (inbound only) | Private (database) |
-| S3 Bucket | File storage for uploaded documents (replaces @vercel/blob) | ECS tasks via Gateway Endpoint | N/A (AWS service) |
-| Amazon Bedrock | AI inference - Claude models (replaces direct Anthropic SDK) | ECS tasks via Interface Endpoint | N/A (AWS service) |
-| ECR | Container image registry for Next.js Docker image | ECS tasks (image pull), GitHub Actions (image push) | N/A (AWS service) |
-| Secrets Manager | Store DATABASE_URL, S3 config, Bedrock config | ECS task definition (injected at startup) | N/A (AWS service) |
-| NAT Gateway | Outbound internet access for tasks needing external resources | Internet Gateway | Private (NAT) |
-| EventBridge + ECS Scheduled Task | Cron replacement for stale run recovery (replaces Vercel Cron) | RDS (via same VPC) | Private (app) |
-
-### Data Flow
-
-#### Document Upload Flow
 ```
-User (corporate network)
-  --> Internal ALB (HTTPS/443)
-    --> ECS Task (Next.js API route: /api/upload)
-      --> S3 PutObject (via Gateway Endpoint) -- store file
-      --> RDS INSERT (Upload record with S3 key)
-      --> Return upload ID to client
+1. User visits app ──► middleware.ts checks for session cookie
+2. No cookie ──► redirect to /login (public landing page)
+3. User clicks "Sign in with Okta" ──► redirect to Cognito Hosted UI
+4. Cognito Hosted UI ──► SAML redirect to Okta
+5. User authenticates in Okta ──► SAML assertion back to Cognito
+6. Cognito ──► authorization code redirect to /api/auth/callback
+7. Callback route ──► exchanges code for tokens at Cognito token endpoint
+8. Tokens (id_token, access_token, refresh_token) ──► stored in HttpOnly cookies
+9. Redirect to /projects ──► middleware reads cookie, verifies JWT, continues
+10. Server actions ──► read userId from cookie/session, add to Prisma queries
 ```
 
-#### AI Analysis Flow (Card Extraction)
-```
-User triggers analysis
-  --> ECS Task (Next.js server action)
-    --> RDS: Create Run record (status=RUNNING)
-    --> S3 GetObject: Retrieve document content
-    --> Bedrock InvokeModel: Send to Claude (via Interface Endpoint)
-    --> RDS: Write Card records, update Run status
-    --> Client polls /api/runs/[id] for progress
-```
+## New CDK Resources Required
 
-#### Epic/Story/Subtask Generation Flow
-```
-User triggers generation
-  --> ECS Task (server action, fire-and-confirm pattern)
-    --> RDS: Create Run, set heartbeat
-    --> Loop: For each item (epic/story)
-      --> Bedrock InvokeModel: Generate content
-      --> RDS: Write results, update progress, heartbeat
-    --> RDS: Mark Run complete
-    --> Client polls for progress (existing polling pattern)
-```
+### Cognito Constructs (add to existing `RequirementsFoundryStack`)
 
-#### Stale Run Recovery Flow
-```
-EventBridge Rule (every 5 minutes)
-  --> ECS Scheduled Task (same container image, different command)
-    --> RDS: Query runs WHERE status=RUNNING AND heartbeatAt < NOW() - 5min
-    --> RDS: Mark stale runs as FAILED
-```
+| Construct | CDK Class | Purpose |
+|-----------|-----------|---------|
+| UserPool | `cognito.UserPool` | Central user directory, stores federated user profiles |
+| UserPoolClient | `cognito.UserPoolClient` | App client with OAuth settings, callback URLs |
+| UserPoolDomain | `cognito.UserPoolDomain` | Hosted UI domain for login/logout pages |
+| UserPoolIdentityProviderSaml | `cognito.UserPoolIdentityProviderSaml` | Okta SAML federation configuration |
+| SSM Parameters (3) | `ssm.StringParameter` | User Pool ID, Client ID, Domain URL for app |
 
-#### JIRA Export Flow
-```
-User triggers export
-  --> ECS Task (server action)
-    --> RDS: Read epics/stories/subtasks with MSS mappings
-    --> Generate CSV/JSON export payload
-    --> Return to client for download
-```
+### CDK Implementation Pattern
 
-### Security Groups
-
-| Security Group | Inbound | Outbound | Attached To |
-|----------------|---------|----------|-------------|
-| `sg-alb` | TCP/443 from corporate CIDR (e.g., 10.0.0.0/8) | TCP/3000 to `sg-ecs` | Internal ALB |
-| `sg-ecs` | TCP/3000 from `sg-alb` | TCP/5432 to `sg-rds`, TCP/443 to VPC endpoints, TCP/443 to NAT | ECS Tasks |
-| `sg-rds` | TCP/5432 from `sg-ecs` | None needed | RDS Instance |
-| `sg-endpoints` | TCP/443 from `sg-ecs` | N/A | VPC Interface Endpoints |
-
-**Port 3000:** Next.js default port inside the container. The ALB listens on 443 (HTTPS) and forwards to target group on port 3000.
-
-## Patterns to Follow
-
-### Pattern 1: Storage Abstraction Swap (S3 for Vercel Blob)
-
-**What:** Replace `@vercel/blob` with AWS S3 SDK using the existing storage abstraction layer in `lib/storage/index.ts`.
-
-**Why:** The codebase already has a clean `StorageMode` abstraction (`local` | `blob`). Add `s3` as a third mode or replace `blob` entirely. The interface (`uploadToStorage`, `getFileBuffer`, `deleteFromStorage`) maps 1:1 to S3 operations.
-
-**Example:**
 ```typescript
-// lib/storage/index.ts - S3 mode
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 
-const s3 = new S3Client({ region: process.env.AWS_REGION });
-const BUCKET = process.env.S3_BUCKET_NAME!;
+// --- Inside RequirementsFoundryStack constructor ---
 
-export async function uploadToStorage(buffer: Buffer, filename: string, contentType: string): Promise<UploadResult> {
-  const key = `uploads/${Date.now()}-${filename}`;
-  await s3.send(new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-    Body: buffer,
-    ContentType: contentType,
-  }));
-  return { blobUrl: key, blobPathname: key };
-}
+// 1. User Pool
+const userPool = new cognito.UserPool(this, 'UserPool', {
+  userPoolName: 'requirements-foundry-prod-userpool',
+  selfSignUpEnabled: false,          // Okta-only, no self-registration
+  signInCaseSensitive: false,
+  standardAttributes: {
+    email: { required: true, mutable: true },
+    givenName: { required: false, mutable: true },
+    familyName: { required: false, mutable: true },
+  },
+  customAttributes: {
+    'groups': new cognito.StringAttribute({ mutable: true }),  // Okta groups
+  },
+  removalPolicy: cdk.RemovalPolicy.DESTROY,  // POC
+});
+
+// 2. Okta SAML Identity Provider
+const oktaSamlProvider = new cognito.UserPoolIdentityProviderSaml(this, 'OktaSaml', {
+  userPool,
+  name: 'Okta',
+  metadata: cognito.UserPoolIdentityProviderSamlMetadata.url(
+    // Okta metadata URL - set via CDK context or SSM parameter
+    this.node.tryGetContext('oktaMetadataUrl') || 'https://placeholder.okta.com/metadata'
+  ),
+  attributeMapping: {
+    email: cognito.ProviderAttribute.other(
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'
+    ),
+    givenName: cognito.ProviderAttribute.other(
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'
+    ),
+    familyName: cognito.ProviderAttribute.other(
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'
+    ),
+    custom: {
+      'custom:groups': cognito.ProviderAttribute.other('groups'),
+    },
+  },
+});
+
+// 3. App Client (SAML-only, authorization code grant)
+const appClient = userPool.addClient('AppClient', {
+  userPoolClientName: 'requirements-foundry-app',
+  generateSecret: true,  // Server-side app needs client secret
+  supportedIdentityProviders: [
+    cognito.UserPoolClientIdentityProvider.custom('Okta'),
+  ],
+  oAuth: {
+    flows: { authorizationCodeGrant: true },
+    scopes: [
+      cognito.OAuthScope.OPENID,
+      cognito.OAuthScope.EMAIL,
+      cognito.OAuthScope.PROFILE,
+    ],
+    callbackUrls: [
+      `http://${alb.loadBalancerDnsName}/api/auth/callback`,
+      'http://localhost:3000/api/auth/callback',  // local dev
+    ],
+    logoutUrls: [
+      `http://${alb.loadBalancerDnsName}/`,
+      'http://localhost:3000/',
+    ],
+  },
+  accessTokenValidity: cdk.Duration.hours(1),
+  idTokenValidity: cdk.Duration.hours(1),
+  refreshTokenValidity: cdk.Duration.days(30),
+});
+
+// Ensure client waits for SAML provider
+appClient.node.addDependency(oktaSamlProvider);
+
+// 4. Hosted UI Domain
+const userPoolDomain = userPool.addDomain('Domain', {
+  cognitoDomain: {
+    domainPrefix: 'requirements-foundry',
+  },
+});
+
+// 5. Store Cognito config as SSM Parameters (app reads at startup)
+new ssm.StringParameter(this, 'CognitoUserPoolIdParam', {
+  parameterName: '/requirements-foundry/prod/cognito-user-pool-id',
+  stringValue: userPool.userPoolId,
+});
+new ssm.StringParameter(this, 'CognitoClientIdParam', {
+  parameterName: '/requirements-foundry/prod/cognito-client-id',
+  stringValue: appClient.userPoolClientId,
+});
+new ssm.StringParameter(this, 'CognitoDomainParam', {
+  parameterName: '/requirements-foundry/prod/cognito-domain',
+  stringValue: `https://${userPoolDomain.domainName}.auth.us-east-1.amazoncognito.com`,
+});
+
+// 6. Client secret handling:
+// CDK does not directly expose UserPoolClient secrets as constructs.
+// Two options:
+//   A) Post-deploy script: aws cognito describe-user-pool-client → store in Secrets Manager
+//   B) Use a CDK Custom Resource to fetch and store automatically
+// Option A is simpler for POC.
+
+// 7. Add Cognito env vars to existing ECS container definition
+// Modify the existing container environment block to include:
+//   COGNITO_USER_POOL_ID: userPool.userPoolId,
+//   COGNITO_CLIENT_ID: appClient.userPoolClientId,
+//   COGNITO_DOMAIN: `https://requirements-foundry.auth.us-east-1.amazoncognito.com`,
+//   COGNITO_ISSUER: `https://cognito-idp.us-east-1.amazonaws.com/${userPool.userPoolId}`,
+
+// Stack outputs for Cognito
+new cdk.CfnOutput(this, 'CognitoUserPoolId', {
+  value: userPool.userPoolId,
+  exportName: 'rf-prod-cognito-user-pool-id',
+});
+new cdk.CfnOutput(this, 'CognitoClientId', {
+  value: appClient.userPoolClientId,
+  exportName: 'rf-prod-cognito-client-id',
+});
+new cdk.CfnOutput(this, 'CognitoDomainUrl', {
+  value: `https://${userPoolDomain.domainName}.auth.us-east-1.amazoncognito.com`,
+  exportName: 'rf-prod-cognito-domain',
+});
+new cdk.CfnOutput(this, 'CognitoSamlSpMetadata', {
+  value: `https://cognito-idp.us-east-1.amazonaws.com/${userPool.userPoolId}/saml2/metadata`,
+  description: 'Give this URL to Okta admin when creating the SAML app',
+  exportName: 'rf-prod-cognito-sp-metadata',
+});
 ```
 
-### Pattern 2: Bedrock Provider (Replace Anthropic SDK)
+### Existing Resources Modified
 
-**What:** Add a `BedrockProvider` class implementing the existing `AIProvider` interface in `lib/ai/provider.ts`.
+| Resource | Change | Why |
+|----------|--------|-----|
+| ECS TaskDefinition (container env) | Add COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID, COGNITO_DOMAIN, COGNITO_ISSUER, NEXT_PUBLIC_APP_URL | App needs Cognito config at runtime |
+| ECS TaskDefinition (container secrets) | Add COGNITO_CLIENT_SECRET from Secrets Manager | Token exchange needs client secret |
+| ECS TaskRole | No change needed | Cognito auth uses OAuth (client-side), not IAM credentials |
 
-**Why:** The provider pattern is already in place (`AnthropicProvider`, `MockProvider`). Bedrock uses `@aws-sdk/client-bedrock-runtime` with `InvokeModelCommand`. The prompt format is identical -- Bedrock's Claude endpoint accepts the same Messages API format. Select provider via environment variable.
+## Component Responsibilities
 
-**Example:**
+| Component | Responsibility | New vs Modified |
+|-----------|----------------|-----------------|
+| Cognito UserPool | Stores federated user identities from Okta | **NEW** CDK resource |
+| Cognito SAML IdP | Bridges Okta SAML assertions to Cognito tokens | **NEW** CDK resource |
+| Cognito App Client | OAuth client config (callback URLs, scopes) | **NEW** CDK resource |
+| Cognito Domain | Hosted UI for login redirect | **NEW** CDK resource |
+| `/api/auth/callback` route | Exchanges auth code for tokens, sets cookies | **NEW** Next.js API route |
+| `/api/auth/logout` route | Clears cookies, redirects to Cognito logout | **NEW** Next.js API route |
+| `middleware.ts` | JWT verification, redirect unauthenticated, extract userId | **NEW** Next.js middleware |
+| `/login` page | Public landing page with "Sign in with Okta" button | **NEW** Next.js page |
+| `lib/auth.ts` | Helper: get session from cookies, verify JWT, parse claims | **NEW** utility module |
+| `server/actions/projects.ts` | Add userId to `where` clauses and `create` data | **MODIFIED** |
+| All server actions (18 files) | Call `getSession()`, pass userId to queries | **MODIFIED** |
+| All API routes (9 files) | Verify auth token, extract userId | **MODIFIED** |
+| Prisma schema (Project) | Make `userId` non-nullable via phased migration | **MODIFIED** |
+| `app/layout.tsx` | Pass user info to AppShell for display | **MODIFIED** |
+
+## Architectural Patterns
+
+### Pattern 1: Server-Side Token Exchange (Authorization Code Grant)
+
+**What:** User authenticates via Cognito Hosted UI. Browser receives an authorization code in the callback URL. Server-side API route exchanges code for tokens using the client secret. Tokens stored in HttpOnly cookies -- never exposed to client JavaScript.
+
+**When to use:** Always for server-rendered Next.js apps. Authorization code grant with server-side exchange is the most secure OAuth flow.
+
+**Why not Amplify:** Amplify stores tokens in localStorage (XSS-vulnerable) and adds ~200KB+ bundle weight. For a server-rendered ECS-hosted app, direct OAuth with HttpOnly cookies is simpler and more secure.
+
+**Trade-offs:** More code than Amplify drop-in, but full control over session lifecycle and no client-side token exposure.
+
 ```typescript
-import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+// app/api/auth/callback/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
-class BedrockProvider implements AIProvider {
-  private client: BedrockRuntimeClient;
+export async function GET(req: NextRequest) {
+  const code = req.nextUrl.searchParams.get('code');
+  if (!code) return NextResponse.redirect('/login?error=no_code');
 
-  constructor() {
-    this.client = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
-  }
-
-  async generateEpics(cards: CardData[]): Promise<GenerationResult<EpicData[]>> {
-    const response = await this.client.send(new InvokeModelCommand({
-      modelId: "anthropic.claude-sonnet-4-20250514-v1:0",
-      contentType: "application/json",
-      body: JSON.stringify({
-        anthropic_version: "bedrock-2023-05-31",
-        max_tokens: 4096,
-        messages: [{ role: "user", content: prompt }],
+  // Exchange code for tokens at Cognito token endpoint
+  const tokenResponse = await fetch(
+    `${process.env.COGNITO_DOMAIN}/oauth2/token`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        client_id: process.env.COGNITO_CLIENT_ID!,
+        client_secret: process.env.COGNITO_CLIENT_SECRET!,
+        redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
       }),
-    }));
-    // Parse response.body same as Anthropic SDK
+    }
+  );
+
+  const tokens = await tokenResponse.json();
+
+  // Set HttpOnly cookies
+  const cookieStore = await cookies();
+  cookieStore.set('id_token', tokens.id_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 3600, // 1 hour
+  });
+  cookieStore.set('refresh_token', tokens.refresh_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 30 * 24 * 3600, // 30 days
+  });
+
+  return NextResponse.redirect(new URL('/projects', req.url));
+}
+```
+
+### Pattern 2: Middleware JWT Verification
+
+**What:** Next.js middleware intercepts every request, reads the id_token cookie, verifies its JWT signature against Cognito's JWKS, and either allows the request or redirects to login.
+
+**When to use:** Every protected route. Since this app runs on ECS (self-hosted, not Vercel), middleware uses the Node.js runtime -- so `jsonwebtoken` and `jwks-rsa` work fine. No need for the `jose` library (which is needed only for Edge Runtime on Vercel).
+
+**Trade-offs:** Middleware runs on every request, so keep verification fast. JWKS keys should be cached (`jwks-rsa` has built-in caching). RSA signature verification is ~1ms -- negligible.
+
+```typescript
+// middleware.ts
+import { NextRequest, NextResponse } from 'next/server';
+import jwt from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
+
+export const config = {
+  matcher: [
+    // Protect everything except public routes and static assets
+    '/((?!login|api/auth|api/health|api/cron|_next/static|_next/image|favicon.ico).*)',
+  ],
+  runtime: 'nodejs',  // Self-hosted on ECS = full Node.js available
+};
+
+const client = jwksClient({
+  jwksUri: `https://cognito-idp.us-east-1.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}/.well-known/jwks.json`,
+  cache: true,
+  cacheMaxAge: 600000,  // Cache JWKS keys for 10 minutes
+});
+
+function getKey(header: jwt.JwtHeader, callback: jwt.SigningKeyCallback) {
+  client.getSigningKey(header.kid, (err, key) => {
+    if (err) return callback(err);
+    callback(null, key?.getPublicKey());
+  });
+}
+
+async function verifyToken(token: string): Promise<jwt.JwtPayload> {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, getKey, {
+      issuer: process.env.COGNITO_ISSUER,
+      algorithms: ['RS256'],
+    }, (err, decoded) => {
+      if (err) reject(err);
+      else resolve(decoded as jwt.JwtPayload);
+    });
+  });
+}
+
+export async function middleware(req: NextRequest) {
+  const token = req.cookies.get('id_token')?.value;
+
+  if (!token) {
+    return NextResponse.redirect(new URL('/login', req.url));
+  }
+
+  try {
+    const decoded = await verifyToken(token);
+    // Attach user info to request headers for downstream use
+    const response = NextResponse.next();
+    response.headers.set('x-user-id', decoded.sub as string);
+    response.headers.set('x-user-email', decoded.email as string);
+    response.headers.set('x-user-groups', (decoded['custom:groups'] as string) || '');
+    return response;
+  } catch {
+    // Token expired or invalid -- clear cookies, redirect to login
+    const response = NextResponse.redirect(new URL('/login', req.url));
+    response.cookies.delete('id_token');
+    response.cookies.delete('refresh_token');
+    return response;
   }
 }
 ```
 
-### Pattern 3: Database Connection Simplification
+### Pattern 3: Server Action Auth Helper (Per-User Data Filtering)
 
-**What:** Remove Vercel/Neon SSL detection from `lib/db.ts`. On ECS, the container connects to RDS via private DNS hostname within the VPC. No SSL complexity needed for internal traffic (though RDS SSL is still recommended).
+**What:** A centralized `getSession()` helper reads and decodes the id_token from cookies, returning a typed user object. Every server action calls this before querying the database. Project queries include `WHERE userId = session.userId` (or no filter for admins).
 
-**Why:** The current code has conditional SSL logic for Vercel (`isVercel` check). On AWS, `DATABASE_URL` is injected from Secrets Manager into the ECS task definition. The connection is straightforward: `postgresql://user:pass@rds-hostname:5432/requirements_foundry`.
+**When to use:** Every server action and API route that accesses user-scoped data.
 
-### Pattern 4: Secrets Injection via Task Definition
+**Trade-offs:** Adds one function call per server action. Centralizes auth logic so it cannot be accidentally bypassed. Uses `jwt.decode()` (not `jwt.verify()`) since middleware already verified the token on this request.
 
-**What:** Use AWS Secrets Manager to store sensitive config. Reference secrets in the ECS Task Definition so they are injected as environment variables at container startup.
+```typescript
+// lib/auth.ts
+import { cookies } from 'next/headers';
+import jwt from 'jsonwebtoken';
 
-**Why:** Avoids baking secrets into Docker images or `.env` files. ECS natively supports `valueFrom` in container definitions pointing to Secrets Manager ARNs.
+export interface Session {
+  userId: string;       // Cognito sub (unique, stable ID)
+  email: string;
+  givenName?: string;
+  familyName?: string;
+  groups: string[];     // Okta groups from custom:groups claim
+  isAdmin: boolean;     // Derived: groups includes 'RequirementsFoundry-Admins'
+}
 
-```json
-{
-  "containerDefinitions": [{
-    "secrets": [
-      { "name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:rf/database-url" },
-      { "name": "S3_BUCKET_NAME", "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:rf/s3-bucket" }
-    ]
-  }]
+export async function getSession(): Promise<Session> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('id_token')?.value;
+  if (!token) throw new Error('Not authenticated');
+
+  // Decode only -- full verification already done in middleware
+  const decoded = jwt.decode(token) as jwt.JwtPayload;
+  if (!decoded?.sub) throw new Error('Invalid token');
+
+  const groups = ((decoded['custom:groups'] as string) || '')
+    .split(',')
+    .map(g => g.trim())
+    .filter(Boolean);
+
+  return {
+    userId: decoded.sub,
+    email: decoded.email as string,
+    givenName: decoded.given_name as string | undefined,
+    familyName: decoded.family_name as string | undefined,
+    groups,
+    isAdmin: groups.includes('RequirementsFoundry-Admins'),
+  };
+}
+
+// Helper: returns Prisma WHERE filter for project queries
+export async function getProjectFilter(): Promise<{ userId?: string }> {
+  const session = await getSession();
+  if (session.isAdmin) return {};  // Admins see all projects
+  return { userId: session.userId };
 }
 ```
 
-### Pattern 5: Container Health Check + ALB Target Group
+### Pattern 4: Prisma Query Filtering
 
-**What:** Add a `/api/health` endpoint to Next.js that checks database connectivity. Configure ALB target group health check to hit this endpoint.
+**What:** Modify all project-touching queries to include userId filter. Use `getProjectFilter()` for list queries and `getSession()` + ownership check for single-project operations.
 
-**Why:** ECS needs to know if a task is healthy to route traffic and replace unhealthy tasks. The health endpoint should verify the RDS connection is alive (lightweight `SELECT 1` query).
+**How existing queries change:**
 
-## Anti-Patterns to Avoid
+```typescript
+// server/actions/projects.ts -- BEFORE
+export async function getProjects() {
+  return db.project.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { _count: { select: { uploads: true, cards: true, epics: true, runs: true } } },
+  });
+}
 
-### Anti-Pattern 1: Public Subnets for ECS Tasks
+// server/actions/projects.ts -- AFTER
+export async function getProjects() {
+  const filter = await getProjectFilter();
+  return db.project.findMany({
+    where: filter,
+    orderBy: { createdAt: "desc" },
+    include: { _count: { select: { uploads: true, cards: true, epics: true, runs: true } } },
+  });
+}
 
-**What:** Placing ECS Fargate tasks in public subnets with public IPs.
-**Why bad:** This is an internal-only app. Public IPs are unnecessary, create attack surface, and contradict the internal-only requirement.
-**Instead:** Use private subnets for everything. Internal ALB for inbound traffic. NAT Gateway for outbound (ECR pulls).
+// BEFORE
+export async function createProject(data: { name: string; description?: string }) {
+  return db.project.create({
+    data: { name: data.name, description: data.description || null },
+  });
+}
 
-### Anti-Pattern 2: Fully Isolated VPC (No NAT) for POC
+// AFTER
+export async function createProject(data: { name: string; description?: string }) {
+  const session = await getSession();
+  return db.project.create({
+    data: { name: data.name, description: data.description || null, userId: session.userId },
+  });
+}
 
-**What:** Running with zero internet access using only VPC endpoints for everything.
-**Why bad:** While technically possible, it requires VPC endpoints for every AWS service the container touches (ECR, CloudWatch Logs, Secrets Manager, STS, etc.). Each Interface Endpoint costs ~$7.50/month per AZ. For a POC, a single NAT Gateway ($32/month + data) is simpler and cheaper than 5+ endpoints ($37.50+/month).
-**Instead:** Use a NAT Gateway for general outbound access plus a free S3 Gateway Endpoint. Add Interface Endpoints selectively only where cost savings justify it (Bedrock endpoint is worth it to keep AI traffic internal).
-
-### Anti-Pattern 3: Storing Files in RDS
-
-**What:** Storing uploaded document files as BLOBs in PostgreSQL.
-**Why bad:** The codebase already stores `rawContent` (extracted text) in RDS. Storing original files in RDS bloats the database, slows backups, and limits file size. The existing `blobUrl`/`blobPathname` fields on the Upload model are designed for external storage.
-**Instead:** Use S3 for file storage. Store the S3 key in the existing `blobUrl`/`blobPathname` columns.
-
-### Anti-Pattern 4: Running Next.js in Lambda
-
-**What:** Deploying the Next.js app as Lambda functions (like OpenNext or SST).
-**Why bad:** The app has long-running AI generation flows (epics/stories processing takes minutes). Lambda has a 15-minute hard timeout and cold start penalties. The existing continuation pattern was designed to work around Vercel's 300s timeout -- on ECS there is no timeout, so the continuation complexity can eventually be simplified.
-**Instead:** ECS Fargate has no timeout limit. A single container handles both SSR and API routes. The fire-and-confirm pattern still works but is no longer strictly necessary.
-
-### Anti-Pattern 5: Multi-Container Task Definition
-
-**What:** Running separate containers for "frontend" and "API" in the same ECS task.
-**Why bad:** Next.js 16 serves both SSR pages and API routes from a single process. Splitting creates unnecessary complexity and inter-container networking.
-**Instead:** Single container per task. Next.js handles everything. Scale by adding more tasks behind the ALB.
-
-## Build Order (Dependencies Between Components)
-
-Components must be built in this order because each layer depends on the previous:
-
-```
-Phase 1: Foundation (no AWS dependency)
-  [1] Dockerfile + local Docker testing
-  [2] /api/health endpoint
-  [3] S3 storage adapter (lib/storage)
-  [4] Bedrock AI provider (lib/ai/provider.ts)
-  [5] Remove Vercel-specific code (lib/db.ts SSL logic)
-
-Phase 2: AWS Infrastructure (Terraform/CloudFormation)
-  [6] VPC + Subnets + NAT Gateway + Internet Gateway
-  [7] Security Groups
-  [8] S3 Bucket (+ Gateway Endpoint)
-  [9] RDS PostgreSQL instance (+ DB subnet group)
-  [10] ECR Repository
-  [11] Bedrock VPC Interface Endpoint
-  [12] Secrets Manager secrets
-
-Phase 3: Compute + Networking
-  [13] Internal ALB + Target Group + Listener
-  [14] ECS Cluster
-  [15] ECS Task Definition (references ECR, Secrets Manager)
-  [16] ECS Service (references ALB, subnets, security groups)
-
-Phase 4: CI/CD + Operations
-  [17] GitHub Actions: Build -> Push ECR -> Deploy ECS
-  [18] EventBridge Rule + ECS Scheduled Task (stale run recovery)
-  [19] CloudWatch Log Group (basic logging)
-
-Phase 5: Validation
-  [20] Smoke test all flows (upload, analyze, generate, export)
-  [21] Database migration (Prisma migrate on RDS)
+// Single-project access: verify ownership
+export async function getProject(id: string) {
+  const session = await getSession();
+  const project = await db.project.findUnique({
+    where: { id },
+    // ... include block unchanged ...
+  });
+  if (!project) return null;
+  if (!session.isAdmin && project.userId !== session.userId) return null;
+  return project;
+}
 ```
 
-**Critical path:** Steps 1-5 can happen in parallel with steps 6-12 (code changes vs. infrastructure). Steps 13-16 depend on 6-12. Step 17 depends on 10 (ECR) and 13-16 (ECS infra). Step 21 depends on 9 (RDS).
+### Pattern 5: Cron Route Auth Bypass
 
-## ECS Task Definition Sizing (POC)
+**What:** The `/api/cron/recover-stale-runs` route is called by Lambda, not by users. It authenticates via the existing CRON_SECRET bearer token. It must be excluded from middleware's JWT check.
 
-| Parameter | Value | Rationale |
-|-----------|-------|-----------|
-| CPU | 512 (0.5 vCPU) | Next.js SSR is not CPU-intensive; AI calls are I/O-bound (waiting on Bedrock) |
-| Memory | 1024 MB | Next.js + Prisma client + document parsing. Increase if OOM occurs |
-| Desired count | 1 | POC, single instance acceptable |
-| Min/Max (autoscaling) | 1/2 | Optional: scale to 2 under load |
-| Platform version | LATEST | Use current Fargate platform |
-| Assign public IP | false | Private subnet, no public IP needed |
+**How:** Already handled by middleware matcher exclusion (`api/cron` path excluded). No changes needed to the cron route itself.
 
-## Scalability Considerations
+## Data Flow
 
-| Concern | POC (now) | Production (future) |
-|---------|-----------|---------------------|
-| Availability | Single AZ, 1 task | Multi-AZ, 2+ tasks, RDS Multi-AZ |
-| Authentication | None (VPN-only access) | Cognito + Okta SAML (ALB auth integration) |
-| DNS | ALB DNS name directly | Route 53 alias record + custom domain |
-| HTTPS | ACM cert on ALB | Same, with custom domain |
-| Monitoring | CloudWatch Logs basic | CloudWatch metrics, alarms, dashboards |
-| File storage | Single S3 bucket, no lifecycle | S3 lifecycle rules, versioning |
-| AI rate limits | 2-3 concurrent Bedrock calls | Request Bedrock quota increase |
-| Database | db.t3.micro or t4g.micro | db.r6g.large+ with read replicas |
-| Cron | ECS Scheduled Task | Same, with monitoring/alerting |
-| WAF/DDoS | Not needed (internal) | AWS WAF if ever exposed publicly |
+### Authentication Flow
 
-## Environment Variables (Container)
+```
+Browser                    Cognito Hosted UI          Okta IdP
+   |                            |                       |
+   |-- GET /projects ---------->|                       |
+   |<- 302 /login (middleware)  |                       |
+   |                            |                       |
+   |-- GET /login ------------->|                       |
+   |<- 200 (landing page)      |                       |
+   |                            |                       |
+   |-- Click "Sign in" ------->|                       |
+   |   (redirect to Cognito)    |                       |
+   |                            |-- SAML AuthnRequest ->|
+   |                            |<- SAML Assertion -----|
+   |                            |                       |
+   |<- 302 /api/auth/callback  |                       |
+   |   ?code=XXXXX              |                       |
+   |                            |                       |
+   |-- GET /api/auth/callback --|                       |
+   |   (server exchanges code)  |                       |
+   |<- Set-Cookie: id_token     |                       |
+   |   302 /projects            |                       |
+   |                            |                       |
+   |-- GET /projects ---------->|                       |
+   |   Cookie: id_token         |                       |
+   |   (middleware verifies)    |                       |
+   |<- 200 (user's projects)   |                       |
+```
 
-| Variable | Source | Purpose |
-|----------|--------|---------|
-| `DATABASE_URL` | Secrets Manager | PostgreSQL connection string for RDS |
-| `AWS_REGION` | Task Definition env | `us-east-1` |
-| `S3_BUCKET_NAME` | Secrets Manager or env | Upload storage bucket |
-| `UPLOAD_STORAGE` | Task Definition env | Set to `s3` (new mode) |
-| `AI_PROVIDER` | Task Definition env | Set to `bedrock` to select BedrockProvider |
-| `NODE_ENV` | Task Definition env | `production` |
-| `PORT` | Task Definition env | `3000` (Next.js default) |
+### Data Access Flow (After Auth)
 
-**Note:** Bedrock does not need an API key when running on ECS. The task's IAM execution role grants `bedrock:InvokeModel` permission. The AWS SDK automatically uses the task role credentials.
+```
+Server Component / Server Action
+    |
+    |-- getSession()           --> reads id_token cookie, decodes JWT
+    |   returns { userId, email, groups, isAdmin }
+    |
+    |-- getProjectFilter()     --> { userId: "xxx" } or {} for admin
+    |
+    |-- db.project.findMany({ where: filter, ... })
+        |-- Prisma --> PostgreSQL (RDS)
+            SELECT * FROM "Project" WHERE "userId" = 'xxx'
+```
+
+### Okta Groups to Admin Role Flow
+
+```
+Okta Group: "RequirementsFoundry-Admins"
+    |
+    |-- Okta SAML Assertion: attribute "groups" = "RequirementsFoundry-Admins"
+    |
+    |-- Cognito attribute mapping: custom:groups <-- groups
+    |
+    |-- id_token JWT claim: "custom:groups" = "RequirementsFoundry-Admins"
+    |
+    |-- getSession(): groups.includes('RequirementsFoundry-Admins')
+    |
+    |-- isAdmin = true --> getProjectFilter() returns {} (no userId filter)
+```
+
+## New Project Structure (Auth-Related Files Only)
+
+```
+app/
+|-- login/
+|   |-- page.tsx                    # NEW: Public landing page with SSO button
+|-- api/
+|   |-- auth/
+|       |-- callback/
+|       |   |-- route.ts            # NEW: OAuth code exchange, set cookies
+|       |-- logout/
+|           |-- route.ts            # NEW: Clear cookies, Cognito logout
+|-- layout.tsx                      # MODIFIED: pass user context to AppShell
+|
+lib/
+|-- auth.ts                         # NEW: getSession(), getProjectFilter()
+|
+middleware.ts                       # NEW: JWT verification, route protection
+|
+server/actions/
+|-- projects.ts                     # MODIFIED: add userId filtering
+|-- analysis.ts                     # MODIFIED: verify project ownership
+|-- generation.ts                   # MODIFIED: verify project ownership
+|-- batch-stories.ts                # MODIFIED: verify project ownership
+|-- subtasks.ts                     # MODIFIED: verify project ownership
+|-- uploads.ts                      # MODIFIED: verify project ownership
+|-- epics.ts                        # MODIFIED: verify project ownership
+|-- export.ts                       # MODIFIED: verify project ownership
+|-- jira-export.ts                  # MODIFIED: verify project ownership
+|-- questions.ts                    # MODIFIED: verify project ownership
+|-- mss.ts                          # NO CHANGE (MSS is global taxonomy, not user-scoped)
+|
+infra/lib/
+|-- requirements-foundry-stack.ts   # MODIFIED: add Cognito constructs
+|
+prisma/
+|-- schema.prisma                   # MODIFIED: userId non-nullable (phased)
+```
+
+## Database Migration Strategy
+
+The Project model already has `userId String?` with an `@@index([userId])`. The migration is phased to avoid downtime:
+
+```
+Phase 1: Deploy auth code (userId remains nullable)
+  - New projects get userId from session
+  - Old projects remain with userId = null
+  - List queries: WHERE userId = X OR userId IS NULL (transition)
+  - This ensures existing projects remain visible during transition
+
+Phase 2: Backfill existing projects
+  - Admin assigns ownership to existing projects via UI or script
+  - Fallback: UPDATE "Project" SET "userId" = '<admin-cognito-sub>' WHERE "userId" IS NULL
+
+Phase 3: Make userId non-nullable
+  - Prisma migration: ALTER COLUMN "userId" SET NOT NULL
+  - Remove OR userId IS NULL from queries
+  - Clean data model going forward
+```
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Client-Side Token Storage (localStorage/sessionStorage)
+
+**What people do:** Use Amplify or custom code that stores Cognito tokens in localStorage.
+**Why it's wrong:** XSS vulnerabilities can steal tokens. Any injected script reads localStorage.
+**Do this instead:** HttpOnly cookies. The browser sends them automatically; JavaScript cannot read them.
+
+### Anti-Pattern 2: Full JWT Verification in Every Server Action
+
+**What people do:** Call full JWT verification (RSA signature check, JWKS fetch) in every server action.
+**Why it's wrong:** Middleware already verified the token before the request reached the server action. Re-verifying 18+ times per page load wastes CPU.
+**Do this instead:** Middleware verifies once. Server actions use `jwt.decode()` (not `jwt.verify()`) to read claims, since middleware guarantees the token is valid for this request.
+
+### Anti-Pattern 3: Using Cognito Identity Pool
+
+**What people do:** Add an Identity Pool to get temporary AWS credentials for browser-side API calls.
+**Why it's wrong:** This app makes zero browser-to-AWS-service calls. All data flows through Next.js server actions and API routes. The ECS task role handles AWS service access.
+**Do this instead:** Use only User Pool + App Client. Skip Identity Pools entirely.
+
+### Anti-Pattern 4: Making userId Non-Nullable Before Data Backfill
+
+**What people do:** Change Prisma schema to `userId String` (required) before handling existing rows.
+**Why it's wrong:** Prisma migration fails because existing rows have NULL userId.
+**Do this instead:** Three-phase migration: deploy with nullable, backfill data, then make non-nullable.
+
+### Anti-Pattern 5: Storing User Profile Data in App Database
+
+**What people do:** Create a `User` table and sync profile data from Cognito.
+**Why it's wrong:** For this app, all user data comes from Okta via Cognito JWT claims. There's no user-editable profile, no in-app preferences, no avatar. Adding a User table creates sync complexity with no benefit.
+**Do this instead:** Use `userId` (Cognito sub) as a foreign key on Project. User display info (name, email) comes from the JWT on each request. If user preferences are needed later, add a User table then.
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| Okta (SAML IdP) | SAML 2.0 via Cognito federation | Requires Okta admin to create SAML app. Chicken-and-egg: deploy Cognito first, get SP metadata URL, configure Okta, update CDK with real metadata URL, redeploy. |
+| Cognito Hosted UI | OAuth 2.0 Authorization Code Grant | Browser redirects to Cognito, Cognito redirects to Okta, Okta redirects back. No direct app-to-Okta communication. |
+| Cognito Token Endpoint | HTTP POST from `/api/auth/callback` | Server exchanges auth code for tokens. Requires client_secret. URL: `{COGNITO_DOMAIN}/oauth2/token` |
+| Cognito JWKS Endpoint | HTTP GET from middleware (cached) | Fetches public keys for JWT signature verification. URL: `cognito-idp.{region}.amazonaws.com/{poolId}/.well-known/jwks.json` |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| middleware.ts --> Server Actions | Request headers (`x-user-id`, `x-user-email`, `x-user-groups`) | Middleware sets headers after JWT verification |
+| Server Actions --> Prisma | Direct function calls with userId filter | All project queries add userId WHERE clause from session |
+| API Routes --> Auth | Cookie reading via `cookies()` | Polling routes, upload route need auth check too |
+| `/api/cron/*` --> Auth | CRON_SECRET bearer token (bypass JWT auth) | Lambda cron has no user session; uses existing shared secret |
+| CDK Stack --> ECS Container | Environment variables + Secrets Manager | Cognito config as env vars; client secret via Secrets Manager |
+
+## Build Order (Dependency-Aware)
+
+Build order respects the dependency chain: CDK resources must exist before app code can use them, and Okta configuration requires Cognito SP metadata.
+
+| Phase | What to Build | Depends On | Deliverable |
+|-------|---------------|------------|-------------|
+| 1 | CDK: UserPool, UserPoolDomain, UserPoolClient, SAML IdP (placeholder metadata URL) | Existing CDK stack | Cognito resources deployed; SP metadata URL available |
+| 2 | Okta: Create SAML app in Okta admin console, configure with Cognito SP metadata | Phase 1 (SP metadata URL from CDK output) | Okta metadata URL |
+| 3 | CDK: Update SAML IdP with real Okta metadata URL, redeploy. Add Cognito env vars to ECS container. | Phase 2 (Okta metadata URL) | Working SAML federation; container has config |
+| 4 | App: `lib/auth.ts` (getSession, getProjectFilter helpers) | None (pure code) | Auth utility ready |
+| 5 | App: `middleware.ts` (JWT verification, route protection) | Phase 3 (COGNITO_* env vars available) | All routes protected |
+| 6 | App: `/api/auth/callback` + `/api/auth/logout` routes | Phase 3 + Phase 4 | Token exchange and logout work |
+| 7 | App: `/login` landing page with "Sign in with Okta" button | Phase 5 + Phase 6 | End-to-end login flow works |
+| 8 | App: Modify `server/actions/projects.ts` (create, list, get, update, delete) | Phase 4 | Per-user project isolation |
+| 9 | App: Modify remaining server actions (analysis, generation, uploads, etc.) | Phase 8 | Full data isolation |
+| 10 | App: Admin role logic (skip userId filter for admins) | Phase 9 | Admin sees all projects |
+| 11 | DB: Backfill userId on existing projects, then make column non-nullable | Phase 10 | Clean data model |
+| 12 | App: UI polish (user menu in AppShell, display name, logout button) | Phase 10 | Complete UX |
+
+**Critical path:** Phases 1-2-3 involve manual Okta admin steps and CDK redeployment. Plan for this handoff -- it's the main blocker.
+
+**Parallelization opportunity:** Phases 4-6 (app auth code) can be developed and tested locally in parallel with Phases 1-3 (CDK + Okta setup) using mock tokens or a local Cognito setup.
+
+## Okta-Cognito Setup: Chicken-and-Egg Resolution
+
+This is the most commonly misunderstood part. The exact sequence:
+
+1. **CDK deploy** with a placeholder Okta metadata URL (use any valid SAML metadata XML or a known-valid URL)
+2. **Get Cognito SP metadata** from CDK output: `https://cognito-idp.us-east-1.amazonaws.com/<pool-id>/saml2/metadata`
+3. **Create Okta SAML app** in Okta admin with:
+   - Single Sign-On URL: `https://requirements-foundry.auth.us-east-1.amazoncognito.com/saml2/idpresponse`
+   - Audience URI (SP Entity ID): `urn:amazon:cognito:sp:<pool-id>`
+   - Attribute Statements: email, firstName, lastName, groups
+   - Group Attribute: `groups` (filter by "RequirementsFoundry-*" or send all)
+4. **Get Okta metadata URL** from the Okta SAML app's "Sign On" tab
+5. **CDK redeploy** with real metadata URL: `cdk deploy -c oktaMetadataUrl=https://your-okta-domain/app/xxx/sso/saml/metadata`
+6. **Assign users** in Okta to the SAML app
+7. **Test**: Visit app, click "Sign in with Okta", verify login completes
+
+## Environment Variables (ECS Container)
+
+New variables to add to the existing ECS container definition:
+
+| Variable | Source | Sensitive | How to Pass |
+|----------|--------|-----------|-------------|
+| `COGNITO_USER_POOL_ID` | CDK output | No | Container environment |
+| `COGNITO_CLIENT_ID` | CDK output | No | Container environment |
+| `COGNITO_CLIENT_SECRET` | Post-deploy script | **Yes** | Secrets Manager |
+| `COGNITO_DOMAIN` | CDK output | No | Container environment |
+| `COGNITO_ISSUER` | Derived from pool ID | No | Container environment |
+| `NEXT_PUBLIC_APP_URL` | ALB DNS name | No | Container environment |
+
+## Token Refresh Strategy
+
+When the id_token expires (1 hour), the middleware will reject it. Two options:
+
+**Option A (Recommended for POC):** Redirect to login. The user clicks "Sign in with Okta" again. Since they have an active Okta session, Okta SSO silently re-authenticates (no password prompt). This is seamless from the user's perspective.
+
+**Option B (Future enhancement):** Add a refresh flow. When middleware detects an expired id_token, call Cognito's `/oauth2/token` endpoint with the refresh_token to get new tokens. Set new cookies and continue. This avoids even the brief redirect.
+
+Option A is simpler and acceptable for an internal POC with ~20 users. Option B is worth adding if session interruption becomes annoying.
 
 ## Sources
 
-- [Run ECS tasks on Fargate in private subnet](https://repost.aws/knowledge-center/ecs-fargate-tasks-private-subnet) - AWS re:Post
-- [Access container apps privately on ECS with PrivateLink](https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/access-container-applications-privately-on-amazon-ecs-by-using-aws-fargate-aws-privatelink-and-a-network-load-balancer.html) - AWS Prescriptive Guidance
-- [Amazon Bedrock VPC Interface Endpoints](https://docs.aws.amazon.com/bedrock/latest/userguide/vpc-interface-endpoints.html) - AWS Docs
-- [Use AWS PrivateLink for private access to Amazon Bedrock](https://aws.amazon.com/blogs/machine-learning/use-aws-privatelink-to-set-up-private-access-to-amazon-bedrock/) - AWS Blog
-- [ECS cluster with isolated VPC and no NAT Gateway](https://containersonaws.com/pattern/ecs-cluster-isolated-vpc-no-nat-gateway/) - Containers on AWS
-- [Best practices for connecting ECS to AWS services from inside VPC](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/networking-connecting-vpc.html) - AWS Docs
-- [ECS Interface VPC Endpoints](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/vpc-endpoints.html) - AWS Docs
-- [Next.js deployment using ECS with Fargate](https://medium.com/@redrobotdev/next-js-deployment-using-ecs-with-fargate-1a730a8d0cb1) - Medium
-- [Deploy Next.js on AWS Fargate with Terraform](https://blog.oscars.dev/posts/deploy_nextjs_app_on_fargate_with_terraform/) - Oscar's Blog
-- [Optimizing ECS Fargate Network Costs with S3 VPC Endpoints](https://mhdez.com/notes/optimizing-ecs-fargate-network-costs-with-s3-vpc-endpoints/) - Miguel Hernandez
+- [AWS CDK Cognito Module - UserPoolIdentityProviderSaml](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_cognito.UserPoolIdentityProviderSaml.html) -- HIGH confidence
+- [AWS CDK Cognito README - full construct reference](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_cognito-readme.html) -- HIGH confidence
+- [Amazon Cognito example for external IdP (GitHub)](https://github.com/aws-samples/amazon-cognito-example-for-external-idp) -- HIGH confidence
+- [Okta SAML attributes and Cognito group mapping](https://devforum.okta.com/t/okta-saml-attributes-cognito-and-acces-tokens/22085) -- MEDIUM confidence
+- [SAML Group assertions from IDP to AWS Cognito](https://repost.aws/questions/QUjYKehBfFSL-gWEEviEI3cQ/saml-group-assertions-from-idp-to-aws-cognito) -- MEDIUM confidence
+- [Next.js middleware Node.js runtime support (v15.2+)](https://github.com/vercel/next.js/discussions/71727) -- HIGH confidence
+- [Next.js self-hosting guide](https://nextjs.org/docs/app/guides/self-hosting) -- HIGH confidence
+- [Cognito SSO with Hosted UI](https://blog.srcinnovations.com.au/2024/04/03/single-sign-on-sso-with-aws-cognitos-hosted-ui/) -- MEDIUM confidence
+- [How to Implement Cognito Authentication in Next.js](https://oneuptime.com/blog/post/2026-02-12-cognito-authentication-nextjs/view) -- MEDIUM confidence
+
+---
+*Architecture research for: Cognito + Okta SAML SSO integration with existing Next.js on ECS Fargate*
+*Researched: 2026-03-09*
