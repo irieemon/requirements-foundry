@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Authentication & Multi-User
-status: completed
-stopped_at: Phase 29 context gathered
-last_updated: "2026-03-10T20:24:07.998Z"
-last_activity: 2026-03-10 -- Completed Plan 03 (API Routes & Page Components)
+status: active
+stopped_at: Completed 29-01-PLAN.md
+last_updated: "2026-03-10T20:49:00Z"
+last_activity: 2026-03-10 -- Completed Plan 01 (User Menu)
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 4
+  total_plans: 10
+  completed_plans: 10
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** Internal corporate users authenticate via Okta SSO and see only their own projects, with admin oversight across all users.
-**Current focus:** v3.0 Phase 28 -- Data Isolation
+**Current focus:** v3.0 Phase 29 -- Admin UI Polish
 
 ## Current Position
 
 Phase: 29 of 29 (Admin UI Polish)
-Plan: 2 of 3 complete
-Status: Executing Phase 29
-Last activity: 2026-03-10 -- Completed Plan 02 (Admin View Toggle)
+Plan: 2 of 2 complete
+Status: Phase 29 Complete
+Last activity: 2026-03-10 -- Completed Plan 01 (User Menu)
 
-Progress: [██████░░░░] 67% (Phase 29)
+Progress: [██████████] 100% (Phase 29)
 
 ## Milestones
 
@@ -44,9 +44,9 @@ Progress: [██████░░░░] 67% (Phase 29)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8 (v3.0)
-- Average duration: 2.5min
-- Total execution time: 20min
+- Total plans completed: 10 (v3.0)
+- Average duration: 3.2min
+- Total execution time: 32min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -58,6 +58,7 @@ Progress: [██████░░░░] 67% (Phase 29)
 | 28 | 01 | 2min | 2 | 4 |
 | 28 | 02 | 7min | 2 | 11 |
 | 28 | 03 | 4min | 2 | 12 |
+| 29 | 01 | 4min | 2 | 5 |
 | 29 | 02 | 3min | 2 | 4 |
 
 ## Accumulated Context
@@ -87,6 +88,8 @@ See .planning/PROJECT.md Key Decisions table for complete history.
 - [28-03] API routes use getCurrentUser + isAdmin directly (not getAuthorizedProject) to avoid notFound() throw in route handlers
 - [28-03] Projects page calls getAuthorizedProjects directly for admin owner badges
 - [28-03] Run ownership verified via run->project->userId join pattern
+- [29-01] Server layout fetches user data and passes as props through AppShell to avoid client-side auth calls
+- [29-01] UserMenu replaces old collapse toggle button, combining user identity with sidebar control
 - [29-02] Admin defaults to own projects (viewAll=false); must explicitly opt into all-projects view
 - [29-02] Owner labels only shown in admin All view, not in My view
 
@@ -104,6 +107,6 @@ See .planning/PROJECT.md Key Decisions table for complete history.
 
 ## Session Continuity
 
-Last session: 2026-03-10T20:47:47Z
-Stopped at: Completed 29-02-PLAN.md
-Next: Continue with Phase 29 Plan 03.
+Last session: 2026-03-10T20:49:00Z
+Stopped at: Completed 29-01-PLAN.md
+Next: Phase 29 complete. All v3.0 phases done. Finalize milestone or push to deploy.

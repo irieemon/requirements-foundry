@@ -87,7 +87,7 @@ See [v2.0 archive](milestones/v2.0-ROADMAP.md) for full details.
 - [x] **Phase 26: Cognito Infrastructure** - Deploy Cognito User Pool with Okta SAML federation and group-mapping Lambda via CDK (completed 2026-03-10)
 - [x] **Phase 27: Auth Flow** - End-to-end login, session management, route protection, and logout (completed 2026-03-10)
 - [x] **Phase 28: Data Isolation** - Per-user project ownership with admin bypass and existing data migration (completed 2026-03-10)
-- [ ] **Phase 29: Admin UI and Polish** - Admin project toggle, user identity display, and user menu
+- [x] **Phase 29: Admin UI and Polish** - Admin project toggle, user identity display, and user menu (completed 2026-03-10)
 
 ## Phase Details
 
@@ -149,7 +149,7 @@ Plans:
   2. "All Projects" view shows project owner information alongside each project
   3. App header displays the authenticated user's name and email from Okta
   4. User menu includes a logout option that triggers the logout flow
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 29-01-PLAN.md -- User identity display and user menu in sidebar and mobile nav (UX-01, UX-02)
@@ -170,4 +170,4 @@ Phases execute in numeric order: 26 -> 27 -> 28 -> 29
 | 26. Cognito Infrastructure | 2/2 | Complete    | 2026-03-10 | - |
 | 27. Auth Flow | 3/3 | Complete    | 2026-03-10 | - |
 | 28. Data Isolation | 3/3 | Complete    | 2026-03-10 | - |
-| 29. Admin UI and Polish | 1/2 | In Progress|  | - |
+| 29. Admin UI and Polish | 2/2 | Complete   | 2026-03-10 | - |

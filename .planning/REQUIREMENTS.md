@@ -30,8 +30,8 @@ Requirements for v3.0 milestone. Each maps to roadmap phases.
 
 ### User Experience
 
-- [ ] **UX-01**: Header displays user name/email from Okta with a user menu
-- [ ] **UX-02**: User menu includes logout option
+- [x] **UX-01**: Header displays user name/email from Okta with a user menu
+- [x] **UX-02**: User menu includes logout option
 
 ### Infrastructure
 
@@ -84,8 +84,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADMIN-01 | Phase 28 | Complete |
 | ADMIN-02 | Phase 29 | Complete |
 | ADMIN-03 | Phase 28 | Complete |
-| UX-01 | Phase 29 | Pending |
-| UX-02 | Phase 29 | Pending |
+| UX-01 | Phase 29 | Complete |
+| UX-02 | Phase 29 | Complete |
 | INFRA-01 | Phase 26 | Complete |
 | INFRA-02 | Phase 26 | Complete |
 | INFRA-03 | Phase 26 | Complete |
