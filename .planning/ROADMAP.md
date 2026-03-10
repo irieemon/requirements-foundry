@@ -116,12 +116,12 @@ Plans:
   3. Authenticated user's session persists across browser tabs and survives page refreshes (HTTP-only cookies)
   4. User can log out and is redirected to the landing page, with Cognito session cleared
   5. proxy.ts verifies JWT on every request and rejects expired/invalid tokens
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 27-01: TBD
-- [ ] 27-02: TBD
-- [ ] 27-03: TBD
+- [ ] 27-01-PLAN.md -- Auth library foundation: types, Cognito URL builders, JWT verification, session helpers (AUTH-01, AUTH-03)
+- [ ] 27-02-PLAN.md -- Route protection proxy.ts, OAuth2 callback, and logout API routes (AUTH-01, AUTH-04, AUTH-05)
+- [ ] 27-03-PLAN.md -- Landing page and layout restructuring with route groups (AUTH-02, AUTH-05)
 
 ### Phase 28: Data Isolation
 **Goal**: Each user sees only their own projects, with admin role enforcement at the data access layer
@@ -168,6 +168,6 @@ Phases execute in numeric order: 26 -> 27 -> 28 -> 29
 | 18-20 | v1.3      | 2/?            | Paused   | -          |
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26. Cognito Infrastructure | 2/2 | Complete    | 2026-03-10 | - |
-| 27. Auth Flow | v3.0 | 0/? | Not started | - |
+| 27. Auth Flow | v3.0 | 0/3 | Planned | - |
 | 28. Data Isolation | v3.0 | 0/? | Not started | - |
 | 29. Admin UI and Polish | v3.0 | 0/? | Not started | - |
