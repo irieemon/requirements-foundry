@@ -25,7 +25,7 @@ Requirements for v3.0 milestone. Each maps to roadmap phases.
 ### Admin
 
 - [x] **ADMIN-01**: Users in the Okta admin group are granted admin role via JWT claims
-- [ ] **ADMIN-02**: Admin users can toggle between "My Projects" and "All Projects" views
+- [x] **ADMIN-02**: Admin users can toggle between "My Projects" and "All Projects" views
 - [x] **ADMIN-03**: Default admin is sean.mcinerney@merkle.com
 
 ### User Experience
@@ -82,7 +82,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 28 | Complete |
 | DATA-04 | Phase 28 | Complete |
 | ADMIN-01 | Phase 28 | Complete |
-| ADMIN-02 | Phase 29 | Pending |
+| ADMIN-02 | Phase 29 | Complete |
 | ADMIN-03 | Phase 28 | Complete |
 | UX-01 | Phase 29 | Pending |
 | UX-02 | Phase 29 | Pending |

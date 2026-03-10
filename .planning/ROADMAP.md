@@ -149,7 +149,7 @@ Plans:
   2. "All Projects" view shows project owner information alongside each project
   3. App header displays the authenticated user's name and email from Okta
   4. User menu includes a logout option that triggers the logout flow
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 29-01-PLAN.md -- User identity display and user menu in sidebar and mobile nav (UX-01, UX-02)
@@ -170,4 +170,4 @@ Phases execute in numeric order: 26 -> 27 -> 28 -> 29
 | 26. Cognito Infrastructure | 2/2 | Complete    | 2026-03-10 | - |
 | 27. Auth Flow | 3/3 | Complete    | 2026-03-10 | - |
 | 28. Data Isolation | 3/3 | Complete    | 2026-03-10 | - |
-| 29. Admin UI and Polish | v3.0 | 0/2 | Not started | - |
+| 29. Admin UI and Polish | 1/2 | In Progress|  | - |
