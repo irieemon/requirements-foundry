@@ -14,11 +14,18 @@ import {
 } from "@/components/ui/sheet";
 import { Hammer, FolderOpen, Activity, Menu, FileText, Layers, BookOpen, ScrollText, ListTodo } from "lucide-react";
 import { getProjectName } from "@/server/actions/projects";
+import { UserMenu } from "./user-menu";
+import type { UserInfo } from "@/lib/auth/types";
 
 // ════════════════════════════════════════════════════════════════
 // MOBILE NAVIGATION
 // Shows on screens < md (768px) as a header with hamburger menu
 // ════════════════════════════════════════════════════════════════
+
+interface MobileNavProps {
+  user: UserInfo;
+  isAdmin: boolean;
+}
 
 // Regex to match /projects/[id] but not /projects alone
 const PROJECT_PATH_REGEX = /^\/projects\/([^\/]+)/;
@@ -38,7 +45,7 @@ const projectSections = [
   { section: "runs", label: "Runs", icon: Activity },
 ];
 
-export function MobileNav() {
+export function MobileNav({ user, isAdmin }: MobileNavProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [open, setOpen] = React.useState(false);
@@ -174,6 +181,9 @@ export function MobileNav() {
               </>
             )}
           </nav>
+
+          {/* User menu at bottom of sheet */}
+          <UserMenu user={user} isAdmin={isAdmin} collapsed={false} onToggle={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
     </header>

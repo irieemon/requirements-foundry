@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -15,8 +14,6 @@ import {
   Hammer,
   FolderOpen,
   Activity,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Layers,
   BookOpen,
@@ -24,10 +21,14 @@ import {
   ListTodo,
 } from "lucide-react";
 import { getProjectName } from "@/server/actions/projects";
+import { UserMenu } from "./user-menu";
+import type { UserInfo } from "@/lib/auth/types";
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  user: UserInfo;
+  isAdmin: boolean;
 }
 
 // Regex to match /projects/[id] but not /projects alone
@@ -43,7 +44,7 @@ const projectSections = [
   { section: "runs", label: "Runs", icon: Activity },
 ];
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, user, isAdmin }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [projectName, setProjectName] = useState<string | null>(null);
@@ -201,28 +202,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           )}
         </nav>
 
-        {/* Collapse toggle - larger touch target for tablets */}
-        <div className="border-t border-sidebar-border p-3">
-          <Button
-            variant="ghost"
-            size="default"
-            onClick={onToggle}
-            className={cn(
-              "w-full min-h-[44px] text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent",
-              collapsed ? "justify-center px-0" : "justify-start"
-            )}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? (
-              <ChevronRight className="h-5 w-5" />
-            ) : (
-              <>
-                <ChevronLeft className="h-5 w-5 mr-2" />
-                <span>Collapse</span>
-              </>
-            )}
-          </Button>
-        </div>
+        {/* User menu with collapse toggle */}
+        <UserMenu user={user} isAdmin={isAdmin} collapsed={collapsed} onToggle={onToggle} />
       </aside>
     </TooltipProvider>
   );
