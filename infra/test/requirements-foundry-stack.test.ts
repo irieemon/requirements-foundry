@@ -391,10 +391,10 @@ describe('RequirementsFoundryStack', () => {
   });
 
   describe('Cognito Infrastructure', () => {
-    test('UserPool exists with password policy', () => {
+    test('UserPool exists with self-signup disabled', () => {
       template.hasResourceProperties('AWS::Cognito::UserPool', {
-        Policies: Match.objectLike({
-          PasswordPolicy: Match.anyValue(),
+        AdminCreateUserConfig: Match.objectLike({
+          AllowAdminCreateUserOnly: true,
         }),
       });
     });
@@ -444,11 +444,8 @@ describe('RequirementsFoundryStack', () => {
     });
 
     test('AwsCustomResource exists for describing UserPool client', () => {
-      const resources = template.findResources('Custom::AWS');
-      const hasDescribeClient = Object.values(resources).some((r: any) =>
-        JSON.stringify(r).includes('describeUserPoolClient')
-      );
-      expect(hasDescribeClient).toBe(true);
+      const resources = template.findResources('Custom::DescribeCognitoUserPoolClient');
+      expect(Object.keys(resources).length).toBeGreaterThanOrEqual(1);
     });
 
     test('Cognito client secret exists in Secrets Manager', () => {

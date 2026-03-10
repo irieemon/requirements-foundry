@@ -10,6 +10,8 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as cr from 'aws-cdk-lib/custom-resources';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
@@ -271,6 +273,136 @@ export class RequirementsFoundryStack extends cdk.Stack {
     // Grant task execution role read access to CRON_SECRET
     cronSecret.grantRead(taskExecutionRole);
 
+    // --- Phase 26: Cognito Infrastructure ---
+
+    // Cognito User Pool (INFRA-01)
+    const userPool = new cognito.UserPool(this, 'UserPool', {
+      userPoolName: 'requirements-foundry-prod',
+      selfSignUpEnabled: false,
+      signInAliases: { email: true },
+      autoVerify: { email: true },
+      standardAttributes: {
+        email: { required: true, mutable: true },
+        givenName: { required: false, mutable: true },
+        familyName: { required: false, mutable: true },
+      },
+      customAttributes: {
+        groups: new cognito.StringAttribute({ mutable: true }),
+      },
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Cognito Domain (for Hosted UI)
+    const cognitoDomainPrefix = this.node.tryGetContext('cognitoDomainPrefix') || 'requirements-foundry-prod';
+    const cognitoDomain = userPool.addDomain('CognitoDomain', {
+      cognitoDomain: {
+        domainPrefix: cognitoDomainPrefix,
+      },
+    });
+
+    // Okta SAML Identity Provider (INFRA-01)
+    const oktaMetadataUrl = this.node.tryGetContext('oktaMetadataUrl')
+      || 'https://your-okta-domain.okta.com/app/PLACEHOLDER/sso/saml/metadata';
+
+    const samlProvider = new cognito.UserPoolIdentityProviderSaml(this, 'OktaSamlIdp', {
+      userPool,
+      name: 'Okta',
+      metadata: cognito.UserPoolIdentityProviderSamlMetadata.url(oktaMetadataUrl),
+      attributeMapping: {
+        email: cognito.ProviderAttribute.other('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'),
+        custom: {
+          'custom:groups': cognito.ProviderAttribute.other('groups'),
+        },
+      },
+    });
+
+    // PreTokenGeneration Lambda (INFRA-02)
+    const preTokenFn = new lambda.Function(this, 'PreTokenGenerationFn', {
+      functionName: 'requirements-foundry-pre-token-generation',
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda/pre-token-generation'),
+      timeout: cdk.Duration.seconds(5),
+      memorySize: 128,
+    });
+
+    userPool.addTrigger(
+      cognito.UserPoolOperation.PRE_TOKEN_GENERATION_CONFIG,
+      preTokenFn,
+      cognito.LambdaVersion.V2_0,
+    );
+
+    // User Pool Client (INFRA-01)
+    const redirectUri = `http://${alb.loadBalancerDnsName}/api/auth/callback`;
+    const cognitoClient = userPool.addClient('AppClient', {
+      userPoolClientName: 'requirements-foundry-app',
+      generateSecret: true,
+      oAuth: {
+        flows: { authorizationCodeGrant: true },
+        scopes: [
+          cognito.OAuthScope.OPENID,
+          cognito.OAuthScope.EMAIL,
+          cognito.OAuthScope.PROFILE,
+        ],
+        callbackUrls: [redirectUri],
+        logoutUrls: [`http://${alb.loadBalancerDnsName}/`],
+      },
+      supportedIdentityProviders: [
+        cognito.UserPoolClientIdentityProvider.custom('Okta'),
+      ],
+      accessTokenValidity: cdk.Duration.hours(1),
+      idTokenValidity: cdk.Duration.hours(1),
+      refreshTokenValidity: cdk.Duration.days(30),
+    });
+    cognitoClient.node.addDependency(samlProvider);
+
+    // Extract client secret via AwsCustomResource (INFRA-03)
+    const describeCognitoClient = new cr.AwsCustomResource(this, 'DescribeCognitoClient', {
+      resourceType: 'Custom::DescribeCognitoUserPoolClient',
+      onCreate: {
+        service: 'CognitoIdentityServiceProvider',
+        action: 'describeUserPoolClient',
+        parameters: {
+          UserPoolId: userPool.userPoolId,
+          ClientId: cognitoClient.userPoolClientId,
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(cognitoClient.userPoolClientId),
+      },
+      onUpdate: {
+        service: 'CognitoIdentityServiceProvider',
+        action: 'describeUserPoolClient',
+        parameters: {
+          UserPoolId: userPool.userPoolId,
+          ClientId: cognitoClient.userPoolClientId,
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(cognitoClient.userPoolClientId),
+      },
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE,
+      }),
+    });
+
+    // Cognito client credentials in Secrets Manager (INFRA-03)
+    const cognitoSecret = new secretsmanager.Secret(this, 'CognitoClientSecret', {
+      secretName: 'requirements-foundry-prod/cognito-client',
+      description: 'Cognito App Client credentials',
+      secretObjectValue: {
+        userPoolId: cdk.SecretValue.unsafePlainText(userPool.userPoolId),
+        clientId: cdk.SecretValue.unsafePlainText(cognitoClient.userPoolClientId),
+        clientSecret: cdk.SecretValue.unsafePlainText(
+          describeCognitoClient.getResponseField('UserPoolClient.ClientSecret')
+        ),
+        domain: cdk.SecretValue.unsafePlainText(
+          `${cognitoDomainPrefix}.auth.us-east-1.amazoncognito.com`
+        ),
+      },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Grant task execution role read access to Cognito secret
+    cognitoSecret.grantRead(taskExecutionRole);
+
     // Container
     taskDefinition.addContainer('AppContainer', {
       image: ecs.ContainerImage.fromEcrRepository(repository, 'latest'),
@@ -281,9 +413,14 @@ export class RequirementsFoundryStack extends cdk.Stack {
         AWS_REGION: 'us-east-1',
         S3_BUCKET_NAME: bucket.bucketName,
         RDS_SECRET_NAME: 'requirements-foundry-prod/rds-credentials',
+        COGNITO_USER_POOL_ID: userPool.userPoolId,
+        COGNITO_CLIENT_ID: cognitoClient.userPoolClientId,
+        COGNITO_DOMAIN: `https://${cognitoDomainPrefix}.auth.us-east-1.amazoncognito.com`,
+        COGNITO_REDIRECT_URI: redirectUri,
       },
       secrets: {
         CRON_SECRET: ecs.Secret.fromSecretsManager(cronSecret),
+        COGNITO_CLIENT_SECRET: ecs.Secret.fromSecretsManager(cognitoSecret),
       },
       portMappings: [{ containerPort: 3000, protocol: ecs.Protocol.TCP }],
     });
@@ -486,6 +623,33 @@ exports.handler = async () => {
     new cdk.CfnOutput(this, 'GitHubActionsRoleArn', { value: deployRole.roleArn, exportName: 'rf-prod-github-role-arn' });
     new cdk.CfnOutput(this, 'CronSecretArn', { value: cronSecret.secretArn, exportName: 'rf-prod-cron-secret-arn' });
     new cdk.CfnOutput(this, 'AlarmTopicArn', { value: alarmTopic.topicArn, exportName: 'rf-prod-alarm-topic-arn' });
+
+    // Cognito Outputs (Phase 26)
+    new cdk.CfnOutput(this, 'CognitoUserPoolId', {
+      value: userPool.userPoolId,
+      exportName: 'rf-prod-cognito-user-pool-id',
+    });
+    new cdk.CfnOutput(this, 'CognitoEntityId', {
+      value: `urn:amazon:cognito:sp:${userPool.userPoolId}`,
+      exportName: 'rf-prod-cognito-entity-id',
+      description: 'Set this as Audience URI (SP Entity ID) in Okta SAML app',
+    });
+    new cdk.CfnOutput(this, 'CognitoAcsUrl', {
+      value: `https://${cognitoDomainPrefix}.auth.us-east-1.amazoncognito.com/saml2/idpresponse`,
+      exportName: 'rf-prod-cognito-acs-url',
+      description: 'Set this as Single Sign On URL in Okta SAML app',
+    });
+    new cdk.CfnOutput(this, 'CognitoHostedUiUrl', {
+      value: cognitoDomain.signInUrl(cognitoClient, {
+        redirectUri,
+      }),
+      exportName: 'rf-prod-cognito-hosted-ui-url',
+      description: 'Use this URL to test SAML login via Cognito Hosted UI',
+    });
+    new cdk.CfnOutput(this, 'CognitoClientId', {
+      value: cognitoClient.userPoolClientId,
+      exportName: 'rf-prod-cognito-client-id',
+    });
 
     // Tags
     cdk.Tags.of(this).add('Project', 'requirements-foundry');
