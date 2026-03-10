@@ -142,6 +142,7 @@ Acceptance Criteria use Given/When/Then format:
       name: "Digital Transformation Initiative",
       description:
         "Q1 2024 initiative to modernize customer-facing applications and internal workflows",
+      userId: "sean.mcinerney@merkle.com",
     },
   });
   console.log("Created sample project:", project.name);
