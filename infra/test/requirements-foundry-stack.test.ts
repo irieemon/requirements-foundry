@@ -6,7 +6,11 @@ describe('RequirementsFoundryStack', () => {
   let template: Template;
 
   beforeAll(() => {
-    const app = new cdk.App();
+    const app = new cdk.App({
+      context: {
+        oktaMetadataUrl: 'https://test.okta.com/app/test123/sso/saml/metadata',
+      },
+    });
     const stack = new RequirementsFoundryStack(app, 'TestStack', {
       env: { region: 'us-east-1' },
     });
@@ -181,9 +185,9 @@ describe('RequirementsFoundryStack', () => {
       });
     });
 
-    test('at least 2 secrets exist (RDS credentials + DATABASE_URL)', () => {
+    test('at least 3 secrets exist (RDS credentials + DATABASE_URL + Cognito)', () => {
       const secrets = template.findResources('AWS::SecretsManager::Secret');
-      expect(Object.keys(secrets).length).toBeGreaterThanOrEqual(2);
+      expect(Object.keys(secrets).length).toBeGreaterThanOrEqual(3);
     });
   });
 
@@ -287,9 +291,9 @@ describe('RequirementsFoundryStack', () => {
   });
 
   describe('Stack Outputs', () => {
-    test('stack has at least 16 outputs', () => {
+    test('stack has at least 21 outputs', () => {
       const outputs = template.toJSON().Outputs;
-      expect(Object.keys(outputs).length).toBeGreaterThanOrEqual(16);
+      expect(Object.keys(outputs).length).toBeGreaterThanOrEqual(21);
     });
 
     test('VpcId output exists', () => {
@@ -382,6 +386,140 @@ describe('RequirementsFoundryStack', () => {
     test('service has LaunchType FARGATE', () => {
       template.hasResourceProperties('AWS::ECS::Service', {
         LaunchType: 'FARGATE',
+      });
+    });
+  });
+
+  describe('Cognito Infrastructure', () => {
+    test('UserPool exists with password policy', () => {
+      template.hasResourceProperties('AWS::Cognito::UserPool', {
+        Policies: Match.objectLike({
+          PasswordPolicy: Match.anyValue(),
+        }),
+      });
+    });
+
+    test('UserPool has custom:groups attribute defined', () => {
+      template.hasResourceProperties('AWS::Cognito::UserPool', {
+        Schema: Match.arrayWith([
+          Match.objectLike({
+            Name: 'groups',
+            AttributeDataType: 'String',
+            Mutable: true,
+          }),
+        ]),
+      });
+    });
+
+    test('Cognito UserPool domain exists', () => {
+      template.resourceCountIs('AWS::Cognito::UserPoolDomain', 1);
+    });
+
+    test('SAML identity provider named Okta exists', () => {
+      template.hasResourceProperties('AWS::Cognito::UserPoolIdentityProvider', {
+        ProviderType: 'SAML',
+        ProviderName: 'Okta',
+      });
+    });
+
+    test('UserPoolClient has authorization code grant with openid scope', () => {
+      template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
+        AllowedOAuthFlows: ['code'],
+        AllowedOAuthScopes: Match.arrayWith(['openid']),
+      });
+    });
+
+    test('PreTokenGeneration Lambda function exists', () => {
+      template.hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'requirements-foundry-pre-token-generation',
+      });
+    });
+
+    test('UserPool has PreTokenGeneration Lambda trigger configured', () => {
+      template.hasResourceProperties('AWS::Cognito::UserPool', {
+        LambdaConfig: Match.objectLike({
+          PreTokenGenerationConfig: Match.anyValue(),
+        }),
+      });
+    });
+
+    test('AwsCustomResource exists for describing UserPool client', () => {
+      const resources = template.findResources('Custom::AWS');
+      const hasDescribeClient = Object.values(resources).some((r: any) =>
+        JSON.stringify(r).includes('describeUserPoolClient')
+      );
+      expect(hasDescribeClient).toBe(true);
+    });
+
+    test('Cognito client secret exists in Secrets Manager', () => {
+      template.hasResourceProperties('AWS::SecretsManager::Secret', {
+        Name: 'requirements-foundry-prod/cognito-client',
+      });
+    });
+
+    test('ECS container includes COGNITO_USER_POOL_ID environment variable', () => {
+      template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+        ContainerDefinitions: Match.arrayWith([
+          Match.objectLike({
+            Environment: Match.arrayWith([
+              Match.objectLike({
+                Name: 'COGNITO_USER_POOL_ID',
+              }),
+            ]),
+          }),
+        ]),
+      });
+    });
+
+    test('ECS container includes COGNITO_CLIENT_ID environment variable', () => {
+      template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+        ContainerDefinitions: Match.arrayWith([
+          Match.objectLike({
+            Environment: Match.arrayWith([
+              Match.objectLike({
+                Name: 'COGNITO_CLIENT_ID',
+              }),
+            ]),
+          }),
+        ]),
+      });
+    });
+
+    test('ECS container includes COGNITO_CLIENT_SECRET in secrets', () => {
+      template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+        ContainerDefinitions: Match.arrayWith([
+          Match.objectLike({
+            Secrets: Match.arrayWith([
+              Match.objectLike({
+                Name: 'COGNITO_CLIENT_SECRET',
+              }),
+            ]),
+          }),
+        ]),
+      });
+    });
+
+    test('CognitoEntityId output exists', () => {
+      template.hasOutput('CognitoEntityId', {
+        Export: { Name: 'rf-prod-cognito-entity-id' },
+      });
+    });
+
+    test('CognitoAcsUrl output exists', () => {
+      template.hasOutput('CognitoAcsUrl', {
+        Export: { Name: 'rf-prod-cognito-acs-url' },
+      });
+    });
+
+    test('CognitoHostedUiUrl output exists', () => {
+      template.hasOutput('CognitoHostedUiUrl', {
+        Export: { Name: 'rf-prod-cognito-hosted-ui-url' },
+      });
+    });
+
+    test('CognitoClientId output exists', () => {
+      template.hasOutput('CognitoClientId', {
+        Export: { Name: 'rf-prod-cognito-client-id' },
       });
     });
   });
