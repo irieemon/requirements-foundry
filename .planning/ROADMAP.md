@@ -133,7 +133,7 @@ Plans:
   3. Non-admin users see only their own projects in the project list and cannot access other users' projects via direct URL
   4. All server actions and API routes enforce userId ownership -- requests for another user's resources are rejected
   5. Admin user (determined by Okta group membership in JWT) can access all projects through server-side bypass
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 28-01-PLAN.md -- Authorization module (isAdmin, getAuthorizedProject, getAuthorizedProjects) + Prisma migration (DATA-04, ADMIN-01, ADMIN-03)
@@ -169,5 +169,5 @@ Phases execute in numeric order: 26 -> 27 -> 28 -> 29
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26. Cognito Infrastructure | 2/2 | Complete    | 2026-03-10 | - |
 | 27. Auth Flow | 3/3 | Complete    | 2026-03-10 | - |
-| 28. Data Isolation | v3.0 | 0/3 | Planning complete | - |
+| 28. Data Isolation | 1/3 | In Progress|  | - |
 | 29. Admin UI and Polish | v3.0 | 0/? | Not started | - |
