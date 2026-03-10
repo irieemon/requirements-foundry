@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Authentication & Multi-User
 status: executing
-stopped_at: Completed 27-02-PLAN.md
-last_updated: "2026-03-10T15:09:10Z"
-last_activity: 2026-03-10 -- Completed Plan 02 (Route Protection & Auth Routes)
+stopped_at: Completed 27-03-PLAN.md
+last_updated: "2026-03-10T16:32:00Z"
+last_activity: 2026-03-10 -- Completed Plan 03 (Landing Page & Layout Split)
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
-  percent: 80
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-09)
 ## Current Position
 
 Phase: 27 of 29 (Auth Flow)
-Plan: 2 of 3 complete
-Status: Executing Phase 27
-Last activity: 2026-03-10 -- Completed Plan 02 (Route Protection & Auth Routes)
+Plan: 3 of 3 complete
+Status: Phase 27 Complete
+Last activity: 2026-03-10 -- Completed Plan 03 (Landing Page & Layout Split)
 
-Progress: [██████░░░░] 67% (Phase 27)
+Progress: [██████████] 100% (Phase 27)
 
 ## Milestones
 
@@ -44,9 +44,9 @@ Progress: [██████░░░░] 67% (Phase 27)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4 (v3.0)
-- Average duration: 2.3min
-- Total execution time: 9min
+- Total plans completed: 5 (v3.0)
+- Average duration: 2.4min
+- Total execution time: 12min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -54,6 +54,7 @@ Progress: [██████░░░░] 67% (Phase 27)
 | 26 | 02 | 1min | 2 | 2 |
 | 27 | 01 | 4min | 2 | 10 |
 | 27 | 02 | 2min | 2 | 4 |
+| 27 | 03 | 3min | 3 | 4 |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ See .planning/PROJECT.md Key Decisions table for complete history.
 - [27-02] Use getIronSession with request.cookies/response.cookies in proxy.ts (not cookies() helper)
 - [27-02] 5-minute refresh threshold for transparent token refresh in proxy
 - [27-02] Failed refresh redirects to / for silent re-auth via Cognito/Okta SSO
+- [27-03] Lazy-initialize CognitoJwtVerifier to avoid crash when env vars absent in dev
+- [27-03] Route group (authenticated) wraps children in AppShell; root layout is bare shell
 
 ### Pending Todos
 
@@ -87,6 +90,6 @@ See .planning/PROJECT.md Key Decisions table for complete history.
 
 ## Session Continuity
 
-Last session: 2026-03-10T15:09:10Z
-Stopped at: Completed 27-02-PLAN.md
-Next: Execute Plan 03 (Landing page with Sign in button, conditional AppShell layout).
+Last session: 2026-03-10T16:32:00Z
+Stopped at: Completed 27-03-PLAN.md
+Next: Phase 27 complete. Proceed to Phase 28 (User Data) planning.

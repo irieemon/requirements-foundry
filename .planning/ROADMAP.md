@@ -85,7 +85,7 @@ See [v2.0 archive](milestones/v2.0-ROADMAP.md) for full details.
 ### Phases
 
 - [x] **Phase 26: Cognito Infrastructure** - Deploy Cognito User Pool with Okta SAML federation and group-mapping Lambda via CDK (completed 2026-03-10)
-- [ ] **Phase 27: Auth Flow** - End-to-end login, session management, route protection, and logout
+- [x] **Phase 27: Auth Flow** - End-to-end login, session management, route protection, and logout (completed 2026-03-10)
 - [ ] **Phase 28: Data Isolation** - Per-user project ownership with admin bypass and existing data migration
 - [ ] **Phase 29: Admin UI and Polish** - Admin project toggle, user identity display, and user menu
 
@@ -116,7 +116,7 @@ Plans:
   3. Authenticated user's session persists across browser tabs and survives page refreshes (HTTP-only cookies)
   4. User can log out and is redirected to the landing page, with Cognito session cleared
   5. proxy.ts verifies JWT on every request and rejects expired/invalid tokens
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 27-01-PLAN.md -- Auth library foundation: types, Cognito URL builders, JWT verification, session helpers (AUTH-01, AUTH-03)
@@ -168,6 +168,6 @@ Phases execute in numeric order: 26 -> 27 -> 28 -> 29
 | 18-20 | v1.3      | 2/?            | Paused   | -          |
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26. Cognito Infrastructure | 2/2 | Complete    | 2026-03-10 | - |
-| 27. Auth Flow | 2/3 | In Progress|  | - |
+| 27. Auth Flow | 3/3 | Complete   | 2026-03-10 | - |
 | 28. Data Isolation | v3.0 | 0/? | Not started | - |
 | 29. Admin UI and Polish | v3.0 | 0/? | Not started | - |
