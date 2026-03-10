@@ -86,7 +86,7 @@ See [v2.0 archive](milestones/v2.0-ROADMAP.md) for full details.
 
 - [x] **Phase 26: Cognito Infrastructure** - Deploy Cognito User Pool with Okta SAML federation and group-mapping Lambda via CDK (completed 2026-03-10)
 - [x] **Phase 27: Auth Flow** - End-to-end login, session management, route protection, and logout (completed 2026-03-10)
-- [ ] **Phase 28: Data Isolation** - Per-user project ownership with admin bypass and existing data migration
+- [x] **Phase 28: Data Isolation** - Per-user project ownership with admin bypass and existing data migration (completed 2026-03-10)
 - [ ] **Phase 29: Admin UI and Polish** - Admin project toggle, user identity display, and user menu
 
 ## Phase Details
@@ -133,12 +133,12 @@ Plans:
   3. Non-admin users see only their own projects in the project list and cannot access other users' projects via direct URL
   4. All server actions and API routes enforce userId ownership -- requests for another user's resources are rejected
   5. Admin user (determined by Okta group membership in JWT) can access all projects through server-side bypass
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 28-01-PLAN.md -- Authorization module (isAdmin, getAuthorizedProject, getAuthorizedProjects) + Prisma migration (DATA-04, ADMIN-01, ADMIN-03)
-- [ ] 28-02-PLAN.md -- Server actions ownership enforcement across all 11 action files (DATA-01, DATA-02, DATA-03)
-- [ ] 28-03-PLAN.md -- API routes and page components ownership enforcement (DATA-02, DATA-03)
+- [x] 28-01-PLAN.md -- Authorization module (isAdmin, getAuthorizedProject, getAuthorizedProjects) + Prisma migration (DATA-04, ADMIN-01, ADMIN-03)
+- [x] 28-02-PLAN.md -- Server actions ownership enforcement across all 11 action files (DATA-01, DATA-02, DATA-03)
+- [x] 28-03-PLAN.md -- API routes and page components ownership enforcement (DATA-02, DATA-03)
 
 ### Phase 29: Admin UI and Polish
 **Goal**: Admin users have a toggle to view all projects, and all users see their identity in the app header with a functional user menu
@@ -169,5 +169,5 @@ Phases execute in numeric order: 26 -> 27 -> 28 -> 29
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26. Cognito Infrastructure | 2/2 | Complete    | 2026-03-10 | - |
 | 27. Auth Flow | 3/3 | Complete    | 2026-03-10 | - |
-| 28. Data Isolation | 1/3 | In Progress|  | - |
+| 28. Data Isolation | 3/3 | Complete | 2026-03-10 | - |
 | 29. Admin UI and Polish | v3.0 | 0/? | Not started | - |
