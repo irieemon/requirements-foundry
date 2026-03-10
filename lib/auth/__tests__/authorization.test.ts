@@ -154,16 +154,49 @@ describe("authorization", () => {
       { id: "proj-1", name: "Project 1", userId: "user@example.com" },
     ];
 
-    it("returns only user's projects for non-admin", async () => {
+    it("returns only admin's own projects when viewAll is false", async () => {
+      mockGetCurrentUser.mockResolvedValue(adminUser);
+      mockFindMany.mockResolvedValue([allProjects[0]]);
+
+      const result = await getAuthorizedProjects(false);
+      expect(result.user).toEqual(adminUser);
+      expect(result.isAdmin).toBe(true);
+
+      // Verify the where clause filters by admin's userId
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: "sean.mcinerney@merkle.com" },
+        })
+      );
+    });
+
+    it("returns all projects when admin passes viewAll=true", async () => {
+      mockGetCurrentUser.mockResolvedValue(adminUser);
+      mockFindMany.mockResolvedValue(allProjects);
+
+      const result = await getAuthorizedProjects(true);
+      expect(result.projects).toEqual(allProjects);
+      expect(result.user).toEqual(adminUser);
+      expect(result.isAdmin).toBe(true);
+
+      // Verify no where filter for admin with viewAll
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {},
+        })
+      );
+    });
+
+    it("returns only user's projects for non-admin even when viewAll=true", async () => {
       mockGetCurrentUser.mockResolvedValue(regularUser);
       mockFindMany.mockResolvedValue(userProjects);
 
-      const result = await getAuthorizedProjects();
+      const result = await getAuthorizedProjects(true);
       expect(result.projects).toEqual(userProjects);
       expect(result.user).toEqual(regularUser);
       expect(result.isAdmin).toBe(false);
 
-      // Verify the where clause filters by userId
+      // Verify the where clause still filters by userId
       expect(mockFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { userId: "user@example.com" },
@@ -171,19 +204,17 @@ describe("authorization", () => {
       );
     });
 
-    it("returns all projects for admin", async () => {
+    it("defaults to user's own projects when no argument provided", async () => {
       mockGetCurrentUser.mockResolvedValue(adminUser);
-      mockFindMany.mockResolvedValue(allProjects);
+      mockFindMany.mockResolvedValue([allProjects[0]]);
 
       const result = await getAuthorizedProjects();
-      expect(result.projects).toEqual(allProjects);
-      expect(result.user).toEqual(adminUser);
       expect(result.isAdmin).toBe(true);
 
-      // Verify no where filter for admin
+      // Verify default behavior filters by userId (same as viewAll=false)
       expect(mockFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: {},
+          where: { userId: "sean.mcinerney@merkle.com" },
         })
       );
     });

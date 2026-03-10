@@ -35,10 +35,10 @@ export async function getAuthorizedProject(projectId: string) {
  * Get all projects for the current user (or all projects for admin).
  * Matches the orderBy and _count include from getProjects() in server/actions/projects.ts.
  */
-export async function getAuthorizedProjects() {
+export async function getAuthorizedProjects(viewAll: boolean = false) {
   const user = await getCurrentUser();
   const admin = isAdmin(user.email);
-  const where = admin ? {} : { userId: user.email };
+  const where = admin && viewAll ? {} : { userId: user.email };
 
   const projects = await db.project.findMany({
     where,
