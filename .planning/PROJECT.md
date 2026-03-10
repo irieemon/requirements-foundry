@@ -2,23 +2,11 @@
 
 ## What This Is
 
-Requirements Foundry is a tool that transforms uploaded documents into structured requirements (cards), groups them into epics, generates user stories with AI, and breaks stories down into implementable subtasks. Work items can be mapped to MSS (Master Service Schedule) taxonomy for service line visibility. Deployed on AWS (ECS Fargate, RDS PostgreSQL, S3, Bedrock AI) with automated CI/CD via GitHub Actions.
+Requirements Foundry is a multi-user tool that transforms uploaded documents into structured requirements (cards), groups them into epics, generates user stories with AI, and breaks stories down into implementable subtasks. Work items can be mapped to MSS (Master Service Schedule) taxonomy for service line visibility. Users authenticate via Okta SSO with per-user project isolation and admin oversight. Deployed on AWS (ECS Fargate, RDS PostgreSQL, S3, Bedrock AI, Cognito) with automated CI/CD via GitHub Actions.
 
 ## Core Value
 
-**Internal corporate users authenticate via Okta SSO and see only their own projects, with admin oversight across all users.**
-
-## Current Milestone: v3.0 Authentication & Multi-User
-
-**Goal:** Add Cognito + Okta SAML SSO authentication with per-user project isolation and admin role
-
-**Target features:**
-- Cognito User Pool with Okta SAML identity provider (seamless SSO)
-- Per-user project isolation (enforce Project.userId)
-- Admin role via Okta group (admins see all projects)
-- Public landing page with "Sign in with Okta" button
-- All app routes protected (redirect unauthenticated users)
-- Default admin: sean.mcinerney@merkle.com
+**Transform uploaded documents into structured, exportable requirements with AI — securely isolated per user with corporate SSO.**
 
 ## Requirements
 
@@ -62,14 +50,16 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 - ✓ Lambda cron for stale run recovery — v2.0
 - ✓ CloudWatch alarms and SNS notifications — v2.0
 - ✓ End-to-end smoke test on AWS (all features) — v2.0
+- ✓ Cognito User Pool with Okta SAML SSO (seamless corporate login) — v3.0
+- ✓ Per-user project isolation (enforce Project.userId) — v3.0
+- ✓ Admin role via Okta group membership — v3.0
+- ✓ Public landing page with SSO login — v3.0
+- ✓ Protected routes with auth middleware — v3.0
+- ✓ User identity display with logout menu — v3.0
 
 ### Active
 
-- [ ] Cognito User Pool with Okta SAML SSO (seamless corporate login)
-- [ ] Per-user project isolation (enforce Project.userId)
-- [ ] Admin role via Okta group membership
-- [ ] Public landing page with SSO login
-- [ ] Protected routes with auth middleware
+(None — define next milestone requirements via `/gsd:new-milestone`)
 
 ### Deferred
 
@@ -77,6 +67,13 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 - Multi-AZ RDS for high availability
 - Custom domain via Route 53
 - Auto-scaling for ECS
+- Refresh token rotation for enhanced security
+- Custom Cognito domain (auth.requirementsfoundry.internal)
+- Admin project ownership reassignment
+- Admin dashboard with user activity metrics
+- Audit log of user actions
+- Okta group-based admin detection (pipeline wired, using hardcoded email)
+- Runs page admin My/All toggle (parity with projects page)
 
 ### Out of Scope
 
@@ -85,13 +82,22 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 - Multi-region deployment — POC, single region acceptable
 - ElastiCache/Redis — app uses polling, no session cache needed
 - RDS Proxy — Prisma prepared statements cause connection pinning
+- Local username/password auth — pure SSO via corporate Okta
+- NextAuth / Amplify libraries — direct Cognito integration is simpler for SAML
+- PostgreSQL Row-Level Security — Prisma doesn't support RLS session variables; app-level filtering sufficient
+- IdP-initiated SAML — Cognito doesn't support it
+- ALB-level Cognito authentication — breaks logout control
+- User self-registration — corporate SSO only
 
 ## Context
 
-**Current state (v2.0 shipped):**
-- ~61,483 lines of TypeScript/TSX/JS/JSON
-- Tech stack: Next.js 16, Prisma 7, Bedrock Claude AI, AWS (ECS Fargate, RDS, S3, ALB)
+**Current state (v3.0 shipped):**
+- ~70,000+ lines of TypeScript/TSX/JS/JSON
+- Tech stack: Next.js 16, Prisma 7, Bedrock Claude AI, AWS (ECS Fargate, RDS, S3, ALB, Cognito, Secrets Manager)
 - Infrastructure: CDK (TypeScript), GitHub Actions CI/CD with OIDC
+- Authentication: Cognito + Okta SAML SSO, iron-session cookies, JWT verification via aws-jwt-verify
+- Data isolation: per-user project ownership with centralized authorization module
+- Admin: hardcoded admin email with UI toggle for all-projects view
 - All generative flows working with real-time progress on AWS
 - Complete MSS taxonomy management
 - v1.3 (Contextual Upload) paused at Phase 19
@@ -102,6 +108,7 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 - Database: RDS PostgreSQL db.t4g.micro (single-AZ)
 - Storage: S3 bucket (private access)
 - AI: Amazon Bedrock (Claude Sonnet 4)
+- Auth: Cognito User Pool + Okta SAML IdP + PreTokenGeneration Lambda
 - Network: Internet-facing ALB (POC; switch to internal after VPN setup)
 - Monitoring: CloudWatch alarms, SNS email, Container Insights
 - Cron: EventBridge + Lambda calling stale run recovery every 5 minutes
@@ -139,15 +146,24 @@ Requirements Foundry is a tool that transforms uploaded documents into structure
 | RemovalPolicy.DESTROY on all resources | POC teardown convenience | ⚠️ Revisit (change for production) |
 | Server-side FormData upload | Replaced client-side Blob, works with S3 | ✓ Good |
 | Direct async executor calls | Eliminated Vercel HTTP self-trigger pattern | ✓ Good |
+| Cognito + Okta SAML (not NextAuth/Amplify) | Direct integration simpler for corporate SAML | ✓ Good |
+| AwsCustomResource for Cognito client secret | Extract secret at CDK deploy time, store in Secrets Manager | ✓ Good |
+| iron-session encrypted cookies | HTTP-only, no external session store needed | ✓ Good |
+| Extracted claims in cookie (not full JWT) | Avoids 4KB cookie size limit | ✓ Good |
+| proxy.ts route protection (not middleware) | Defense-in-depth per CVE-2025-29927 | ✓ Good |
+| Hardcoded admin email (not Okta groups) | Simpler for now; group pipeline wired for future | ✓ Good |
+| 404-not-403 for unauthorized access | Prevents leaking project existence | ✓ Good |
+| Entity chain ownership (not userId on every table) | Fewer schema changes, single source of truth | ✓ Good |
+| Admin defaults to own projects | Safe default; explicit opt-in for all-projects view | ✓ Good |
 
 ## Constraints
 
 - **AWS region**: us-east-1
 - **Internal-only**: Internet-facing ALB as POC workaround (switch to internal after VPN)
 - **POC sizing**: Small instance sizes, single AZ acceptable
-- **Okta-ready**: Architecture accommodates future Cognito + Okta SAML
-- **Feature parity**: All existing features work identically on AWS
-- **No breaking schema changes**: Prisma migrations handle column renames
+- **Corporate SSO**: All users authenticate via Okta SAML through Cognito
+- **Feature parity**: All existing features work identically on AWS with auth
+- **No breaking schema changes**: Prisma migrations handle column additions
 
 ---
-*Last updated: 2026-03-09 after v3.0 Authentication milestone started*
+*Last updated: 2026-03-10 after v3.0 Authentication & Multi-User milestone*

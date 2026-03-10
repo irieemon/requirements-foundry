@@ -2,6 +2,53 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v3.0 — Authentication & Multi-User
+
+**Shipped:** 2026-03-10
+**Phases:** 4 | **Plans:** 10 | **Sessions:** ~3
+
+### What Was Built
+- Cognito User Pool with Okta SAML federation and PreTokenGeneration Lambda for group-to-JWT mapping
+- Complete auth flow: proxy.ts route protection, OAuth2 callback, JWT verification, iron-session cookies
+- Public landing page with SSO sign-in and Next.js route group layout splitting
+- Per-user data isolation across all server actions, API routes, and page components
+- UserMenu with initials avatar, admin badge, and Cognito logout
+- Admin project view toggle with safe defaults
+
+### What Worked
+- TDD methodology across all phases caught issues early — zero bugs in shipped code
+- Centralized authorization module (getAuthorizedProject/getAuthorizedProjects) made enforcement consistent and fast across 11+ files
+- Small atomic plans averaged 3.2 minutes each — the fastest milestone by execution time
+- Research phase documents provided clear contracts between phases (e.g., Phase 26 Cognito outputs → Phase 27 auth inputs)
+- Milestone audit before completion caught tech debt items for documentation
+
+### What Was Inefficient
+- Phase 26/27 plan checkboxes in ROADMAP.md never got checked to `[x]` (inconsistency with Phase 28/29)
+- Nyquist validation strategies created but never executed — all 4 phases remained in draft status
+- Pre-existing Prisma CLI incompatibility (Node 21.5.0 ESM/CJS) forced manual migration creation
+- Pre-existing CDK test failures (3) accumulated from v2.0 and were never addressed
+
+### Patterns Established
+- `server-only` import guard on all lib/auth/ modules prevents client-side usage
+- proxy.ts defense-in-depth route protection (per CVE-2025-29927) — verify auth in data access, not just middleware
+- Entity chain ownership lookup (run→project→userId) instead of userId on every table
+- URL search param for server/client view state synchronization (admin toggle)
+- Server layout → AppShell → component props pattern for user data flow (avoids client-side auth calls)
+
+### Key Lessons
+1. **Centralized authorization pays off** — writing helpers once and importing everywhere made 11-file enforcement take 7 minutes instead of hours
+2. **iron-session cookie size matters** — storing extracted claims instead of full JWT avoided 4KB limit silently truncating data
+3. **Lazy singleton for env-dependent services** — CognitoJwtVerifier crashed in dev until lazy-initialized, a pattern to apply broadly
+4. **Safe admin defaults** — defaulting admins to their own view prevents accidental data exposure and matches daily workflow
+5. **Hardcode first, abstract later** — hardcoded admin email shipped in minutes; the full group pipeline is wired but dormant until needed
+
+### Cost Observations
+- Model mix: ~80% sonnet (execution), ~20% opus (planning, milestone completion)
+- Sessions: ~3 across 2 days
+- Notable: 32 minutes total execution time for 10 plans — fastest milestone by wall-clock execution
+
+---
+
 ## Milestone: v2.0 — AWS Migration
 
 **Shipped:** 2026-03-09
@@ -59,9 +106,11 @@
 | v1.1 | ~5 | 5 | Added decimal phases for urgent work |
 | v1.2 | ~4 | 5 | Fastest milestone, 8 plans in 7 days |
 | v2.0 | ~12 | 5 | Infrastructure + deployment, multi-session debugging |
+| v3.0 | ~3 | 4 | Fastest execution (32min), TDD across all phases |
 
 ### Top Lessons (Verified Across Milestones)
 
-1. Small, atomic plans execute faster and with fewer issues than large monolithic ones (v1.0, v1.1, v1.2, v2.0)
+1. Small, atomic plans execute faster and with fewer issues than large monolithic ones (v1.0, v1.1, v1.2, v2.0, v3.0)
 2. Human checkpoints for deployment validation are essential — automated tests can't verify browser-based flows (v1.0, v2.0)
 3. Parallel execution where dependencies allow saves significant wall-clock time (v2.0 phases 21+22)
+4. Centralized helpers for cross-cutting concerns (authorization, auth) pay off immediately when many files need the same pattern (v3.0)

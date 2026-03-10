@@ -1,5 +1,39 @@
 # Project Milestones: Requirements Foundry
 
+## v3.0 Authentication & Multi-User (Shipped: 2026-03-10)
+
+**Delivered:** Added Cognito + Okta SAML SSO authentication with per-user project isolation, admin role bypass, and polished user identity display -- transforming a single-user tool into a secure multi-tenant application.
+
+**Phases completed:** 26-29 (10 plans total)
+
+**Key accomplishments:**
+
+- Deployed Cognito User Pool with Okta SAML federation and PreTokenGeneration Lambda for group-to-JWT mapping via CDK
+- Built complete auth flow: proxy.ts route protection, OAuth2 callback, JWT verification (aws-jwt-verify), iron-session encrypted cookies
+- Created public landing page with SSO sign-in and Next.js route group layout splitting for authenticated/public separation
+- Enforced per-user data isolation across all 11 server actions, 7 API routes, and 3 page components with centralized authorization module
+- Added UserMenu component with initials avatar, admin badge, and Cognito logout in sidebar and mobile nav
+- Implemented admin project view toggle with safe defaults (own projects first, explicit opt-in to view all)
+
+**Stats:**
+
+- 67 commits in milestone
+- 375 files changed, +70,225 / -3,753 lines
+- 4 phases, 10 plans, 20 tasks
+- 2 days from start to ship (Mar 9-10, 2026)
+- Total execution time: 32 minutes across 10 plans (avg 3.2 min/plan)
+
+**Git range:** `test(26-01)` → `docs: create v3.0 milestone audit report`
+
+**Tech debt:**
+- ADMIN-01: isAdmin uses hardcoded ADMIN_EMAIL instead of Okta group claims (pipeline wired but unused)
+- Runs page admins see all runs by default with no My/All toggle (asymmetry with projects page)
+- 3 pre-existing CDK test failures (ALB security group, internal flag, DesiredCount)
+
+**What's next:** Resume v1.3 (Contextual Upload, Phase 19) or start new milestone
+
+---
+
 ## v2.0 AWS Migration (Shipped: 2026-03-09)
 
 **Delivered:** Migrated Requirements Foundry from Vercel to AWS with full feature parity -- ECS Fargate, RDS PostgreSQL, S3, Bedrock AI, automated CI/CD, and operational monitoring.
