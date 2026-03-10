@@ -20,7 +20,7 @@ model Project {
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  userId      String?  // Nullable for MVP; add auth later
+  userId      String
 
   uploads Upload[]
   cards   Card[]
