@@ -2,11 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
 import { getAIProvider, hasAwsCredentials } from "@/lib/ai/provider";
 import { RunType, RunStatus, GenerationMode, PersonaSet, CardData } from "@/lib/types";
 import { getMssHierarchy, getMssServiceAreaByCode } from "./mss";
 
 export async function generateEpicsForProject(projectId: string) {
+  // Verify ownership
+  try { await getAuthorizedProject(projectId); } catch { return { success: false, error: "Project not found" }; }
+
   // Create run record
   const run = await db.run.create({
     data: {
@@ -173,6 +177,9 @@ export async function generateStoriesForEpic(
     return { success: false, error: "Epic not found" };
   }
 
+  // Verify ownership
+  try { await getAuthorizedProject(epic.projectId); } catch { return { success: false, error: "Project not found" }; }
+
   // Create run record
   const run = await db.run.create({
     data: {
@@ -281,6 +288,10 @@ async function appendLog(runId: string, message: string) {
 }
 
 export async function getRun(id: string) {
+  const run = await db.run.findUnique({ where: { id }, select: { projectId: true } });
+  if (!run) return null;
+  try { await getAuthorizedProject(run.projectId); } catch { return null; }
+
   return db.run.findUnique({
     where: { id },
     include: { project: true },
@@ -288,6 +299,8 @@ export async function getRun(id: string) {
 }
 
 export async function getRunsForProject(projectId: string) {
+  await getAuthorizedProject(projectId);
+
   return db.run.findMany({
     where: { projectId },
     orderBy: { createdAt: "desc" },

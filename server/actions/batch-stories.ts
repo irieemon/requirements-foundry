@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
 import { executeBatchStoryRun } from "@/lib/run-engine/batch-story-executor";
 import {
   RunType,
@@ -24,9 +25,10 @@ export async function startGenerateAllStories(
   const { projectId, options } = input;
 
   try {
-    // 1. Validate project exists
-    const project = await db.project.findUnique({ where: { id: projectId } });
-    if (!project) {
+    // 1. Verify ownership
+    try {
+      await getAuthorizedProject(projectId);
+    } catch {
       return { success: false, error: "Project not found" };
     }
 
@@ -127,6 +129,11 @@ export async function startGenerateAllStories(
 // ============================================
 
 export async function getBatchStoryProgress(runId: string): Promise<BatchStoryProgress | null> {
+  // Verify ownership via run's project
+  const runCheck = await db.run.findUnique({ where: { id: runId }, select: { projectId: true } });
+  if (!runCheck) return null;
+  try { await getAuthorizedProject(runCheck.projectId); } catch { return null; }
+
   const run = await db.run.findUnique({
     where: { id: runId },
     include: {
@@ -206,6 +213,9 @@ export async function cancelBatchStoryRun(
     return { success: false, error: "Run not found" };
   }
 
+  // Verify ownership
+  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+
   if (run.type !== RunType.GENERATE_ALL_STORIES) {
     return { success: false, error: "Not a batch story run" };
   }
@@ -249,6 +259,9 @@ export async function retryFailedEpics(
     return { success: false, error: "Run not found" };
   }
 
+  // Verify ownership
+  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+
   if (run.type !== RunType.GENERATE_ALL_STORIES) {
     return { success: false, error: "Not a batch story run" };
   }
@@ -288,6 +301,8 @@ export interface ActiveBatchStoryRunResult {
 export async function getActiveBatchStoryRun(
   projectId: string
 ): Promise<ActiveBatchStoryRunResult> {
+  await getAuthorizedProject(projectId);
+
   const activeRun = await db.run.findFirst({
     where: {
       projectId,
@@ -351,6 +366,8 @@ export interface EpicForBatch {
 export async function getEpicsForBatchGeneration(
   projectId: string
 ): Promise<EpicForBatch[]> {
+  await getAuthorizedProject(projectId);
+
   const epics = await db.epic.findMany({
     where: { projectId },
     include: {

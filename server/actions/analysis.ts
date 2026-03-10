@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
 import { executeRun } from "@/lib/run-engine/executor";
 import {
   RunType,
@@ -25,9 +26,10 @@ export async function analyzeProject(
   const { projectId, uploadIds, options = {} } = input;
 
   try {
-    // 1. Validate project exists
-    const project = await db.project.findUnique({ where: { id: projectId } });
-    if (!project) {
+    // 1. Verify ownership
+    try {
+      await getAuthorizedProject(projectId);
+    } catch {
       return { success: false, error: "Project not found" };
     }
 
@@ -128,6 +130,11 @@ export async function analyzeProject(
 // ============================================
 
 export async function getRunProgress(runId: string): Promise<RunProgress | null> {
+  // Verify ownership via run's project
+  const runCheck = await db.run.findUnique({ where: { id: runId }, select: { projectId: true } });
+  if (!runCheck) return null;
+  try { await getAuthorizedProject(runCheck.projectId); } catch { return null; }
+
   const run = await db.run.findUnique({
     where: { id: runId },
     include: {
@@ -193,6 +200,9 @@ export async function cancelRun(
     return { success: false, error: "Run not found" };
   }
 
+  // Verify ownership
+  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+
   if (run.status !== RunStatus.RUNNING && run.status !== RunStatus.QUEUED) {
     return { success: false, error: "Run is not active" };
   }
@@ -245,6 +255,9 @@ export async function retryFailedUploads(
     return { success: false, error: "Run not found" };
   }
 
+  // Verify ownership
+  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+
   const failedUploadIds = run.runUploads.map((ru) => ru.uploadId);
 
   if (failedUploadIds.length === 0) {
@@ -274,6 +287,8 @@ export interface ActiveRunResult {
 export async function getActiveRunForProject(
   projectId: string
 ): Promise<ActiveRunResult> {
+  await getAuthorizedProject(projectId);
+
   const activeRun = await db.run.findFirst({
     where: {
       projectId,
@@ -335,6 +350,8 @@ export async function getActiveRunForProject(
 // ============================================
 
 export async function getPendingUploadCount(projectId: string): Promise<number> {
+  await getAuthorizedProject(projectId);
+
   return db.upload.count({
     where: {
       projectId,

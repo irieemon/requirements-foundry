@@ -2,11 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
 import { parseTextToCards } from "@/lib/parsers/text-parser";
 import { parseCSVToCards } from "@/lib/parsers/csv-parser";
 import { ExtractionStatus, AnalysisStatus } from "@/lib/types";
 
 export async function createUploadFromText(projectId: string, text: string, filename?: string) {
+  // Verify ownership
+  try { await getAuthorizedProject(projectId); } catch { return { success: false, error: "Project not found" }; }
+
   // Create the upload record (text paste = direct parsing, no AI needed)
   const upload = await db.upload.create({
     data: {
@@ -67,6 +71,9 @@ export async function createUploadFromText(projectId: string, text: string, file
 }
 
 export async function createUploadFromCSV(projectId: string, csvContent: string, filename: string) {
+  // Verify ownership
+  try { await getAuthorizedProject(projectId); } catch { return { success: false, error: "Project not found" }; }
+
   // Create the upload record (CSV = direct parsing, no AI needed)
   const upload = await db.upload.create({
     data: {
@@ -130,6 +137,10 @@ export async function createUploadFromCSV(projectId: string, csvContent: string,
 }
 
 export async function getUpload(id: string) {
+  const upload = await db.upload.findUnique({ where: { id }, select: { projectId: true } });
+  if (!upload) return null;
+  try { await getAuthorizedProject(upload.projectId); } catch { return null; }
+
   return db.upload.findUnique({
     where: { id },
     include: {
@@ -143,6 +154,7 @@ export async function deleteUpload(id: string) {
   const upload = await db.upload.findUnique({ where: { id } });
   if (!upload) return;
 
+  await getAuthorizedProject(upload.projectId);
   await db.upload.delete({ where: { id } });
   revalidatePath(`/projects/${upload.projectId}`);
 }

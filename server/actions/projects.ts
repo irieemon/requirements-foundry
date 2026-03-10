@@ -2,33 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { getAuthorizedProject, getAuthorizedProjects } from "@/lib/auth/authorization";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function getProjects() {
-  const projects = await db.project.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: {
-        select: {
-          uploads: true,
-          cards: true,
-          epics: true,
-          runs: true,
-        },
-      },
-    },
-  });
+  const { projects } = await getAuthorizedProjects();
   return projects;
 }
 
 export async function getProjectName(id: string) {
-  const project = await db.project.findUnique({
-    where: { id },
-    select: { name: true },
-  });
-  return project?.name || null;
+  const { project } = await getAuthorizedProject(id);
+  return project.name;
 }
 
 export async function getProject(id: string) {
+  // Verify ownership first
+  await getAuthorizedProject(id);
+  // Re-query with full includes for the detail page
   const project = await db.project.findUnique({
     where: { id },
     include: {
@@ -111,10 +101,12 @@ export async function getProject(id: string) {
 }
 
 export async function createProject(data: { name: string; description?: string }) {
+  const user = await getCurrentUser();
   const project = await db.project.create({
     data: {
       name: data.name,
       description: data.description || null,
+      userId: user.email,
     },
   });
   revalidatePath("/projects");
@@ -122,6 +114,7 @@ export async function createProject(data: { name: string; description?: string }
 }
 
 export async function updateProject(id: string, data: { name?: string; description?: string }) {
+  await getAuthorizedProject(id);
   const project = await db.project.update({
     where: { id },
     data: {
@@ -135,6 +128,7 @@ export async function updateProject(id: string, data: { name?: string; descripti
 }
 
 export async function deleteProject(id: string) {
+  await getAuthorizedProject(id);
   await db.project.delete({
     where: { id },
   });
