@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Authentication & Multi-User
-status: completed
-stopped_at: Completed 27-01-PLAN.md
-last_updated: "2026-03-10T15:04:06Z"
-last_activity: 2026-03-10 -- Completed Plan 01 (Auth Library Foundation)
+status: executing
+stopped_at: Completed 27-02-PLAN.md
+last_updated: "2026-03-10T15:09:10Z"
+last_activity: 2026-03-10 -- Completed Plan 02 (Route Protection & Auth Routes)
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
-  percent: 60
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-09)
 ## Current Position
 
 Phase: 27 of 29 (Auth Flow)
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: Executing Phase 27
-Last activity: 2026-03-10 -- Completed Plan 01 (Auth Library Foundation)
+Last activity: 2026-03-10 -- Completed Plan 02 (Route Protection & Auth Routes)
 
-Progress: [███-------] 33% (Phase 27)
+Progress: [██████░░░░] 67% (Phase 27)
 
 ## Milestones
 
@@ -44,15 +44,16 @@ Progress: [███-------] 33% (Phase 27)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3 (v3.0)
+- Total plans completed: 4 (v3.0)
 - Average duration: 2.3min
-- Total execution time: 7min
+- Total execution time: 9min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 26 | 01 | 2min | 1 | 2 |
 | 26 | 02 | 1min | 2 | 2 |
 | 27 | 01 | 4min | 2 | 10 |
+| 27 | 02 | 2min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -68,6 +69,9 @@ See .planning/PROJECT.md Key Decisions table for complete history.
 - [27-01] Store only extracted claims + refresh token in session cookie (not full ID token) to avoid 4KB cookie limit
 - [27-01] Ephemeral SESSION_SECRET generated in entrypoint.js if not provided (rotates on container restart)
 - [27-01] Cognito secret fetch is non-fatal -- app can start without auth features
+- [27-02] Use getIronSession with request.cookies/response.cookies in proxy.ts (not cookies() helper)
+- [27-02] 5-minute refresh threshold for transparent token refresh in proxy
+- [27-02] Failed refresh redirects to / for silent re-auth via Cognito/Okta SSO
 
 ### Pending Todos
 
@@ -83,6 +87,6 @@ See .planning/PROJECT.md Key Decisions table for complete history.
 
 ## Session Continuity
 
-Last session: 2026-03-10T15:04:06Z
-Stopped at: Completed 27-01-PLAN.md
-Next: Execute Plan 02 (Auth callback route, proxy/middleware) or Plan 03.
+Last session: 2026-03-10T15:09:10Z
+Stopped at: Completed 27-02-PLAN.md
+Next: Execute Plan 03 (Landing page with Sign in button, conditional AppShell layout).
