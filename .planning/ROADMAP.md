@@ -100,11 +100,11 @@ See [v2.0 archive](milestones/v2.0-ROADMAP.md) for full details.
   2. A test user can complete SAML authentication through Cognito Hosted UI and receive JWT tokens containing their email and group claims
   3. PreTokenGeneration Lambda correctly maps Okta group attributes to cognito:groups in the ID token
   4. Cognito client credentials are stored securely and accessible to ECS task environment
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 26-01: TBD
-- [ ] 26-02: TBD
+- [ ] 26-01-PLAN.md -- PreTokenGeneration Lambda handler and unit tests (INFRA-02)
+- [ ] 26-02-PLAN.md -- CDK stack Cognito resources, secret extraction, ECS wiring, and CDK assertions (INFRA-01, INFRA-02, INFRA-03)
 
 ### Phase 27: Auth Flow
 **Goal**: Users authenticate via Okta SSO through the application with persistent sessions and protected routes
@@ -167,7 +167,7 @@ Phases execute in numeric order: 26 -> 27 -> 28 -> 29
 | 13-17 | v1.2      | 8/8            | Complete | 2026-01-27 |
 | 18-20 | v1.3      | 2/?            | Paused   | -          |
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
-| 26. Cognito Infrastructure | v3.0 | 0/? | Not started | - |
+| 26. Cognito Infrastructure | v3.0 | 0/2 | Not started | - |
 | 27. Auth Flow | v3.0 | 0/? | Not started | - |
 | 28. Data Isolation | v3.0 | 0/? | Not started | - |
 | 29. Admin UI and Polish | v3.0 | 0/? | Not started | - |
