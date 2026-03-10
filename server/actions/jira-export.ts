@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { db } from "@/lib/db";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
 import {
   extractExportData,
   getEpicOptions,
@@ -39,6 +40,7 @@ export async function getExportStats(
   projectId: string,
   scope?: ExportScope
 ): Promise<ExportStats> {
+  await getAuthorizedProject(projectId);
   const effectiveScope: ExportScope = scope || { mode: "all" };
 
   try {
@@ -63,6 +65,8 @@ export async function previewExport(
   projectId: string,
   config: ExportConfig
 ): Promise<ExportPreview> {
+  await getAuthorizedProject(projectId);
+
   try {
     // Extract data
     const data = await extractExportData(projectId, config.scope);
@@ -131,6 +135,8 @@ export async function generateExport(
   projectId: string,
   config: ExportConfig
 ): Promise<ExportBundle> {
+  await getAuthorizedProject(projectId);
+
   try {
     return await runExportPipeline(projectId, config);
   } catch (error) {
@@ -147,6 +153,8 @@ export async function generateExport(
 // ─────────────────────────────────────────────────────────────────
 
 export async function getAvailableRuns(projectId: string): Promise<RunOption[]> {
+  await getAuthorizedProject(projectId);
+
   const runs = await db.run.findMany({
     where: {
       projectId,
@@ -193,6 +201,7 @@ export async function getAvailableRuns(projectId: string): Promise<RunOption[]> 
 // ─────────────────────────────────────────────────────────────────
 
 export async function getEpicsForSelection(projectId: string): Promise<EpicOption[]> {
+  await getAuthorizedProject(projectId);
   return getEpicOptions(projectId);
 }
 
@@ -202,6 +211,8 @@ export async function getEpicsForSelection(projectId: string): Promise<EpicOptio
 // ─────────────────────────────────────────────────────────────────
 
 export async function getProjectForExport(projectId: string) {
+  await getAuthorizedProject(projectId);
+
   const project = await db.project.findUnique({
     where: { id: projectId },
     select: {
@@ -232,6 +243,8 @@ export async function getFullPreviewItems(
   projectId: string,
   config: ExportConfig
 ): Promise<FullPreviewData> {
+  await getAuthorizedProject(projectId);
+
   try {
     // Extract data from database
     const data = await extractExportData(projectId, config.scope);

@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
 import { parseMssCSV, importMssToDatabase } from "@/lib/mss/csv-import";
 import type {
   MssImportResult,
@@ -452,6 +453,9 @@ export async function updateEpicMss(
       return { success: false, error: "Epic not found" };
     }
 
+    // Verify ownership
+    try { await getAuthorizedProject(epic.projectId); } catch { return { success: false, error: "Project not found" }; }
+
     // Validate service area exists if provided
     if (mssServiceAreaId !== null) {
       const serviceArea = await db.mssServiceArea.findUnique({
@@ -487,10 +491,16 @@ export async function updateStoryMss(
 ): Promise<MssAssignmentResult> {
   try {
     // Validate story exists
-    const story = await db.story.findUnique({ where: { id: storyId } });
+    const story = await db.story.findUnique({
+      where: { id: storyId },
+      include: { epic: { select: { projectId: true } } },
+    });
     if (!story) {
       return { success: false, error: "Story not found" };
     }
+
+    // Verify ownership
+    try { await getAuthorizedProject(story.epic.projectId); } catch { return { success: false, error: "Project not found" }; }
 
     // Validate service area exists if provided
     if (mssServiceAreaId !== null) {

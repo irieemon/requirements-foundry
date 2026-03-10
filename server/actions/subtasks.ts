@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
 import { createRunLogger } from "@/lib/observability";
 import { executeSubtaskGeneration, finalizeSubtaskRun } from "@/lib/run-engine/subtask-executor";
 import {
@@ -39,6 +40,9 @@ export async function startGenerateSubtasks(
     if (!epic) {
       return { success: false, error: "Epic not found" };
     }
+
+    // Verify ownership
+    try { await getAuthorizedProject(epic.project.id); } catch { return { success: false, error: "Project not found" }; }
 
     if (epic.stories.length === 0) {
       return { success: false, error: "No stories found to generate subtasks for" };
@@ -113,6 +117,11 @@ export async function startGenerateSubtasks(
 // ============================================
 
 export async function getBatchSubtaskProgress(runId: string): Promise<BatchSubtaskProgress | null> {
+  // Verify ownership via run's project
+  const runCheck = await db.run.findUnique({ where: { id: runId }, select: { projectId: true } });
+  if (!runCheck) return null;
+  try { await getAuthorizedProject(runCheck.projectId); } catch { return null; }
+
   const run = await db.run.findUnique({
     where: { id: runId },
     include: {
@@ -199,6 +208,9 @@ export async function cancelBatchSubtaskRun(
     return { success: false, error: "Run not found" };
   }
 
+  // Verify ownership
+  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+
   if (run.type !== RunType.GENERATE_SUBTASKS) {
     return { success: false, error: "Not a subtask generation run" };
   }
@@ -246,6 +258,9 @@ export async function retryFailedStories(
     return { success: false, error: "Run not found" };
   }
 
+  // Verify ownership
+  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+
   if (run.type !== RunType.GENERATE_SUBTASKS) {
     return { success: false, error: "Not a subtask generation run" };
   }
@@ -288,6 +303,8 @@ export interface ActiveSubtaskRunResult {
 export async function getActiveSubtaskRun(
   projectId: string
 ): Promise<ActiveSubtaskRunResult> {
+  await getAuthorizedProject(projectId);
+
   const activeRun = await db.run.findFirst({
     where: {
       projectId,
@@ -349,6 +366,11 @@ export interface StoryForSubtasks {
 export async function getStoriesForSubtaskGeneration(
   epicId: string
 ): Promise<StoryForSubtasks[]> {
+  // Verify ownership via epic's project
+  const epicCheck = await db.epic.findUnique({ where: { id: epicId }, select: { projectId: true } });
+  if (!epicCheck) return [];
+  await getAuthorizedProject(epicCheck.projectId);
+
   const stories = await db.story.findMany({
     where: { epicId },
     include: {

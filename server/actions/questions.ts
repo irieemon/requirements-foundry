@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
 import { getQuestionGenerator } from "@/lib/ai/question-generator";
 import type { ExtractedContent } from "@/lib/documents/types";
 import {
@@ -48,6 +49,9 @@ export async function generateQuestionsForUpload(uploadId: string): Promise<{
     if (!upload) {
       return { success: false, error: "Upload not found" };
     }
+
+    // Verify ownership
+    try { await getAuthorizedProject(upload.projectId); } catch { return { success: false, error: "Project not found" }; }
 
     // 2. Check if context exists - questions require context form to be submitted first
     if (!upload.context) {
@@ -178,6 +182,9 @@ export async function submitQuestionAnswers(
       return { success: false, error: "Upload not found" };
     }
 
+    // Verify ownership
+    try { await getAuthorizedProject(upload.projectId); } catch { return { success: false, error: "Project not found" }; }
+
     if (!upload.context) {
       return { success: false, error: "Upload context not found" };
     }
@@ -245,6 +252,9 @@ export async function getQuestionsForUpload(uploadId: string): Promise<{
     if (!upload) {
       return { questions: null, answers: null, status: "no-context" };
     }
+
+    // Verify ownership
+    try { await getAuthorizedProject(upload.projectId); } catch { return { questions: null, answers: null, status: "no-context" }; }
 
     // No context form submitted yet
     if (!upload.context) {
