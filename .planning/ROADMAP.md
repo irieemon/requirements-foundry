@@ -168,6 +168,6 @@ Phases execute in numeric order: 26 -> 27 -> 28 -> 29
 | 18-20 | v1.3      | 2/?            | Paused   | -          |
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26. Cognito Infrastructure | 2/2 | Complete    | 2026-03-10 | - |
-| 27. Auth Flow | 3/3 | Complete   | 2026-03-10 | - |
+| 27. Auth Flow | 3/3 | Complete    | 2026-03-10 | - |
 | 28. Data Isolation | v3.0 | 0/? | Not started | - |
 | 29. Admin UI and Polish | v3.0 | 0/? | Not started | - |
