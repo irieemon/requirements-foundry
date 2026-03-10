@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const rawGroups = payload["custom:groups"];
     if (rawGroups) {
       if (Array.isArray(rawGroups)) {
-        groups = rawGroups;
+        groups = rawGroups as string[];
       } else if (typeof rawGroups === "string") {
         try {
           const parsed = JSON.parse(rawGroups);
