@@ -21,6 +21,7 @@ interface ProjectCardProps {
     name: string;
     description: string | null;
     createdAt: Date;
+    ownerLabel?: string;
     _count: {
       uploads: number;
       cards: number;
@@ -114,6 +115,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <p className="text-xs text-muted-foreground">
           Created {formatDistanceToNow(project.createdAt, { addSuffix: true })}
         </p>
+        {project.ownerLabel && (
+          <p className="text-xs text-muted-foreground mt-1">Owner: {project.ownerLabel}</p>
+        )}
       </CardContent>
     </Card>
   );

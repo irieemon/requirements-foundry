@@ -2,9 +2,14 @@ import { db } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { RunList } from "@/components/runs/run-list";
+import { getCurrentUser } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth/authorization";
 
 export default async function RunsPage() {
+  const user = await getCurrentUser();
+  const where = isAdmin(user.email) ? {} : { project: { userId: user.email } };
   const runs = await db.run.findMany({
+    where,
     orderBy: { createdAt: "desc" },
     take: 50,
     include: {

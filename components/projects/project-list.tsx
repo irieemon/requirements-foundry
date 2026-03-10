@@ -9,6 +9,7 @@ interface ProjectListProps {
     name: string;
     description: string | null;
     createdAt: Date;
+    ownerLabel?: string;
     _count: {
       uploads: number;
       cards: number;
