@@ -1,4 +1,4 @@
-import { handler } from '../lambda/pre-token-generation/index.js';
+import { handler } from '../lambda/pre-token-generation/index';
 
 interface PreTokenGenerationEvent {
   request: {
