@@ -4,14 +4,17 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "./sidebar";
 import { MobileNav } from "./mobile-nav";
+import type { UserInfo } from "@/lib/auth/types";
 
 interface AppShellProps {
   children: React.ReactNode;
+  user: UserInfo;
+  isAdmin: boolean;
 }
 
 const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, user, isAdmin }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -44,10 +47,10 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-canvas">
       {/* Mobile navigation - visible on screens < md */}
-      <MobileNav />
+      <MobileNav user={user} isAdmin={isAdmin} />
 
       {/* Desktop sidebar - visible on screens >= md */}
-      <Sidebar collapsed={collapsed} onToggle={handleToggle} />
+      <Sidebar collapsed={collapsed} onToggle={handleToggle} user={user} isAdmin={isAdmin} />
 
       {/* Main content area */}
       {/* Mobile: no left padding (full width) */}
