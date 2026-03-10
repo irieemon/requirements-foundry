@@ -17,7 +17,7 @@ Requirements for v3.0 milestone. Each maps to roadmap phases.
 
 ### Data Isolation
 
-- [ ] **DATA-01**: New projects are automatically assigned to the authenticated user
+- [x] **DATA-01**: New projects are automatically assigned to the authenticated user
 - [x] **DATA-02**: Users see only their own projects in all views
 - [x] **DATA-03**: All server actions and API routes enforce userId ownership checks
 - [x] **DATA-04**: Existing projects are migrated to the admin user during deployment
@@ -77,7 +77,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-03 | Phase 27 | Complete |
 | AUTH-04 | Phase 27 | Complete |
 | AUTH-05 | Phase 27 | Complete |
-| DATA-01 | Phase 28 | Pending |
+| DATA-01 | Phase 28 | Complete |
 | DATA-02 | Phase 28 | Complete |
 | DATA-03 | Phase 28 | Complete |
 | DATA-04 | Phase 28 | Complete |

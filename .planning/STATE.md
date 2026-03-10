@@ -56,6 +56,7 @@ Progress: [██████████] 100% (Phase 28)
 | 27 | 02 | 2min | 2 | 4 |
 | 27 | 03 | 3min | 3 | 4 |
 | 28 | 01 | 2min | 2 | 4 |
+| 28 | 02 | 7min | 2 | 11 |
 | 28 | 03 | 4min | 2 | 12 |
 
 ## Accumulated Context
@@ -79,6 +80,9 @@ See .planning/PROJECT.md Key Decisions table for complete history.
 - [27-03] Route group (authenticated) wraps children in AppShell; root layout is bare shell
 - [28-01] Hardcoded ADMIN_EMAIL constant -- Okta group detection deferred per user decision
 - [28-01] Manual migration directory creation due to Prisma CLI ESM/CJS incompatibility on local Node 21.5.0
+- [28-02] MSS taxonomy CRUD kept global (no ownership check) -- shared data across all users
+- [28-02] Entity chain lookup for ownership (run/upload/epic -> project) rather than adding userId to every entity
+- [28-02] Try/catch wrapping for structured {success, error} responses; direct call for functions that throw/return null
 - [28-03] API routes use getCurrentUser + isAdmin directly (not getAuthorizedProject) to avoid notFound() throw in route handlers
 - [28-03] Projects page calls getAuthorizedProjects directly for admin owner badges
 - [28-03] Run ownership verified via run->project->userId join pattern
