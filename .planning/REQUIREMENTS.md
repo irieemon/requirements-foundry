@@ -9,9 +9,9 @@ Requirements for v3.0 milestone. Each maps to roadmap phases.
 
 ### Authentication
 
-- [ ] **AUTH-01**: User can sign in via Okta SAML SSO with seamless redirect (no extra login if already authenticated)
+- [x] **AUTH-01**: User can sign in via Okta SAML SSO with seamless redirect (no extra login if already authenticated)
 - [ ] **AUTH-02**: Unauthenticated user sees a public landing page with "Sign in with Okta" button
-- [ ] **AUTH-03**: User session persists via HTTP-only cookies with automatic refresh via Okta SSO session
+- [x] **AUTH-03**: User session persists via HTTP-only cookies with automatic refresh via Okta SSO session
 - [ ] **AUTH-04**: User can log out and is redirected to the landing page
 - [ ] **AUTH-05**: All app routes are protected — unauthenticated requests redirect to landing page
 
@@ -72,9 +72,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 27 | Pending |
+| AUTH-01 | Phase 27 | Complete |
 | AUTH-02 | Phase 27 | Pending |
-| AUTH-03 | Phase 27 | Pending |
+| AUTH-03 | Phase 27 | Complete |
 | AUTH-04 | Phase 27 | Pending |
 | AUTH-05 | Phase 27 | Pending |
 | DATA-01 | Phase 28 | Pending |
