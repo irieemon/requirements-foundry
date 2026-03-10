@@ -2,14 +2,22 @@ import "server-only";
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 
 /**
- * Singleton Cognito JWT verifier.
+ * Lazy-initialized singleton Cognito JWT verifier.
+ * Deferred to avoid crashing when env vars are absent (e.g. local dev).
  * JWKS keys are cached automatically by aws-jwt-verify.
  */
-const verifier = CognitoJwtVerifier.create({
-  userPoolId: process.env.COGNITO_USER_POOL_ID!,
-  tokenUse: "id",
-  clientId: process.env.COGNITO_CLIENT_ID!,
-});
+let verifier: ReturnType<typeof CognitoJwtVerifier.create> | null = null;
+
+function getVerifier() {
+  if (!verifier) {
+    verifier = CognitoJwtVerifier.create({
+      userPoolId: process.env.COGNITO_USER_POOL_ID!,
+      tokenUse: "id",
+      clientId: process.env.COGNITO_CLIENT_ID!,
+    });
+  }
+  return verifier;
+}
 
 /**
  * Verify a Cognito ID token.
@@ -20,5 +28,5 @@ const verifier = CognitoJwtVerifier.create({
  * @throws If token is invalid, expired, or has wrong claims
  */
 export async function verifyIdToken(token: string) {
-  return verifier.verify(token);
+  return getVerifier().verify(token);
 }
