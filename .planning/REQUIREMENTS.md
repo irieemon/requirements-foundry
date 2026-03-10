@@ -35,9 +35,9 @@ Requirements for v3.0 milestone. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Cognito User Pool deployed via CDK with Okta SAML identity provider
+- [x] **INFRA-01**: Cognito User Pool deployed via CDK with Okta SAML identity provider
 - [x] **INFRA-02**: PreTokenGeneration Lambda maps Okta groups to JWT claims
-- [ ] **INFRA-03**: Cognito client credentials stored securely (Secrets Manager or environment)
+- [x] **INFRA-03**: Cognito client credentials stored securely (Secrets Manager or environment)
 
 ## v2 Requirements
 
@@ -86,9 +86,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADMIN-03 | Phase 28 | Pending |
 | UX-01 | Phase 29 | Pending |
 | UX-02 | Phase 29 | Pending |
-| INFRA-01 | Phase 26 | Pending |
+| INFRA-01 | Phase 26 | Complete |
 | INFRA-02 | Phase 26 | Complete |
-| INFRA-03 | Phase 26 | Pending |
+| INFRA-03 | Phase 26 | Complete |
 
 **Coverage:**
 - v1 requirements: 17 total

@@ -84,7 +84,7 @@ See [v2.0 archive](milestones/v2.0-ROADMAP.md) for full details.
 
 ### Phases
 
-- [ ] **Phase 26: Cognito Infrastructure** - Deploy Cognito User Pool with Okta SAML federation and group-mapping Lambda via CDK
+- [x] **Phase 26: Cognito Infrastructure** - Deploy Cognito User Pool with Okta SAML federation and group-mapping Lambda via CDK (completed 2026-03-10)
 - [ ] **Phase 27: Auth Flow** - End-to-end login, session management, route protection, and logout
 - [ ] **Phase 28: Data Isolation** - Per-user project ownership with admin bypass and existing data migration
 - [ ] **Phase 29: Admin UI and Polish** - Admin project toggle, user identity display, and user menu
@@ -100,7 +100,7 @@ See [v2.0 archive](milestones/v2.0-ROADMAP.md) for full details.
   2. A test user can complete SAML authentication through Cognito Hosted UI and receive JWT tokens containing their email and group claims
   3. PreTokenGeneration Lambda correctly maps Okta group attributes to cognito:groups in the ID token
   4. Cognito client credentials are stored securely and accessible to ECS task environment
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 26-01-PLAN.md -- PreTokenGeneration Lambda handler and unit tests (INFRA-02)
@@ -167,7 +167,7 @@ Phases execute in numeric order: 26 -> 27 -> 28 -> 29
 | 13-17 | v1.2      | 8/8            | Complete | 2026-01-27 |
 | 18-20 | v1.3      | 2/?            | Paused   | -          |
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
-| 26. Cognito Infrastructure | 1/2 | In Progress|  | - |
+| 26. Cognito Infrastructure | 2/2 | Complete   | 2026-03-10 | - |
 | 27. Auth Flow | v3.0 | 0/? | Not started | - |
 | 28. Data Isolation | v3.0 | 0/? | Not started | - |
 | 29. Admin UI and Polish | v3.0 | 0/? | Not started | - |
