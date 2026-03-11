@@ -48,8 +48,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // Read session from encrypted cookie on the request
   const response = NextResponse.next();
   const session = await getIronSession<SessionData>(
-    request.cookies,
-    response.cookies,
+    request,
+    response,
     sessionOptions
   );
 
