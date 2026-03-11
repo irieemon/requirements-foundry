@@ -273,8 +273,16 @@ export class RequirementsFoundryStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+    // SESSION_SECRET in Secrets Manager (for iron-session cookie encryption)
+    const sessionSecret = new secretsmanager.Secret(this, 'SessionSecret', {
+      secretName: 'requirements-foundry-prod/session-secret',
+      generateSecretString: { excludePunctuation: false, passwordLength: 64 },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
     // Grant task execution role read access to CRON_SECRET
     cronSecret.grantRead(taskExecutionRole);
+    sessionSecret.grantRead(taskExecutionRole);
 
     // --- Phase 26: Cognito Infrastructure ---
 
@@ -359,10 +367,17 @@ export class RequirementsFoundryStack extends cdk.Stack {
           cognito.OAuthScope.EMAIL,
           cognito.OAuthScope.PROFILE,
         ],
-        callbackUrls: ['http://localhost:3000/api/auth/callback'],
-        logoutUrls: ['http://localhost:3000/'],
+        callbackUrls: [
+          redirectUri,
+          'http://localhost:3000/api/auth/callback',
+        ],
+        logoutUrls: [
+          `http://${alb.loadBalancerDnsName}/`,
+          'http://localhost:3000/',
+        ],
       },
       supportedIdentityProviders: [
+        cognito.UserPoolClientIdentityProvider.COGNITO,
         cognito.UserPoolClientIdentityProvider.custom('Okta'),
       ],
       accessTokenValidity: cdk.Duration.hours(1),
@@ -435,6 +450,7 @@ export class RequirementsFoundryStack extends cdk.Stack {
       secrets: {
         CRON_SECRET: ecs.Secret.fromSecretsManager(cronSecret),
         COGNITO_CLIENT_SECRET: ecs.Secret.fromSecretsManager(cognitoSecret),
+        SESSION_SECRET: ecs.Secret.fromSecretsManager(sessionSecret),
       },
       portMappings: [{ containerPort: 3000, protocol: ecs.Protocol.TCP }],
     });

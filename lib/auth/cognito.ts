@@ -9,8 +9,9 @@
  */
 
 /**
- * Build the Cognito authorize URL that redirects directly to Okta
- * (bypasses Cognito Hosted UI via identity_provider=Okta parameter).
+ * Build the Cognito authorize URL.
+ * Goes to Cognito Hosted UI which shows available sign-in options
+ * (email/password and Okta when SAML is configured).
  *
  * @param returnTo - Optional path to redirect to after login (encoded in state param)
  * @returns Full authorize URL string
@@ -21,7 +22,6 @@ export function buildAuthorizeUrl(returnTo?: string): string {
     client_id: process.env.COGNITO_CLIENT_ID!,
     redirect_uri: process.env.COGNITO_REDIRECT_URI!,
     scope: "openid profile email",
-    identity_provider: "Okta",
     state: returnTo || "/",
   });
   return `https://${process.env.COGNITO_DOMAIN}/oauth2/authorize?${params}`;

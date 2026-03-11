@@ -45,7 +45,7 @@ export default async function LandingPage({
             </p>
           )}
           <Button asChild size="lg" className="w-full">
-            <a href={signInUrl}>Sign in with Okta</a>
+            <a href={signInUrl}>Sign in</a>
           </Button>
         </CardContent>
       </Card>
