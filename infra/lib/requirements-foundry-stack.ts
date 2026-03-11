@@ -18,6 +18,9 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cloudwatch_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as sns_subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
+import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import { Construct } from 'constructs';
 
 export class RequirementsFoundryStack extends cdk.Stack {
@@ -302,13 +305,19 @@ export class RequirementsFoundryStack extends cdk.Stack {
     });
 
     // Okta SAML Identity Provider (INFRA-01)
-    const oktaMetadataUrl = this.node.tryGetContext('oktaMetadataUrl')
-      || 'https://your-okta-domain.okta.com/app/PLACEHOLDER/sso/saml/metadata';
+    // Use file-based metadata (placeholder) until real Okta app is configured,
+    // then switch to URL-based: cognito.UserPoolIdentityProviderSamlMetadata.url(oktaMetadataUrl)
+    const oktaMetadataUrl = this.node.tryGetContext('oktaMetadataUrl');
+    const samlMetadataXml = require('fs').readFileSync(
+      require('path').join(__dirname, '..', 'saml-metadata-placeholder.xml'), 'utf-8'
+    );
 
     const samlProvider = new cognito.UserPoolIdentityProviderSaml(this, 'OktaSamlIdp', {
       userPool,
       name: 'Okta',
-      metadata: cognito.UserPoolIdentityProviderSamlMetadata.url(oktaMetadataUrl),
+      metadata: oktaMetadataUrl
+        ? cognito.UserPoolIdentityProviderSamlMetadata.url(oktaMetadataUrl)
+        : cognito.UserPoolIdentityProviderSamlMetadata.file(samlMetadataXml),
       attributeMapping: {
         email: cognito.ProviderAttribute.other('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'),
         custom: {
@@ -325,6 +334,8 @@ export class RequirementsFoundryStack extends cdk.Stack {
       code: lambda.Code.fromAsset('lambda/pre-token-generation'),
       timeout: cdk.Duration.seconds(5),
       memorySize: 128,
+      logGroup: logs.LogGroup.fromLogGroupName(this, 'PreTokenLogGroup',
+        '/aws/lambda/requirements-foundry-pre-token-generation'),
     });
 
     userPool.addTrigger(
@@ -334,6 +345,9 @@ export class RequirementsFoundryStack extends cdk.Stack {
     );
 
     // User Pool Client (INFRA-01)
+    // Cognito requires HTTPS for non-localhost callback URLs.
+    // Using localhost placeholder until HTTPS is configured on ALB.
+    // TODO: Replace with https://<domain>/api/auth/callback when HTTPS is set up.
     const redirectUri = `http://${alb.loadBalancerDnsName}/api/auth/callback`;
     const cognitoClient = userPool.addClient('AppClient', {
       userPoolClientName: 'requirements-foundry-app',
@@ -345,8 +359,8 @@ export class RequirementsFoundryStack extends cdk.Stack {
           cognito.OAuthScope.EMAIL,
           cognito.OAuthScope.PROFILE,
         ],
-        callbackUrls: [redirectUri],
-        logoutUrls: [`http://${alb.loadBalancerDnsName}/`],
+        callbackUrls: ['http://localhost:3000/api/auth/callback'],
+        logoutUrls: ['http://localhost:3000/'],
       },
       supportedIdentityProviders: [
         cognito.UserPoolClientIdentityProvider.custom('Okta'),
@@ -444,7 +458,7 @@ export class RequirementsFoundryStack extends cdk.Stack {
 
     // --- Phase 24: CI/CD and Operations Infrastructure ---
 
-    // GitHub OIDC Provider + IAM Role (CICD-02)
+    // GitHub OIDC Provider + IAM Role (CICD-02) — retained for CloudFormation stability
     const githubRepo = this.node.tryGetContext('githubRepo') || 'irieemon/requirements-foundry';
 
     const oidcProvider = new iam.OpenIdConnectProvider(this, 'GitHubOidc', {
@@ -477,6 +491,111 @@ export class RequirementsFoundryStack extends cdk.Stack {
       ],
       resources: ['*'],
     }));
+
+    // --- CodePipeline + CodeBuild (ARM64 native builds) ---
+
+    // CodeStar Connection to GitHub (must be confirmed in AWS Console after first deploy)
+    const connectionArn = this.node.tryGetContext('codestarConnectionArn')
+      || 'PENDING';
+    const [githubOwner, githubRepoName] = githubRepo.split('/');
+
+    // CodeBuild project: ARM64 native, large compute, Docker-privileged
+    const buildProject = new codebuild.PipelineProject(this, 'DockerBuild', {
+      projectName: 'requirements-foundry-build',
+      environment: {
+        buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
+        computeType: codebuild.ComputeType.LARGE,
+        privileged: true,
+      },
+      environmentVariables: {
+        REPOSITORY_URI: { value: repository.repositoryUri },
+        CONTAINER_NAME: { value: 'AppContainer' },
+        ECS_CLUSTER: { value: cluster.clusterName },
+        ECS_SERVICE: { value: 'requirements-foundry-prod-service' },
+      },
+      buildSpec: codebuild.BuildSpec.fromObject({
+        version: '0.2',
+        phases: {
+          pre_build: {
+            commands: [
+              'echo Logging in to Amazon ECR...',
+              'aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI',
+              'COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)',
+              'IMAGE_TAG=${COMMIT_HASH:=latest}',
+            ],
+          },
+          build: {
+            commands: [
+              'echo Build started on `date`',
+              'docker pull $REPOSITORY_URI:latest || true',
+              'docker build --cache-from $REPOSITORY_URI:latest -t $REPOSITORY_URI:latest -t $REPOSITORY_URI:$IMAGE_TAG .',
+            ],
+          },
+          post_build: {
+            commands: [
+              'echo Pushing Docker image...',
+              'docker push $REPOSITORY_URI:latest',
+              'docker push $REPOSITORY_URI:$IMAGE_TAG',
+              'printf \'[{"name":"%s","imageUri":"%s"}]\' $CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json',
+              'echo Build completed on `date`',
+            ],
+          },
+        },
+        artifacts: {
+          files: ['imagedefinitions.json'],
+        },
+      }),
+      timeout: cdk.Duration.minutes(20),
+    });
+
+    // Grant CodeBuild ECR access
+    repository.grantPullPush(buildProject);
+
+    // CodePipeline: Source → Build → Deploy
+    const sourceOutput = new codepipeline.Artifact('SourceOutput');
+    const buildOutput = new codepipeline.Artifact('BuildOutput');
+
+    const pipeline = new codepipeline.Pipeline(this, 'DeployPipeline', {
+      pipelineName: 'requirements-foundry-deploy',
+      pipelineType: codepipeline.PipelineType.V2,
+      stages: [
+        {
+          stageName: 'Source',
+          actions: [
+            new codepipeline_actions.CodeStarConnectionsSourceAction({
+              actionName: 'GitHub_Source',
+              owner: githubOwner,
+              repo: githubRepoName,
+              branch: 'main',
+              output: sourceOutput,
+              connectionArn,
+            }),
+          ],
+        },
+        {
+          stageName: 'Build',
+          actions: [
+            new codepipeline_actions.CodeBuildAction({
+              actionName: 'Docker_Build',
+              project: buildProject,
+              input: sourceOutput,
+              outputs: [buildOutput],
+            }),
+          ],
+        },
+        {
+          stageName: 'Deploy',
+          actions: [
+            new codepipeline_actions.EcsDeployAction({
+              actionName: 'ECS_Deploy',
+              service,
+              input: buildOutput,
+              deploymentTimeout: cdk.Duration.minutes(15),
+            }),
+          ],
+        },
+      ],
+    });
 
     // Lambda cron caller function (CRON-01)
     const cronLambda = new lambda.Function(this, 'CronCallerLambda', {
@@ -621,6 +740,7 @@ exports.handler = async () => {
     new cdk.CfnOutput(this, 'ServiceName', { value: service.serviceName, exportName: 'rf-prod-service-name' });
     new cdk.CfnOutput(this, 'LogGroupName', { value: logGroup.logGroupName, exportName: 'rf-prod-log-group' });
     new cdk.CfnOutput(this, 'GitHubActionsRoleArn', { value: deployRole.roleArn, exportName: 'rf-prod-github-role-arn' });
+    new cdk.CfnOutput(this, 'PipelineName', { value: pipeline.pipelineName, exportName: 'rf-prod-pipeline-name' });
     new cdk.CfnOutput(this, 'CronSecretArn', { value: cronSecret.secretArn, exportName: 'rf-prod-cron-secret-arn' });
     new cdk.CfnOutput(this, 'AlarmTopicArn', { value: alarmTopic.topicArn, exportName: 'rf-prod-alarm-topic-arn' });
 

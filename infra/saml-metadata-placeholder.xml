@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
+  entityID="https://placeholder.okta.com/placeholder">
+  <md:IDPSSODescriptor WantAuthnRequestsSigned="false"
+    protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDHzCCAgegAwIBAgIUCL/aAqMWyhCE1lUioGWBA7CzzEkwDQYJKoZIhvcNAQELBQAwHzEdMBsGA1UEAwwUcGxhY2Vob2xkZXIub2t0YS5jb20wHhcNMjYwMzExMDIwNzE4WhcNMzYwMzA4MDIwNzE4WjAfMR0wGwYDVQQDDBRwbGFjZWhvbGRlci5va3RhLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKCMENNMRRTpywqgArUHwTnkYyjDYiKoggP7EKCRJYGYe41W9oY0qq/4I4iEstKjVB/7+0u3cIOf+05eOZz1+OFOx4FYKsUal910rAfIQJMFc8+za7kDzjyzb0I6CMAPCTMWK/0Y7wnp0CSH6w9beNK3+halEbVMHXdX8h+sCy9tgPxXTOdpxA4/6W/fN2AsIdsW9cFX9ndKLX3KbKQLl1GCjSW5hp6Na662Hrs6zijQjrbpZckYT0hxbJ93DS13I+2Cb4lWpx6wqyI95I2DWroJWS7QOOo9hN3xOL9hdkafgvuC28O4QxYNgxMx6R2eLu611kpIG/Bj5eC+gS/6S/MCAwEAAaNTMFEwHQYDVR0OBBYEFGdRH04oCoyMxHrmGtaf5MxyBI+HMB8GA1UdIwQYMBaAFGdRH04oCoyMxHrmGtaf5MxyBI+HMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAG95rCOQHFmz8hwyDS6kGwOSKWAL5qNp9HlTICYfJ8LBXjsRoYZAP+JrzkLBxCLl7Oub3xAldjdnATGRLShfkZ832HoBeJZdJi8Sm6Mv6/tBq+rbqJ0lOZ8PP3mjm9VK1gBq9JMiJ1wMJKSd9gS6/rahLUp9WbWms5TMAa/RYuLQvZnGwfgB3fSikLseGyQXeqQaIJyUeBw3WkR5huRIeZQCwllpFOsmyYzayv39bHrmbW9sRlsWmEHnVdFi8WfjlFBGbC7laFlA/d5TNpv0fnsFFiVjSlQcV1YdtrQjXx1tbIM9vB40lH8VqmhpaLbaPb/x7TkTVdoFzqnmGewCMCU=</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat>
+    <md:SingleSignOnService
+      Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+      Location="https://placeholder.okta.com/sso/saml"/>
+    <md:SingleSignOnService
+      Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+      Location="https://placeholder.okta.com/sso/saml"/>
+  </md:IDPSSODescriptor>
+</md:EntityDescriptor>
