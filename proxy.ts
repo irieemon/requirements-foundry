@@ -81,11 +81,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       const rawGroups = payload["custom:groups"];
       if (rawGroups) {
         if (Array.isArray(rawGroups)) {
-          groups = rawGroups;
+          groups = rawGroups.filter((g): g is string => typeof g === "string");
         } else if (typeof rawGroups === "string") {
           try {
             const parsed = JSON.parse(rawGroups);
-            groups = Array.isArray(parsed) ? parsed : [rawGroups];
+            groups = Array.isArray(parsed) ? parsed.filter((g: unknown): g is string => typeof g === "string") : [rawGroups];
           } catch {
             groups = rawGroups.split(",").map((g: string) => g.trim());
           }
