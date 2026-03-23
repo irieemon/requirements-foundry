@@ -21,6 +21,8 @@ import * as sns_subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import { Construct } from 'constructs';
 
 export class RequirementsFoundryStack extends cdk.Stack {
@@ -214,6 +216,23 @@ export class RequirementsFoundryStack extends cdk.Stack {
       priority: 1,
     });
 
+    // --- CloudFront Distribution (HTTPS for Cognito OAuth) ---
+    // HTTP origin to ALB, HTTPS to viewers. All caching disabled for dynamic Next.js app.
+    const distribution = new cloudfront.Distribution(this, 'Distribution', {
+      comment: 'Requirements Foundry - HTTPS termination for Cognito OAuth',
+      defaultBehavior: {
+        origin: new origins.HttpOrigin(alb.loadBalancerDnsName, {
+          protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+          httpPort: 80,
+        }),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+      },
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+    });
+
     // IAM Task Execution Role (SEC-03)
     const taskExecutionRole = new iam.Role(this, 'TaskExecutionRole', {
       roleName: 'requirements-foundry-prod-task-execution',
@@ -353,10 +372,8 @@ export class RequirementsFoundryStack extends cdk.Stack {
     );
 
     // User Pool Client (INFRA-01)
-    // Cognito requires HTTPS for non-localhost callback URLs.
-    // Using localhost placeholder until HTTPS is configured on ALB.
-    // TODO: Replace with https://<domain>/api/auth/callback when HTTPS is set up.
-    const redirectUri = `http://${alb.loadBalancerDnsName}/api/auth/callback`;
+    // CloudFront provides HTTPS termination for Cognito OAuth callbacks.
+    const redirectUri = `https://${distribution.distributionDomainName}/api/auth/callback`;
     const cognitoClient = userPool.addClient('AppClient', {
       userPoolClientName: 'requirements-foundry-app',
       generateSecret: true,
@@ -372,7 +389,7 @@ export class RequirementsFoundryStack extends cdk.Stack {
           'http://localhost:3000/api/auth/callback',
         ],
         logoutUrls: [
-          `http://${alb.loadBalancerDnsName}/`,
+          `https://${distribution.distributionDomainName}/`,
           'http://localhost:3000/',
         ],
       },
@@ -759,6 +776,15 @@ exports.handler = async () => {
     new cdk.CfnOutput(this, 'PipelineName', { value: pipeline.pipelineName, exportName: 'rf-prod-pipeline-name' });
     new cdk.CfnOutput(this, 'CronSecretArn', { value: cronSecret.secretArn, exportName: 'rf-prod-cron-secret-arn' });
     new cdk.CfnOutput(this, 'AlarmTopicArn', { value: alarmTopic.topicArn, exportName: 'rf-prod-alarm-topic-arn' });
+    new cdk.CfnOutput(this, 'CloudFrontDomain', {
+      value: distribution.distributionDomainName,
+      exportName: 'rf-prod-cf-domain',
+      description: 'CloudFront distribution domain — use this as the app URL',
+    });
+    new cdk.CfnOutput(this, 'CloudFrontDistributionId', {
+      value: distribution.distributionId,
+      exportName: 'rf-prod-cf-distribution-id',
+    });
 
     // Cognito Outputs (Phase 26)
     new cdk.CfnOutput(this, 'CognitoUserPoolId', {
