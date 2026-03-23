@@ -1,4 +1,3 @@
-import { buildAuthorizeUrl } from "@/lib/auth/cognito";
 import {
   Card,
   CardContent,
@@ -6,7 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { EmailLoginForm } from "@/components/auth/email-login-form";
 
 export default async function LandingPage({
   searchParams,
@@ -14,7 +13,6 @@ export default async function LandingPage({
   searchParams: Promise<{ error?: string; returnTo?: string }>;
 }) {
   const params = await searchParams;
-  const signInUrl = buildAuthorizeUrl(params.returnTo);
 
   const errorMessages: Record<string, string> = {
     auth_failed: "Authentication failed. Please try again.",
@@ -44,9 +42,7 @@ export default async function LandingPage({
               {errorMessage}
             </p>
           )}
-          <Button asChild size="lg" className="w-full">
-            <a href={signInUrl}>Sign in</a>
-          </Button>
+          <EmailLoginForm returnTo={params.returnTo} />
         </CardContent>
       </Card>
     </main>

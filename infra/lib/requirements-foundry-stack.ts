@@ -395,7 +395,8 @@ export class RequirementsFoundryStack extends cdk.Stack {
       },
       supportedIdentityProviders: [
         cognito.UserPoolClientIdentityProvider.COGNITO,
-        cognito.UserPoolClientIdentityProvider.custom('Okta'),
+        // Re-enable when IT configures the real Okta SAML app:
+        // cognito.UserPoolClientIdentityProvider.custom('Okta'),
       ],
       accessTokenValidity: cdk.Duration.hours(1),
       idTokenValidity: cdk.Duration.hours(1),
