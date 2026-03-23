@@ -106,12 +106,13 @@ Requirements Foundry is a multi-user tool that transforms uploaded documents int
 
 ## Context
 
-**Current state (v3.0 shipped):**
+**Current state (v4.0 Phase 30 complete):**
 - ~70,000+ lines of TypeScript/TSX/JS/JSON
 - Tech stack: Next.js 16, Prisma 7, Bedrock Claude AI, AWS (ECS Fargate, RDS, S3, ALB, Cognito, Secrets Manager)
 - Infrastructure: CDK (TypeScript), GitHub Actions CI/CD with OIDC
 - Authentication: Cognito + Okta SAML SSO, iron-session cookies, JWT verification via aws-jwt-verify
 - Data isolation: per-user project ownership with centralized authorization module
+- Identity: User table with login-time upsert from Cognito claims, ProjectShare junction table for multi-user access
 - Admin: hardcoded admin email with UI toggle for all-projects view
 - All generative flows working with real-time progress on AWS
 - Complete MSS taxonomy management
@@ -198,4 +199,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-23 — v4.0 Project Sharing milestone started*
+*Last updated: 2026-03-23 — Phase 30 Data Foundation complete*
