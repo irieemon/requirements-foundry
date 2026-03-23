@@ -61,22 +61,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| SHARE-01 | — | Pending |
-| SHARE-02 | — | Pending |
-| SHARE-03 | — | Pending |
-| PAGE-01 | — | Pending |
-| PAGE-02 | — | Pending |
-| PAGE-03 | — | Pending |
+| DATA-01 | Phase 30 | Pending |
+| DATA-02 | Phase 30 | Pending |
+| AUTH-01 | Phase 31 | Pending |
+| AUTH-02 | Phase 31 | Pending |
+| AUTH-03 | Phase 31 | Pending |
+| SHARE-01 | Phase 32 | Pending |
+| SHARE-02 | Phase 32 | Pending |
+| SHARE-03 | Phase 32 | Pending |
+| PAGE-01 | Phase 33 | Pending |
+| PAGE-02 | Phase 33 | Pending |
+| PAGE-03 | Phase 33 | Pending |
 
 **Coverage:**
 - v4.0 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-23*

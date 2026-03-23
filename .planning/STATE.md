@@ -1,48 +1,46 @@
----
-gsd_state_version: 1.0
-milestone: v4.0
-milestone_name: Project Sharing
-status: Active
-stopped_at: Defining requirements
-last_updated: "2026-03-23T21:17:00.000Z"
-progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
----
-
 # Project State
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-23)
 
-**Core value:** Transform uploaded documents into structured, exportable requirements with AI — securely isolated per user with corporate SSO.
-**Current focus:** v4.0 Project Sharing — defining requirements
+**Core value:** Enable project owners to share projects with other users as viewers or editors, with clear UI separation between owned and shared projects.
+**Current focus:** Phase 30 — Data Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-23 — Milestone v4.0 started
+Phase: 30 (1 of 4 in v4.0) (Data Foundation)
+Plan: 0 of ? in current phase
+Status: Ready to plan
+Last activity: 2026-03-23 — Roadmap created for v4.0 Project Sharing
 
-## Milestones
+Progress: [░░░░░░░░░░] 0%
 
-- **v1.0** — SHIPPED 2026-01-15 (Phases 1-9)
-- **v1.1** — SHIPPED 2026-01-20 (Phases 10-12)
-- **v1.2** — SHIPPED 2026-01-27 (Phases 13-17)
-- **v1.3** — PAUSED at Phase 19 (resume when ready)
-- **v2.0** — SHIPPED 2026-03-09 (Phases 21-25)
-- **v3.0** — SHIPPED 2026-03-10 (Phases 26-29)
-- **v4.0** — ACTIVE (Project Sharing)
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 64 (across v1.0-v3.0)
+- Average duration: ~3.2 min (v3.0 baseline)
+- Total execution time: ~3.4 hours
+
+**Recent Trend (v3.0):**
+- 10 plans in 32 minutes (avg 3.2 min/plan)
+- Trend: Stable
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
 ### Decisions
 
-See .planning/PROJECT.md Key Decisions table for complete history.
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- [v3.0]: Entity chain ownership (Project is root; child tables carry no userId)
+- [v3.0]: 404-not-403 for unauthorized access (prevents leaking project existence)
+- [v3.0]: Centralized authorization module in lib/auth/authorization.ts
+- [v4.0]: User table approach over Cognito ListUsers (faster, no rate limits, FK-safe)
+- [v4.0]: Backfill User table from SELECT DISTINCT userId FROM Project at migration time
 
 ### Pending Todos
 
@@ -50,11 +48,14 @@ See .planning/PROJECT.md Key Decisions table for complete history.
 
 ### Blockers/Concerns
 
+- Authorization checks scattered in ~6 API route handlers outside centralized module (must consolidate in Phase 31)
+- No User table exists yet; user picker and owner display depend on Phase 30 completing first
+- Concurrent editor run conflicts deferred to v4.x (acceptable for v4.0 launch)
 - Okta SAML app integration requires IT team action (external dependency)
 - Corporate VPN routing to internal ALB not available (using internet-facing as workaround)
 
 ## Session Continuity
 
-Last session: 2026-03-23T21:17:00.000Z
-Stopped at: Defining requirements for v4.0
-Next: Complete requirements → roadmap
+Last session: 2026-03-23
+Stopped at: Roadmap created for v4.0 Project Sharing milestone
+Resume file: None
