@@ -1,0 +1,83 @@
+# Requirements: Requirements Foundry
+
+**Milestone:** v4.0 Project Sharing
+**Defined:** 2026-03-23
+**Core Value:** Enable project owners to share projects with other users as viewers or editors, with clear UI separation between owned and shared projects.
+
+## v4.0 Requirements
+
+### Data Foundation
+
+- [ ] **DATA-01**: User can have their identity stored locally on first login (User table with email, display name, timestamps)
+- [ ] **DATA-02**: User can have a project shared with them via a ProjectShare record (projectId, userId, role: viewer/editor)
+
+### Authorization
+
+- [ ] **AUTH-01**: User can access shared projects based on their effective role (owner/editor/viewer/admin)
+- [ ] **AUTH-02**: User with viewer role cannot trigger mutations (uploads, AI runs, edits, deletions, exports)
+- [ ] **AUTH-03**: Admin can still access all projects regardless of sharing
+
+### Share Management
+
+- [ ] **SHARE-01**: User can share their project with one or more existing users via a share dialog
+- [ ] **SHARE-02**: User can search for other users by email or name when sharing (user picker)
+- [ ] **SHARE-03**: User can remove a share or change a shared user's role (viewer/editor)
+
+### Projects Page
+
+- [ ] **PAGE-01**: User can see shared projects in a separate "Shared with me" section
+- [ ] **PAGE-02**: User can see their role (viewer/editor) as a badge on shared project cards
+- [ ] **PAGE-03**: User can see the project owner's name on shared project cards
+
+## Future Requirements
+
+### v4.x (After Validation)
+
+- **SHARE-04**: User can transfer project ownership to another user
+- **SHARE-05**: User can share a project with multiple users at once (bulk share)
+- **PAGE-04**: User can see an in-app indicator for newly shared projects
+- **PAGE-05**: User can see share count on their own project cards
+
+### v5+ (Deferred)
+
+- **NOTIF-01**: User receives email notification when a project is shared with them
+- **GROUP-01**: Projects can be auto-shared based on Okta group membership
+- **AUDIT-01**: Share/unshare/role-change events are tracked in audit log
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Commenter role | No commenting system exists; add role if/when commenting is built |
+| Per-entity permissions (share only epics, not cards) | Project is the natural sharing boundary; per-entity ACLs would touch every query |
+| Real-time collaborative editing | Requires WebSocket infrastructure; users work asynchronously with AI |
+| Public/anonymous share links | Breaks corporate SSO security model (Cognito + Okta only) |
+| Role inheritance from Okta groups | Removes explicit owner control; defer until demand emerges |
+| Email notifications on share | Requires SES integration; users discover shares on projects page |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| DATA-01 | — | Pending |
+| DATA-02 | — | Pending |
+| AUTH-01 | — | Pending |
+| AUTH-02 | — | Pending |
+| AUTH-03 | — | Pending |
+| SHARE-01 | — | Pending |
+| SHARE-02 | — | Pending |
+| SHARE-03 | — | Pending |
+| PAGE-01 | — | Pending |
+| PAGE-02 | — | Pending |
+| PAGE-03 | — | Pending |
+
+**Coverage:**
+- v4.0 requirements: 11 total
+- Mapped to phases: 0
+- Unmapped: 11
+
+---
+*Requirements defined: 2026-03-23*
+*Last updated: 2026-03-23*
