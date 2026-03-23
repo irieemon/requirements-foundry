@@ -113,7 +113,9 @@ See [v3.0 archive](milestones/v3.0-ROADMAP.md) for full details.
   2. A ProjectShare record can be created linking a user to a project with a viewer or editor role
   3. Existing users who have previously logged in appear in the User table (backfilled from Project.userId on migration)
   4. Deleting a project cascades to remove its share records
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 30-01-PLAN.md — User/ProjectShare schema, migration with backfill, auth callback upsert
 
 ### Phase 31: Authorization Refactor
 **Goal**: Every route and server action resolves an explicit role (owner/editor/viewer/admin) and enforces it consistently
@@ -125,7 +127,9 @@ See [v3.0 archive](milestones/v3.0-ROADMAP.md) for full details.
   3. Admin can access any project regardless of ownership or share records (existing behavior preserved)
   4. No inline ownership checks remain outside the centralized authorization module (all consolidated)
   5. Unauthorized access to a project returns 404 (not 403), preserving the existing security pattern
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 30-01-PLAN.md — User/ProjectShare schema, migration with backfill, auth callback upsert
 
 ### Phase 32: Share Management
 **Goal**: Project owners can add, remove, and manage collaborators on their projects
@@ -137,7 +141,9 @@ See [v3.0 archive](milestones/v3.0-ROADMAP.md) for full details.
   3. Project owner can change a shared user's role between viewer and editor
   4. Project owner can remove a user's access to the project
   5. Non-owners (editors, viewers) cannot access the share management controls
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 30-01-PLAN.md — User/ProjectShare schema, migration with backfill, auth callback upsert
 **UI hint**: yes
 
 ### Phase 33: Projects Page Integration
@@ -149,7 +155,9 @@ See [v3.0 archive](milestones/v3.0-ROADMAP.md) for full details.
   2. Each shared project card shows the user's role (viewer or editor) as a badge
   3. Each shared project card shows the project owner's display name
   4. Runs page includes runs from shared projects the user has access to
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 30-01-PLAN.md — User/ProjectShare schema, migration with backfill, auth callback upsert
 **UI hint**: yes
 
 ## Progress
@@ -165,7 +173,7 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 18-20 | v1.3      | 2/?            | Paused   | -          |
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26-29 | v3.0      | 10/10          | Complete | 2026-03-10 |
-| 30. Data Foundation | v4.0 | 0/? | Not started | - |
+| 30. Data Foundation | v4.0 | 0/1 | Planned | - |
 | 31. Authorization Refactor | v4.0 | 0/? | Not started | - |
 | 32. Share Management | v4.0 | 0/? | Not started | - |
 | 33. Projects Page Integration | v4.0 | 0/? | Not started | - |
