@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Project Sharing
-status: planning
-stopped_at: Phase 30 context gathered
-last_updated: "2026-03-23T21:47:53.162Z"
-last_activity: 2026-03-23 — Roadmap created for v4.0 Project Sharing
+status: Phase complete — ready for verification
+stopped_at: Completed 30-01-PLAN.md
+last_updated: "2026-03-23T22:08:44.977Z"
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 1
   completed_plans: 0
-  percent: 0
 ---
 
 # Project State
@@ -21,16 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Enable project owners to share projects with other users as viewers or editors, with clear UI separation between owned and shared projects.
-**Current focus:** Phase 30 — Data Foundation
+**Current focus:** Phase 30 — data-foundation
 
 ## Current Position
 
-Phase: 30 (1 of 4 in v4.0) (Data Foundation)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-03-23 — Roadmap created for v4.0 Project Sharing
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 30 (data-foundation) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
@@ -59,6 +53,8 @@ Recent decisions affecting current work:
 - [v3.0]: Centralized authorization module in lib/auth/authorization.ts
 - [v4.0]: User table approach over Cognito ListUsers (faster, no rate limits, FK-safe)
 - [v4.0]: Backfill User table from SELECT DISTINCT userId FROM Project at migration time
+- [Phase 30]: Non-blocking upsert: User upsert in auth callback wrapped in try-catch so login succeeds even if DB fails
+- [Phase 30]: Email as User match key: upsert matches on email for consistency with Project.userId pattern
 
 ### Pending Todos
 
@@ -74,6 +70,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-23T21:47:53.159Z
-Stopped at: Phase 30 context gathered
-Resume file: .planning/phases/30-data-foundation/30-CONTEXT.md
+Last session: 2026-03-23T22:08:44.974Z
+Stopped at: Completed 30-01-PLAN.md
+Resume file: None

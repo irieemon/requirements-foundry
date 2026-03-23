@@ -173,7 +173,7 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 18-20 | v1.3      | 2/?            | Paused   | -          |
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26-29 | v3.0      | 10/10          | Complete | 2026-03-10 |
-| 30. Data Foundation | v4.0 | 0/1 | Planned | - |
+| 30. Data Foundation | v4.0 | 0/1 | Planned    |  |
 | 31. Authorization Refactor | v4.0 | 0/? | Not started | - |
 | 32. Share Management | v4.0 | 0/? | Not started | - |
 | 33. Projects Page Integration | v4.0 | 0/? | Not started | - |

@@ -8,8 +8,8 @@
 
 ### Data Foundation
 
-- [ ] **DATA-01**: User can have their identity stored locally on first login (User table with email, display name, timestamps)
-- [ ] **DATA-02**: User can have a project shared with them via a ProjectShare record (projectId, userId, role: viewer/editor)
+- [x] **DATA-01**: User can have their identity stored locally on first login (User table with email, display name, timestamps)
+- [x] **DATA-02**: User can have a project shared with them via a ProjectShare record (projectId, userId, role: viewer/editor)
 
 ### Authorization
 
@@ -61,8 +61,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 30 | Pending |
-| DATA-02 | Phase 30 | Pending |
+| DATA-01 | Phase 30 | Complete |
+| DATA-02 | Phase 30 | Complete |
 | AUTH-01 | Phase 31 | Pending |
 | AUTH-02 | Phase 31 | Pending |
 | AUTH-03 | Phase 31 | Pending |
