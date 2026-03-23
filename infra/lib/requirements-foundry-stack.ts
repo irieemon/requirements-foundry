@@ -444,7 +444,7 @@ export class RequirementsFoundryStack extends cdk.Stack {
         RDS_SECRET_NAME: 'requirements-foundry-prod/rds-credentials',
         COGNITO_USER_POOL_ID: userPool.userPoolId,
         COGNITO_CLIENT_ID: cognitoClient.userPoolClientId,
-        COGNITO_DOMAIN: `https://${cognitoDomainPrefix}.auth.us-east-1.amazoncognito.com`,
+        COGNITO_DOMAIN: `${cognitoDomainPrefix}.auth.us-east-1.amazoncognito.com`,
         COGNITO_REDIRECT_URI: redirectUri,
       },
       secrets: {
