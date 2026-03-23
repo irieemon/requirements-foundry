@@ -10,7 +10,7 @@
 
 /** Strip protocol prefix from COGNITO_DOMAIN if present (handles both with/without https://) */
 function cognitoDomain(): string {
-  return (cognitoDomain() || "").replace(/^https?:\/\//, "");
+  return (process.env.COGNITO_DOMAIN || "").replace(/^https?:\/\//, "");
 }
 
 /**
