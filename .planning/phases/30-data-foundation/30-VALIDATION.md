@@ -17,18 +17,18 @@ created: 2026-03-23
 
 | Property | Value |
 |----------|-------|
-| **Framework** | jest 29.x |
-| **Config file** | jest.config.ts |
-| **Quick run command** | `npx jest --testPathPattern="phase30"` |
-| **Full suite command** | `npx jest` |
+| **Framework** | vitest ^4.0.16 |
+| **Config file** | vitest.config.ts |
+| **Quick run command** | `npx vitest run lib/auth/__tests__/` |
+| **Full suite command** | `npx vitest run` |
 | **Estimated runtime** | ~15 seconds |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `npx jest --testPathPattern="phase30"`
-- **After every plan wave:** Run `npx jest`
+- **After every task commit:** Run `npx vitest run lib/auth/__tests__/`
+- **After every plan wave:** Run `npx vitest run`
 - **Before `/gsd:verify-work`:** Full suite must be green
 - **Max feedback latency:** 15 seconds
 
@@ -38,9 +38,8 @@ created: 2026-03-23
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 30-01-01 | 01 | 1 | DATA-01 | integration | `npx prisma migrate deploy && npx jest --testPathPattern="user-model"` | ❌ W0 | ⬜ pending |
-| 30-01-02 | 01 | 1 | DATA-02 | integration | `npx prisma migrate deploy && npx jest --testPathPattern="project-share"` | ❌ W0 | ⬜ pending |
-| 30-02-01 | 02 | 1 | DATA-01 | integration | `npx jest --testPathPattern="auth-callback"` | ❌ W0 | ⬜ pending |
+| 30-01-01 | 01 | 1 | DATA-01, DATA-02 | integration | `npx prisma validate && npx vitest run lib/auth/__tests__/project-share.test.ts --reporter=verbose` | ❌ W0 | ⬜ pending |
+| 30-01-02 | 01 | 1 | DATA-01 | integration | `npx vitest run lib/auth/__tests__/user-upsert.test.ts --reporter=verbose` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -48,11 +47,10 @@ created: 2026-03-23
 
 ## Wave 0 Requirements
 
-- [ ] `__tests__/phase30/user-model.test.ts` — stubs for DATA-01 (User table creation, backfill)
-- [ ] `__tests__/phase30/project-share.test.ts` — stubs for DATA-02 (ProjectShare creation, cascade delete)
-- [ ] `__tests__/phase30/auth-callback.test.ts` — stubs for DATA-01 (User upsert on login)
+- [ ] `lib/auth/__tests__/project-share.test.ts` — stubs for DATA-02 (ProjectShare creation, cascade delete)
+- [ ] `lib/auth/__tests__/user-upsert.test.ts` — stubs for DATA-01 (User upsert on login)
 
-*Existing infrastructure covers test framework — jest already installed.*
+*Existing infrastructure covers test framework — vitest already installed.*
 
 ---
 
