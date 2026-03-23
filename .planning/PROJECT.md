@@ -59,7 +59,22 @@ Requirements Foundry is a multi-user tool that transforms uploaded documents int
 
 ### Active
 
-(None — define next milestone requirements via `/gsd:new-milestone`)
+- Project owner can share their project with one or more existing users
+- Role-based sharing: viewer (read-only) or editor (full access)
+- "Shared with me" section on projects page separating owned vs shared
+- Share management UI (add/remove users, change roles)
+- User picker showing accounts who have previously signed in
+- Admins retain full visibility across all projects
+
+## Current Milestone: v4.0 Project Sharing
+
+**Goal:** Enable project owners to share projects with other users as viewers or editors, with clear UI separation between owned and shared projects.
+
+**Target features:**
+- Direct user-to-user project sharing with viewer/editor roles
+- Share management UI with user picker
+- "Shared with me" section on projects page
+- Admin full-access override preserved
 
 ### Deferred
 
@@ -165,5 +180,22 @@ Requirements Foundry is a multi-user tool that transforms uploaded documents int
 - **Feature parity**: All existing features work identically on AWS with auth
 - **No breaking schema changes**: Prisma migrations handle column additions
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-03-10 after v3.0 Authentication & Multi-User milestone*
+*Last updated: 2026-03-23 — v4.0 Project Sharing milestone started*
