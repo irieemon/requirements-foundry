@@ -8,6 +8,11 @@
  * - COGNITO_CLIENT_SECRET: Cognito app client secret (from Secrets Manager)
  */
 
+/** Strip protocol prefix from COGNITO_DOMAIN if present (handles both with/without https://) */
+function cognitoDomain(): string {
+  return (cognitoDomain() || "").replace(/^https?:\/\//, "");
+}
+
 /**
  * Build the Cognito authorize URL.
  * Goes to Cognito Hosted UI which shows available sign-in options
@@ -24,7 +29,7 @@ export function buildAuthorizeUrl(returnTo?: string): string {
     scope: "openid profile email",
     state: returnTo || "/",
   });
-  return `https://${process.env.COGNITO_DOMAIN}/oauth2/authorize?${params}`;
+  return `https://${cognitoDomain()}/oauth2/authorize?${params}`;
 }
 
 /**
@@ -42,7 +47,7 @@ export function buildLogoutUrl(): string {
     client_id: process.env.COGNITO_CLIENT_ID!,
     logout_uri: appRoot,
   });
-  return `https://${process.env.COGNITO_DOMAIN}/logout?${params}`;
+  return `https://${cognitoDomain()}/logout?${params}`;
 }
 
 /**
@@ -68,7 +73,7 @@ export async function exchangeCodeForTokens(
   });
 
   const response = await fetch(
-    `https://${process.env.COGNITO_DOMAIN}/oauth2/token`,
+    `https://${cognitoDomain()}/oauth2/token`,
     {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -101,7 +106,7 @@ export async function refreshTokens(
   });
 
   const response = await fetch(
-    `https://${process.env.COGNITO_DOMAIN}/oauth2/token`,
+    `https://${cognitoDomain()}/oauth2/token`,
     {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
