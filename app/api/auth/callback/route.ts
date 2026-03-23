@@ -4,6 +4,7 @@ import { getIronSession } from "iron-session";
 import { exchangeCodeForTokens } from "@/lib/auth/cognito";
 import { verifyIdToken } from "@/lib/auth/verify";
 import { sessionOptions } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 import type { SessionData } from "@/lib/auth/types";
 
 /**
@@ -62,6 +63,22 @@ export async function GET(request: NextRequest) {
       groups,
     };
     await session.save();
+
+    // Create or update local User record
+    // Upsert uses email as match key; updates name from Cognito claims on each login
+    // Wrapped in try-catch: login succeeds even if upsert fails (user created on next login)
+    try {
+      await db.user.upsert({
+        where: { email: session.user.email },
+        update: { name: session.user.name },
+        create: {
+          email: session.user.email,
+          name: session.user.name,
+        },
+      });
+    } catch (upsertError) {
+      console.error("User upsert failed:", upsertError);
+    }
 
     // Redirect to intended URL (from OAuth2 state param) or default to /projects
     const returnTo = state || "/projects";
