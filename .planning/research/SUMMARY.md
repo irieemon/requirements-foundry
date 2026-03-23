@@ -1,165 +1,166 @@
 # Project Research Summary
 
-**Project:** Requirements Foundry - Authentication & Multi-User (v3.0)
-**Domain:** SSO authentication, per-user data isolation, and admin role management for an existing internal Next.js application on ECS Fargate
-**Researched:** 2026-03-09
+**Project:** Requirements Foundry v4.0 — Project Sharing & Role-Based Permissions
+**Domain:** Retrofitting multi-user collaboration onto a single-owner requirements management tool
+**Researched:** 2026-03-23
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Requirements Foundry is an existing internal Next.js 16 application running on ECS Fargate with RDS PostgreSQL, currently operating as a single-user tool. The v3.0 milestone adds Okta SAML SSO authentication via AWS Cognito, per-user project isolation, and Okta-group-driven admin roles. Research across stack, features, architecture, and pitfalls converges on a clear approach: use Cognito User Pool as the SAML service provider with Okta as the identity provider, handle the OAuth authorization code flow server-side, store tokens in HTTP-only cookies, verify JWTs in Next.js 16's `proxy.ts`, and filter all Prisma queries by `userId` with an admin bypass. The only new npm dependency is `aws-jwt-verify`; all CDK constructs come from the existing `aws-cdk-lib`.
+Requirements Foundry v4.0 adds user-to-user project sharing with viewer and editor roles to a previously single-owner application. The research conclusion is unambiguous: this milestone is a schema extension and authorization refactor, not a technology addition. The existing stack (Prisma 7, Next.js 16, iron-session, Zod 4, Radix UI) provides every capability needed. A single new `ProjectShare` junction table, a modified `getAuthorizedProject()` function that returns an explicit role, and a new `User` table populated via login upsert are the entire data layer footprint. No new npm dependencies are required.
 
-The recommended architecture avoids ALB-level Cognito authentication (which has a well-documented logout problem) in favor of app-level auth. It avoids NextAuth, Amplify, and other abstraction layers that add complexity without benefit for this use case. The Cognito Hosted UI handles SAML assertion exchange (the only viable option for SAML), but users never see it because the app redirects directly to Okta via the `identity_provider=Okta` parameter. The existing `Project.userId` nullable column provides a natural migration path -- backfill existing projects to the admin user, then make the column required. No User table is needed; user display info comes from JWT claims and the Cognito `sub` serves as the foreign key.
+The recommended approach follows the existing app's centralized authorization pattern: all access control flows through `lib/auth/authorization.ts`, the `ProjectShare` table is indexed for efficient "shared with me" lookups, and permissions are resolved once per request and threaded through the component tree. The correct mental model is Linear's approach — authenticated SSO users only, explicit per-user sharing, no public links — which matches the corporate security constraints of this tool. Two roles (viewer, editor) plus the existing owner/admin hierarchy cover all realistic collaboration needs without the complexity of per-entity ACLs or a full RBAC library.
 
-The primary risks are: (1) SAML group claims cannot map directly to `cognito:groups` and require a PreTokenGeneration Lambda trigger, (2) the Okta-Cognito setup has a chicken-and-egg dependency requiring two CDK deployments with manual Okta configuration in between, (3) existing projects with NULL `userId` will silently vanish if query filters are added before data migration, and (4) Cognito does not support IdP-initiated SAML flow, so the Okta dashboard tile must be configured as a bookmark. All four risks have known, well-documented solutions.
+The dominant risk is not technical but implementation discipline: the existing codebase has authorization checks scattered across both the centralized module and inline in at least six API route handlers. If the inline checks are not updated alongside the centralized function, shared users will experience partial access (project pages load but run polling and upload endpoints return 404). The authorization consolidation must happen in Phase 1, before any sharing UI is built. A secondary risk is that the app currently has no `User` table — users exist only in Cognito — and the share user picker cannot function without a local queryable source. Adding the `User` model with an upsert on every login is the enabling prerequisite for the share management UI.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack addition is minimal. Only one new npm package (`aws-jwt-verify` v5.1.1) is needed on the app side. All Cognito CDK constructs are already available in `aws-cdk-lib`. The research explicitly rejected NextAuth/Auth.js (unnecessary abstraction over what Cognito already provides), Amplify (heavyweight 200KB+ client-side SDK incompatible with server-side patterns), `jose` (Edge runtime compatibility irrelevant since `proxy.ts` runs on Node.js), and `amazon-cognito-identity-js` (legacy, designed for direct auth not federated SAML).
+The stack requires no changes. All necessary capabilities exist in the current dependencies. The `ProjectShare` junction table uses Prisma 7's native enum fields (`ShareRole: VIEWER | EDITOR`), composite unique constraints (`@@unique([projectId, userEmail])`), and cascade deletes — all stable features since Prisma 4. Zod 4 validates share inputs. Radix UI Dialog and Select (already installed) provide the share management modal and role dropdown. The only new integration is Cognito's `ListUsers` API for user discovery if not using a local User table, which uses `@aws-sdk/client-cognito-identity-provider` already in the dependency tree.
 
 **Core technologies:**
-- `aws-jwt-verify` v5.1.1: Server-side JWT verification -- purpose-built for Cognito, handles JWKS caching and key rotation automatically, 460K+ weekly npm downloads
-- `aws-cdk-lib/aws-cognito`: UserPool, SAML IdP, AppClient, Domain constructs -- no new CDK packages needed, just new imports from existing dependency
-- PreTokenGeneration Lambda (Node.js 20): Maps Okta `custom:groups` attribute to `cognito:groups` JWT claim -- required because Cognito cannot natively map SAML group attributes to its reserved groups claim
+- **Prisma 7**: Schema migration for `ProjectShare` and `User` models, typed queries with relation includes — no new dependency, uses existing patterns
+- **Next.js 16 Server Actions**: All share CRUD operations as server actions — consistent with existing mutation pattern throughout the app
+- **iron-session 8**: Session provides `user.email` for authorization checks — unchanged, remains the identity pivot
+- **Zod 4**: Input validation for share/unshare/role-change actions — same pattern as existing action validators
+- **Radix UI Dialog + Select**: Share management modal and role dropdown — already installed, no new packages needed
+
+**What NOT to add:** CASL/casbin (two roles on one resource type is massive overkill), a WebSocket layer (users collaborate asynchronously; AI generation is the bottleneck, not simultaneous editing), or email notifications via SES (out of scope; in-app discovery is sufficient for this use case).
 
 ### Expected Features
 
-**Must have (table stakes):**
-- SSO login via Okta with direct IdP redirect (bypass Cognito Hosted UI appearance)
-- Protected routes via `proxy.ts` JWT verification with redirect to landing page
-- Per-user project isolation (enforce `Project.userId` on all Prisma queries)
-- Admin role derived from Okta group membership (no local role management needed)
-- Session persistence via HTTP-only cookies with configurable token expiry
-- Logout that clears both Cognito session and browser cookies
-- User identity display (name/email) in app header
-- Migration of existing projects to default admin user
+**Must have (table stakes — v4.0 launch):**
+- User table (new Prisma model, upserted on every login from Cognito claims) — enables picker and owner name display
+- ProjectShare table with migration — the data foundation for all sharing functionality
+- Authorization layer refactor — `getAuthorizedProject()` returns `{ project, user, role: 'owner' | 'editor' | 'viewer' | 'admin' }` and ALL inline checks consolidated here
+- Mutation guards across all 11 server action files — viewers blocked from all write operations with clear feedback
+- Share management UI — modal accessible to project owner; lists current shares with role dropdown and remove action
+- User picker autocomplete — searches local User table; 7-9 max suggestions; prevents self-share and duplicates
+- "Shared with me" section on projects page — separate from "My Projects"; displays owner name and role badge
+- Read-only visual indicators — disabled buttons with "View only" context for viewers; no confusing errors on click
+- Runs page visibility for shared projects — shared users see runs for projects they have access to
 
-**Should have (differentiators):**
-- Automatic user provisioning on first Okta login (no invite flow)
-- Admin project management with view/reassign capability
-- Graceful session expiry handling (silent refresh or friendly re-auth modal)
+**Should have (differentiators — v4.x after validation):**
+- Transfer ownership — when an employee leaves; simple `project.userId` swap with confirmation dialog
+- Bulk share — multi-select in user picker for team onboarding; batch insert in one transaction
+- In-app share notification — "N new projects shared with you" indicator; no email/SES dependency
+- Share count on owner project cards — "Shared with N people" badge; trivial count query
 
-**Defer (v2+):**
-- Project sharing between users
-- Fine-grained permissions (viewer/editor roles)
-- Audit logging for admin actions
-- User activity dashboard
+**Defer (v5+):**
+- Email notifications via SES — significant scope: templates, preferences, bounce handling; in-app discovery suffices
+- Okta group-based auto-sharing — requires group sync pipeline; removes explicit owner control
+- Audit log for share changes — separate concern already in the deferred backlog; build sharing first, audit later
+- Commenter role — only if a commenting feature is actually built; premature to add a role for a non-existent capability
 
 ### Architecture Approach
 
-The architecture follows a server-side authorization code grant pattern. The browser redirects to Cognito (which redirects to Okta), receives an authorization code on callback, and the server exchanges it for tokens stored in HTTP-only cookies. `proxy.ts` verifies JWTs on every request using `aws-jwt-verify` (one verification per request, not per server action). Server actions use `jwt.decode()` (not `jwt.verify()`) since the proxy already validated the token. A centralized `getSession()` helper extracts user identity, and a `getProjectFilter()` helper returns the appropriate Prisma `where` clause based on admin status. No User table is needed -- `userId` (Cognito `sub`) is stored as a foreign key on Project, and display info comes from JWT claims. The three-phase database migration (deploy with nullable, backfill, make required) avoids downtime.
+The integration architecture is additive: one new junction table, one new `User` model, and modifications to the existing authorization module and three pages. The entity chain ownership pattern (Project is the root; child tables carry no userId) is preserved and extended — the `ProjectShare` table is the sole addition at the project level, not scattered across child tables. All authorization resolves once in `getAuthorizedProject()`, which now returns an explicit role. The `canEdit()`, `canManageShares()`, and `canDelete()` helper functions derived from that role are the only permission logic downstream components need. User discovery uses the local `User` table (preferred: faster, no rate limits, FK-safe) over Cognito `ListUsers`.
 
 **Major components:**
-1. Cognito User Pool + SAML IdP + PreTokenGeneration Lambda (CDK) -- handles SAML assertion exchange, token issuance, group mapping
-2. `proxy.ts` -- centralized JWT verification, route protection, user identity extraction via request headers
-3. `/api/auth/callback` + `/api/auth/logout` routes -- token exchange (code-for-tokens) and session cleanup
-4. `lib/auth.ts` -- `getSession()` and `getProjectFilter()` helpers consumed by all server actions
-5. Modified server actions (18 files) -- add `userId` filtering to all project-scoped queries with admin bypass
-6. Landing page (`/login`) -- public entry point with "Sign in with Okta" button
+1. **`lib/auth/authorization.ts` (modified)** — sole authorization source of truth; resolves owner/admin/editor/viewer/none for every project access; exposes `canEdit()`, `canManageShares()`, `canDelete()` helpers; eliminates all inline checks in API route handlers
+2. **`server/actions/sharing.ts` (new)** — share CRUD (`getProjectShares`, `shareProject`, `updateShareRole`, `removeShare`) and user search (`searchUsers`); all guarded by `canManageShares()` check
+3. **`components/projects/share-dialog.tsx` + `share-user-picker.tsx` (new)** — owner-only UI for managing shares; autocomplete over User table; prevents self-share and duplicates
+4. **`app/(authenticated)/projects/page.tsx` (modified)** — two-section layout ("My Projects" / "Shared with me") using updated `getAuthorizedProjects()` return shape
+5. **`app/(authenticated)/runs/page.tsx` (modified)** — expand `where` clause to include shared projects alongside owned projects
 
 ### Critical Pitfalls
 
-1. **SAML groups cannot map to cognito:groups** -- Requires a PreTokenGeneration Lambda trigger to read `custom:groups` and inject into `cognito:groups`. Without this, admin role detection silently fails. Must be working before any app-level admin logic.
+1. **Scattered inline ownership checks create authorization gaps** — The codebase has `project.userId !== user.email` checks in at least 6 API route handlers outside the centralized module. Updating the centralized function without updating inline checks means shared users get partial access (project page works; run polling and upload endpoints silently 404). Prevention: audit every `project.userId` reference before writing sharing logic; consolidate all checks into `authorization.ts` in Phase 1. Verify with: `grep -r "project.userId" app/ server/ lib/` returning matches ONLY in `lib/auth/authorization.ts`.
 
-2. **ALB Cognito auth has broken logout** -- The ALB's `AWSELBAuthSessionCookie` persists independently of Cognito sessions, causing users to be silently re-authenticated after logout. Use app-level auth (not ALB `authenticate-cognito` action). This is an architecture decision, not a bug to fix later.
+2. **Viewer role not enforced on mutating server actions** — The current auth model is binary (access/no-access). Developers add the share check to `getAuthorizedProject()`, declare the feature done, and ship a viewer who can trigger AI generation runs and delete cards. Prevention: `assertCanEdit(role)` helper called at the top of every write action; automated tests for each server action verifying viewers receive a permission error.
 
-3. **NULL userId hides existing projects** -- All pre-existing projects have `userId = null`. Adding `where: { userId }` filters silently excludes them. Must backfill userId on all existing projects BEFORE enabling query filters.
+3. **No User table breaks the user picker and creates orphaned shares** — The app has no local `User` model; users exist only in Cognito. Without a User table, developers fall back to Cognito `ListUsers` (rate-limited at 5 req/sec, slow) or allow sharing with arbitrary emails that produce orphaned share records for users who never sign in. Prevention: add the `User` model in Phase 2 with an upsert on every auth callback login; `ProjectShare` references `User` via FK to prevent orphaned records.
 
-4. **Cognito does not support IdP-initiated SAML** -- Users clicking the Okta dashboard tile get a SAML error. Configure the Okta app as a Bookmark pointing to the app landing page to initiate SP flow instead.
+4. **Runs page and API route handlers bypass `getAuthorizedProject()`** — The runs page queries runs with an inline `project: { userId: user.email }` filter. Run detail pages and upload API routes check ownership inline. These paths will silently deny shared users access. Prevention: design a `getAccessibleProjectIds(userEmail)` helper as part of the Phase 1 auth refactor; use it as the building block for all list queries on child entities.
 
-5. **Authorization at UI level only** -- Admin visibility implemented only in the frontend while server actions still filter by userId. Authorization must be enforced at the data access layer with `getProjectFilter()`, not in React components.
+5. **N+1 queries on the "Shared with me" projects page** — Naively fetching shared projects as "get share IDs, then fetch each project individually" produces one query per shared project. Prevention: include `_count` in the `ProjectShare.findMany` query with a nested project include; return a unified `ProjectWithAccess` type from `getAuthorizedProjects()` so the component receives a single list to group, not two sequential round trips.
 
 ## Implications for Roadmap
 
-Based on research, the work naturally splits into four phases following a strict dependency chain.
+Based on research, the dependency chain is clear and suggests a four-phase structure. The architecture research provides an explicit build order; the pitfalls research confirms the sequencing is mandatory, not advisory.
 
-### Phase 1: Cognito Infrastructure
+### Phase 1: Authorization Foundation
 
-**Rationale:** Everything depends on Cognito existing first. The Okta-Cognito setup has a chicken-and-egg dependency requiring two CDK deployments with manual Okta admin configuration in between. This is the critical path blocker.
-**Delivers:** Working Cognito User Pool with Okta SAML federation, PreTokenGeneration Lambda for group mapping, Cognito config values as ECS environment variables, client secret in Secrets Manager.
-**Addresses:** Cognito + Okta SAML setup, Okta group-to-JWT mapping, CDK infrastructure additions.
-**Avoids:** P1 (groups not in JWT -- Lambda trigger built here), P4 (IdP-initiated not supported -- Okta configured as bookmark), P5 (URL mismatch -- all URLs derived from CDK outputs).
+**Rationale:** Every other phase depends on this. The authorization module must return an explicit role before any UI or server action can enforce permissions correctly. Pitfalls 1, 2, and 4 (scattered checks, viewer enforcement, entity chain gaps) are all caused by doing this phase wrong or out of order. This is the highest-risk phase and must be completed before Phase 2.
+**Delivers:** Consolidated authorization module with no inline checks remaining; `getAuthorizedProject()` returning `{ project, user, role }`; `canEdit()` / `canManageShares()` / `canDelete()` helpers; `getAccessibleProjectIds()` for child entity queries; admin permission hierarchy clearly defined as admin > owner > editor > viewer.
+**Addresses:** Authorization enforcement across all routes (highest-effort table-stakes feature from FEATURES.md); admin full-access override preservation.
+**Avoids:** P1 (scattered checks), P2 (viewer enforcement gaps), P4 (entity chain breaks), P6 (admin/sharing ambiguity).
+**Research flag:** No additional research needed — codebase is fully analyzed, pattern is well-established.
 
-### Phase 2: Auth Flow (Login, Session, Logout)
+### Phase 2: Data Layer (Schema + User Table)
 
-**Rationale:** With Cognito infrastructure in place, the app needs the end-to-end authentication flow before data isolation work can begin. Protected routes depend on session management existing.
-**Delivers:** Landing page with SSO button, `/api/auth/callback` token exchange route, `/api/auth/logout`, `proxy.ts` JWT verification, `lib/auth.ts` session helpers, HTTP-only cookie management.
-**Addresses:** SSO login, protected routes, session persistence, logout, user identity display, direct IdP redirect.
-**Avoids:** P2 (ALB logout broken -- uses app-level auth), security mistakes (HTTP-only cookies, server-side token exchange, issuer/audience validation).
+**Rationale:** The `User` table and `ProjectShare` table are the data foundations for all sharing UI. The User table must be populated before the picker can function. The `ProjectShare` table must exist before the authorization checks added in Phase 1 can query it. This phase also includes the login upsert so the User table self-populates going forward.
+**Delivers:** `User` Prisma model + migration with upsert in auth callback; `ProjectShare` model + migration with `ShareRole` enum, composite unique, and cascade delete; updated `getAuthorizedProjects()` returning `{ ownedProjects, sharedProjects }` with unified `ProjectWithAccess` type including counts.
+**Uses:** Prisma 7 enum fields, composite unique constraints, relation includes; existing iron-session callback for login upsert trigger.
+**Avoids:** P5 (no User table / orphaned shares), P4 (N+1 query — design unified query shape here).
+**Research flag:** No additional research needed — schema design is fully specified in STACK.md and ARCHITECTURE.md.
 
-### Phase 3: Per-User Data Isolation
+### Phase 3: Share Management + Projects Page UI
 
-**Rationale:** Auth flow must work before data isolation can be enforced because queries need the authenticated user's identity. Data migration must happen before query filters are enabled to avoid hiding existing projects.
-**Delivers:** Data migration (backfill existing projects to admin user), `userId` made required on Project model, `getProjectFilter()` applied to all 18 server action files, ownership verification on single-project operations.
-**Addresses:** Per-user project isolation, existing data migration, admin view-all-projects bypass.
-**Avoids:** P3 (NULL userId hides projects -- migration runs first), P6 (admin check only in UI -- authorization enforced at data access layer).
+**Rationale:** Server actions and UI for creating and managing shares, plus the "Shared with me" section, can be built together once the data layer is in place. These are the user-visible deliverables of the milestone.
+**Delivers:** `server/actions/sharing.ts` (getProjectShares, shareProject, updateShareRole, removeShare, searchUsers); share dialog + user picker components; "Shared with me" section on projects page with role badges and owner names; share button on project cards/headers; owner-only access guards on share management UI.
+**Implements:** Share creation flow and shared project access flow from ARCHITECTURE.md; user picker with 7-9 suggestion limit and debounced search.
+**Avoids:** P5 (picking users who don't exist — User table FK prevents this); UX pitfalls (no visual distinction between owned and shared projects, share management buried, exact-match-only picker).
+**Research flag:** No additional research needed — component boundaries and data flows are fully specified in ARCHITECTURE.md.
 
-### Phase 4: Admin Features and Polish
+### Phase 4: Viewer Enforcement + Read-Only UI
 
-**Rationale:** Admin features depend on both working auth (Phase 2) and working data isolation (Phase 3). UI polish is best done after core functionality is stable and testable.
-**Delivers:** Admin role detection from JWT groups claim, admin project list showing all projects with owner info, user menu in AppShell with display name and logout button, graceful session expiry handling.
-**Addresses:** Admin role from Okta groups, admin project management, user identity in header, session expiry UX.
-**Avoids:** P6 (admin check only in UI -- server-side enforcement already in place from Phase 3).
+**Rationale:** Viewer role enforcement is separated from share creation because it requires touching all 11 server action files and every mutation-bearing UI component. Treating it as a dedicated phase ensures it receives complete attention rather than being bolted on at the end of Phase 3.
+**Delivers:** `assertCanEdit()` calls in all write server actions; disabled/hidden mutation controls for viewers in project detail page; role-conditional UI in upload panel, run trigger, epic/story/subtask generation, JIRA export, and delete; "View only" indicators with tooltip context; runs page `where` clause expansion for shared project visibility; run detail page sharing-aware authorization check.
+**Avoids:** P2 (viewer enforcement), P3 (runs page entity chain gap), UX pitfall of viewers seeing all UI controls but receiving confusing errors on click.
+**Research flag:** No additional research needed — the 11 server action files are identified; the pattern is straightforward.
 
 ### Phase Ordering Rationale
 
-- Phases follow a strict dependency chain: infrastructure (Cognito must exist) -> auth flow (sessions must work) -> data isolation (user identity must be known) -> admin features (isolation must be enforced)
-- The Okta-Cognito chicken-and-egg problem (two CDK deploys with manual Okta config in between) is the critical path and must be resolved first
-- App-side auth code (Phases 2-3) can be developed locally in parallel with Phase 1 using mock JWT tokens, but cannot be deployed until Phase 1 is complete
-- Data migration is placed in Phase 3 (not Phase 1) because the admin user's Cognito `sub` is not known until after Cognito is deployed and the admin logs in for the first time
-- All 18 server action files need modification in Phase 3 -- this is high surface area but mechanically simple (add `getProjectFilter()` call)
+- Phases 1 and 2 are strictly prerequisite: you cannot safely add the ProjectShare table without the authorization module ready to query it, and you cannot build share UI without the data to back it
+- Phase 3 depends on both the authorization module (to check `canManageShares()`) and the User table (for the picker)
+- Phase 4 is intentionally last so that viewer enforcement is validated end-to-end against real share records and real UI
+- The ARCHITECTURE.md build order (Schema -> Auth -> Server Actions -> UI -> Page -> Detail -> Runs) is resequenced slightly here: authorization refactor precedes schema creation because the refactor defines the interface the schema will serve
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 1:** Okta admin console configuration is manual and involves coordination with IT. Exact SAML attribute statement names and group filter syntax depend on the Okta org. The client secret retrieval from Cognito (post-deploy script vs CDK Custom Resource) needs a decision.
-- **Phase 3:** Three-phase migration sequence (backfill, make non-nullable, remove null handling) requires careful Prisma migration authoring. Test against a database snapshot before production.
-
 Phases with standard patterns (skip research-phase):
-- **Phase 2:** OAuth authorization code grant with HTTP-only cookies is thoroughly documented. `aws-jwt-verify` handles Cognito-specific validation with a single constructor call. Complete code samples provided in STACK.md and ARCHITECTURE.md.
-- **Phase 4:** Admin role checks, conditional UI rendering, and session management follow standard patterns with no novel technical challenges.
+- **Phase 1:** Authorization consolidation is a mechanical refactor of a well-understood pattern; the codebase has been fully analyzed and inline check locations are known
+- **Phase 2:** Schema design is fully specified; Prisma junction table with enum is standard and version-compatible
+- **Phase 3:** Component boundaries and server action signatures are fully specified in ARCHITECTURE.md
+- **Phase 4:** Viewer enforcement pattern is clear; the 11 server action files are identified
+
+No phase requires a `/gsd:research-phase` call. All necessary detail is in the four research files.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Only one new dependency (`aws-jwt-verify`). Official AWS library, 460K+ weekly downloads. All alternatives evaluated and rejected with clear rationale. Version pinned. |
-| Features | HIGH | Feature set well-scoped with clear table-stakes vs. differentiator separation. Anti-features list prevents scope creep (no local passwords, no ACLs, no RLS, no local user CRUD). |
-| Architecture | HIGH | Server-side auth code grant with HTTP-only cookies is the canonical pattern for server-rendered Next.js on ECS. CDK code samples provided and verified against AWS CDK v2 docs. |
-| Pitfalls | HIGH | Six critical pitfalls identified from official AWS docs, re:Post, and community reports. Each has documented prevention strategy, warning signs, and recovery steps. |
+| Stack | HIGH | Direct codebase analysis of package.json and schema; all technologies verified as having the required capabilities in their current installed versions; no new dependencies needed |
+| Features | HIGH | MVP feature set derived from codebase constraints (no User table, no commenting system) and direct comparison with industry patterns; Linear's model confirmed as the correct archetype for a corporate SSO tool |
+| Architecture | HIGH | Based on direct analysis of authorization.ts, all server action files, and prisma/schema.prisma; component boundaries and data flows fully specified with code samples |
+| Pitfalls | HIGH | Based on direct codebase analysis of 6 API route handlers with inline ownership checks and 11 server action files; pitfalls are identified from actual code, not inference |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Okta admin access:** The Okta SAML app creation requires Okta admin privileges. Confirm who has access and plan the handoff before starting Phase 1.
-- **Cognito client secret retrieval:** CDK does not directly expose the UserPoolClient secret as a construct output. A post-deploy script (`aws cognito-idp describe-user-pool-client`) or CDK Custom Resource is needed to store it in Secrets Manager. Decide during Phase 1 planning.
-- **Token refresh strategy:** Research recommends redirect-to-login for POC (Okta SSO silently re-authenticates within Okta session window). Silent refresh using the refresh token is deferred. Evaluate if session interruption becomes a user complaint.
-- **PreTokenGeneration Lambda trigger version:** V1_0 is correct for this use case (ID token group override). V2_0 is only needed for access token scope customization, which is not required here.
-- **Next.js 16 proxy.ts vs middleware.ts:** STACK.md correctly identifies `proxy.ts` as the Next.js 16 replacement for `middleware.ts`. ARCHITECTURE.md references `middleware.ts` in some code samples (written for broader compatibility). Implementation should use `proxy.ts` exclusively.
+- **IAM permission for Cognito ListUsers:** If the Cognito ListUsers approach is chosen for user discovery instead of the local User table, the ECS task role needs `cognito-idp:ListUsers` scoped to the User Pool ARN. This is a CDK infra change. Recommendation: use the User table approach (no IAM change, no rate limits, FK integrity enforced). Confirm before Phase 2 schema work begins.
+- **Cognito vs. User table for user discovery:** STACK.md recommends the User table; ARCHITECTURE.md describes both approaches. Decide explicitly before Phase 2. Recommendation is the User table.
+- **Backfilling the User table:** On first deploy, the User table will be empty. Existing users will not appear in the picker until they log in again. Options: (a) accept the cold-start gap, (b) backfill from `SELECT DISTINCT userId FROM Project` at migration time, (c) backfill from Cognito ListUsers at migration time. Option (b) is simplest and sufficient — plan this as part of the Phase 2 migration script.
+- **Concurrent run conflicts (P7):** Multiple editors on the same project can trigger AI generation simultaneously, potentially producing duplicate runs. Acceptable to defer a robust locking solution to a v4.x patch. A transaction-based run creation guard with a "run already in progress" response is sufficient for v4.0 and should be addressed in Phase 4.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [AWS re:Post: Set Up Okta as SAML IdP in Cognito](https://repost.aws/knowledge-center/cognito-okta-saml-identity-provider)
-- [AWS CDK Cognito Module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_cognito-readme.html)
-- [aws-jwt-verify on GitHub](https://github.com/awslabs/aws-jwt-verify) (v5.1.1)
-- [Next.js 16 Upgrade Guide](https://nextjs.org/docs/app/guides/upgrading/version-16) (proxy.ts replaces middleware.ts)
-- [AWS: Role-based access control with Cognito and external IdP](https://aws.amazon.com/blogs/security/role-based-access-control-using-amazon-cognito-and-an-external-identity-provider/)
-- [aws-samples/amazon-cognito-example-for-external-idp](https://github.com/aws-samples/amazon-cognito-example-for-external-idp)
-- [Cognito PreTokenGeneration Lambda](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-lambda-pre-token-generation.html)
-- [AWS: Securing ECS apps with ALB and Cognito](https://aws.amazon.com/blogs/containers/securing-amazon-elastic-container-service-applications-using-application-load-balancer-and-amazon-cognito/)
-- [Cognito JWT verification best practices](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-tokens-verifying-a-jwt.html)
+- Existing codebase: `lib/auth/authorization.ts`, `prisma/schema.prisma`, `package.json`, `server/actions/*.ts` — direct analysis, all findings verified against actual code
+- `.planning/PROJECT.md` — v4.0 milestone requirements, established architectural decisions (entity chain ownership, 404-not-403, app-level filtering, no middleware auth)
+- Prisma 7 documentation — enum support, composite unique constraints, relation queries, cascade deletes — all verified as stable features since Prisma 4
 
 ### Secondary (MEDIUM confidence)
-- [Medium: SAML IdP Group Mappings with Cognito](https://medium.com/geekculture/using-saml-idp-group-mappings-with-aws-cognito-34e297cf1aa8)
-- [Okta Dev Forum: SAML attributes and Cognito](https://devforum.okta.com/t/okta-saml-attributes-cognito-and-acces-tokens/22085)
-- [ZenStack: Multi-Tenancy with Prisma](https://zenstack.dev/blog/multi-tenant)
-- [tecRacer: Fargate container app with Cognito](https://www.tecracer.com/blog/2020/03/building-a-fargate-based-container-app-with-cognito-authentication.html)
-- [Okta Help Center: IdP-initiated SSO with Cognito](https://support.okta.com/help/s/question/0D54z0000A3q8sQCQQ/idp-initiated-sso-login-using-amazon-cognito)
+- [Google Drive Roles and Permissions](https://developers.google.com/workspace/drive/api/guides/ref-roles) — role hierarchy reference for table stakes determination
+- [Baymard: Autocomplete Design Best Practices](https://baymard.com/blog/autocomplete-design) — 7-9 suggestion limit, match highlighting recommendation
+- [Permify: Modeling Google Docs Access Management](https://permify.co/post/modeling-google-docs-access-management-using-permify/) — ReBAC pattern reference
+
+### Tertiary (supporting context)
+- Competitor analysis (Google Docs, Figma, Notion, Linear) — used to confirm Linear's model (authenticated users only, no public links) is the correct archetype for a corporate SSO tool; public sharing features of Google Docs and Figma are explicitly out of scope
 
 ---
-*Research completed: 2026-03-09*
+*Research completed: 2026-03-23*
 *Ready for roadmap: yes*

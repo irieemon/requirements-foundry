@@ -1,316 +1,151 @@
-# Technology Stack: Authentication & Multi-User (v3.0)
+# Stack Research: Project Sharing & Role-Based Permissions (v4.0)
 
-**Project:** Requirements Foundry - Cognito + Okta SAML SSO
-**Researched:** 2026-03-09
-**Overall Confidence:** HIGH
+**Domain:** Multi-user project sharing with viewer/editor roles
+**Researched:** 2026-03-23
+**Confidence:** HIGH
 
-## Existing Stack (unchanged)
+## Key Finding: No New Dependencies Required
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Next.js | 16.1.1 | Full-stack React framework |
-| React | 19.2.3 | UI library |
-| Prisma | 7.2.0 | ORM with `@prisma/adapter-pg` driver adapter |
-| AWS CDK | v2 (latest) | Infrastructure as Code (TypeScript) |
-| ECS Fargate | ARM64 | Container compute |
-| RDS PostgreSQL | 16.3 | Database |
-| S3 | N/A | File storage |
-| Bedrock | Claude Sonnet 4 | AI inference |
+The existing stack (Prisma 7, Next.js 16, iron-session, Zod 4) provides everything needed for project sharing. This milestone is a **schema + authorization logic change**, not a technology addition.
 
-## Packages to ADD
+## What Changes (Within Existing Stack)
 
-### Authentication (App-side)
+### Prisma Schema Addition
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| `aws-jwt-verify` | ^5.1.1 | Cognito JWT token verification | Official AWS library purpose-built for Cognito. Verifies ID and access tokens, handles JWKS key rotation and caching automatically. 460K+ weekly npm downloads. Works in Node.js runtime -- and Next.js 16's `proxy.ts` runs on Node.js (not Edge), so there is no compatibility issue. | HIGH |
+| Change | What | Why |
+|--------|------|-----|
+| New `ProjectShare` model | Junction table: projectId + userEmail + role enum | Explicit many-to-many with metadata (role, timestamps). Prisma 7 supports enum fields and composite unique constraints natively. |
+| New `ShareRole` enum | `VIEWER`, `EDITOR` | Prisma enums map to PostgreSQL enums, providing type-safe role validation at the database level. |
+| New relation on `Project` | `shares ProjectShare[]` | Enables `include: { shares: true }` in queries and cascading deletes when project is removed. |
+| New index | `@@index([userEmail])` on ProjectShare | Required for "Shared with me" queries -- finds all shares for a given user efficiently. |
 
-### Authentication (Infrastructure-side)
+**Why a junction table, not a JSON field:** The app needs to query "all projects shared with user X" efficiently. A `sharedWith Json?` field on Project would require scanning all projects. A junction table with an index on `userEmail` is O(1) lookup via index scan.
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| `aws-cdk-lib/aws-cognito` | (already in aws-cdk-lib) | Cognito User Pool + SAML IdP in CDK | Part of the existing `aws-cdk-lib` dependency in `infra/`. Provides `UserPool`, `UserPoolClient`, `UserPoolDomain`, and `UserPoolIdentityProviderSaml` L2 constructs. No new npm install needed -- just new imports. | HIGH |
-| `aws-cdk-lib/aws-lambda` | (already in aws-cdk-lib) | Pre Token Generation Lambda trigger | Already imported in the CDK stack. Used for a Lambda that maps Okta `custom:groups` attribute to `cognito:groups` in the JWT claims. Required because Cognito cannot natively map SAML group attributes to `cognito:groups`. | HIGH |
+**Why `userEmail` not `userId`:** The existing schema uses `Project.userId` as email string (set from `user.email` in session). There is no `User` table. Keeping consistency with the existing pattern avoids a migration to add a User model. The `userEmail` on ProjectShare matches the same identifier used in `Project.userId`.
 
-## Packages NOT to Add
+### Authorization Module Changes
 
-| Package | Why Not |
-|---------|---------|
-| `next-auth` / `auth.js` | Unnecessary abstraction layer. Cognito Hosted UI handles OAuth/SAML redirect flow. The app only needs to verify JWTs from cookies -- `aws-jwt-verify` does this directly. NextAuth adds a session database, provider abstraction, and callback complexity that duplicates what Cognito already provides. |
-| `@aws-amplify/auth` | Amplify is a heavyweight SDK designed for client-side SPAs. It bundles 200KB+ of JavaScript, requires client-side configuration, and conflicts with Next.js server component patterns. The app needs server-side token verification, not client-side auth management. |
-| `amazon-cognito-identity-js` | Legacy library. Designed for Cognito User Pool direct auth (username/password), not federated SAML SSO. Cognito Hosted UI handles the SAML redirect flow without this library. |
-| `jose` | Edge-runtime-compatible JWT library (48M weekly downloads). Would be necessary if using `middleware.ts` (Edge runtime), but Next.js 16 deprecated `middleware.ts` in favor of `proxy.ts` which runs on Node.js. Since `aws-jwt-verify` works on Node.js and is purpose-built for Cognito (auto-handles JWKS URLs, issuer validation, token_use claims), it is the better choice. |
-| `jsonwebtoken` / `jwks-rsa` | Generic JWT libraries. `aws-jwt-verify` handles Cognito-specific validation (user pool ID, app client ID, token_use claim) out of the box with a single configuration object. These generic libraries require manual JWKS endpoint construction, manual claim validation, and manual key caching. |
-| `@aws-sdk/client-cognito-identity-provider` | Admin SDK for managing Cognito programmatically (create users, manage pools). Not needed at runtime -- CDK handles pool creation, and the app only verifies tokens. Only add this if you later need admin APIs like "list all users" from the app itself. |
+| Change | File | Why |
+|--------|------|-----|
+| Extend `getAuthorizedProject()` | `lib/auth/authorization.ts` | Currently checks `project.userId === user.email \|\| isAdmin`. Must add: "OR user has a ProjectShare record for this project." |
+| Add role-aware helper | `lib/auth/authorization.ts` | New `getProjectRole()` function returns `'owner' \| 'editor' \| 'viewer' \| null`. Used by UI to conditionally show/hide edit controls. |
+| Extend `getAuthorizedProjects()` | `lib/auth/authorization.ts` | Must return both owned projects AND shared projects, with a flag indicating ownership vs shared status. |
 
-## Packages to KEEP (unchanged)
+### Zod Validation (Already Installed)
 
-All existing dependencies remain unchanged. Authentication adds to the stack; it does not replace anything.
+| Schema | Purpose | Why Zod |
+|--------|---------|---------|
+| `shareProjectSchema` | Validate share request: `{ email: z.string().email(), role: z.enum(['VIEWER', 'EDITOR']) }` | Already used throughout the app for form validation (react-hook-form + @hookform/resolvers). No new dependency. |
+| `updateShareSchema` | Validate role change: `{ shareId: z.string(), role: z.enum(['VIEWER', 'EDITOR']) }` | Same pattern as existing action validators. |
 
-## How Authentication Works (Architecture Decision)
+## What NOT to Add
 
-### Cognito Hosted UI + Authorization Code Flow
+| Technology | Why NOT | What to Do Instead |
+|------------|---------|-------------------|
+| CASL / casbin / any RBAC library | Massive overkill for two roles (viewer/editor) on a single resource type (projects). These libraries solve complex cross-resource policy engines. This app has ONE authorization check: "can this user access this project, and at what level?" | Simple `getProjectRole()` function returning `'owner' \| 'editor' \| 'viewer' \| null`. ~20 lines of code. |
+| User model / table | The app identifies users by email from Cognito claims. Adding a `User` table requires syncing with Cognito (on first login, etc.), migration complexity, and FK changes across the schema. Not needed for v4.0. | Use `userEmail: String` in ProjectShare, matching the existing `Project.userId` pattern. A User table may make sense in a future milestone for profiles/preferences, but sharing doesn't require it. |
+| Invitation / email system | The milestone spec says "User picker showing accounts who have previously signed in." This means sharing with existing users only, not inviting external users. No email delivery needed. | Query `SELECT DISTINCT userId FROM Project` (or add a lightweight seen-users query) to populate the user picker. Users must have logged in at least once. |
+| WebSocket / real-time notifications | No requirement for real-time "you've been shared on" notifications. The user discovers shared projects when they visit the projects page. | Shared projects appear in "Shared with me" section on next page load. |
+| Middleware-level auth changes | The existing `proxy.ts` route protection already gates all `/projects/[id]` routes through `getAuthorizedProject()`. Sharing just changes what "authorized" means inside that function. | Modify the authorization module only. No middleware changes needed. |
+| Row-Level Security (PostgreSQL) | Already ruled out in PROJECT.md (Prisma doesn't support RLS session variables). App-level filtering is the established pattern. | Continue with app-level authorization in `getAuthorizedProject()`. |
 
-Use Cognito's Hosted UI (managed login) for the SAML SSO flow. This is the only way to do SAML with Cognito -- you cannot build a custom SAML login form because SAML requires HTTP redirects between the IdP (Okta) and SP (Cognito).
+## Existing Stack Usage (No Changes Needed)
 
-**Flow:**
-1. User clicks "Sign in with Okta" on the landing page
-2. Browser redirects to Cognito Hosted UI domain (`https://<prefix>.auth.us-east-1.amazoncognito.com/oauth2/authorize`)
-3. Cognito redirects to Okta SAML login page
-4. User authenticates with Okta (SSO, MFA, etc.)
-5. Okta POSTs SAML assertion back to Cognito (`/saml2/idpresponse`)
-6. Cognito validates assertion, creates/updates user, issues authorization code
-7. Cognito redirects to app callback URL (`/api/auth/callback`) with `?code=...`
-8. App server exchanges code for tokens at Cognito's `/oauth2/token` endpoint
-9. App sets tokens in HTTP-only cookies
-10. Subsequent requests: `proxy.ts` reads cookie, verifies JWT with `aws-jwt-verify`
-
-### Why NOT a Custom UI
-
-SAML 2.0 requires browser redirects to the IdP. There is no way to embed Okta SAML login in a custom form. The Hosted UI handles the entire SAML handshake, certificate validation, and assertion parsing. Customization of the Hosted UI appearance is possible via CSS in the Cognito console (logo, colors, fonts).
-
-### Why proxy.ts Instead of middleware.ts
-
-Next.js 16 renamed `middleware.ts` to `proxy.ts` and changed the runtime from Edge to Node.js. This is a breaking change documented in the [Next.js 16 upgrade guide](https://nextjs.org/docs/app/guides/upgrading/version-16). Since the project is on Next.js 16.1.1, use `proxy.ts`:
-
-- `proxy.ts` runs on **Node.js runtime** (not Edge)
-- This means `aws-jwt-verify` works directly (it requires Node.js APIs)
-- No need for Edge-compatible alternatives like `jose`
-- The `middleware.ts` filename still works but is **deprecated** and will be removed in a future version
-
-## CDK Infrastructure Additions
-
-All constructs come from the existing `aws-cdk-lib` dependency. No new CDK packages needed.
-
-### Cognito User Pool
-
-```typescript
-import * as cognito from 'aws-cdk-lib/aws-cognito';
-
-const userPool = new cognito.UserPool(this, 'UserPool', {
-  userPoolName: 'requirements-foundry-prod',
-  selfSignUpEnabled: false,         // Okta-only, no self-registration
-  signInAliases: { email: true },
-  standardAttributes: {
-    email: { required: true, mutable: false },
-  },
-  customAttributes: {
-    groups: new cognito.StringAttribute({ mutable: true }),  // Okta groups
-  },
-  removalPolicy: cdk.RemovalPolicy.DESTROY,
-});
-```
-
-### SAML Identity Provider (Okta)
-
-```typescript
-const samlProvider = new cognito.UserPoolIdentityProviderSaml(this, 'OktaSaml', {
-  userPool,
-  name: 'Okta',
-  metadata: cognito.UserPoolIdentityProviderSamlMetadata.url(
-    'https://your-okta-domain.okta.com/app/YOUR_APP_ID/sso/saml/metadata'
-  ),
-  attributeMapping: {
-    email: cognito.ProviderAttribute.other('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'),
-    custom: {
-      'custom:groups': cognito.ProviderAttribute.other('groups'),
-    },
-  },
-});
-```
-
-### User Pool Domain (Hosted UI)
-
-```typescript
-const domain = userPool.addDomain('CognitoDomain', {
-  cognitoDomain: { domainPrefix: 'requirements-foundry' },
-});
-```
-
-### User Pool Client (App)
-
-```typescript
-const userPoolClient = userPool.addClient('AppClient', {
-  userPoolClientName: 'requirements-foundry-app',
-  generateSecret: true,                      // Server-side app needs client secret
-  oAuth: {
-    flows: { authorizationCodeGrant: true },  // PKCE not needed for server-side
-    scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL, cognito.OAuthScope.PROFILE],
-    callbackUrls: ['https://YOUR_ALB_DNS/api/auth/callback'],
-    logoutUrls: ['https://YOUR_ALB_DNS/'],
-  },
-  supportedIdentityProviders: [
-    cognito.UserPoolClientIdentityProvider.custom('Okta'),
-  ],
-});
-userPoolClient.node.addDependency(samlProvider);
-```
-
-### Pre Token Generation Lambda (Groups Mapping)
-
-```typescript
-const preTokenLambda = new lambda.Function(this, 'PreTokenGeneration', {
-  functionName: 'requirements-foundry-pre-token-gen',
-  runtime: lambda.Runtime.NODEJS_20_X,
-  handler: 'index.handler',
-  code: lambda.Code.fromInline(`
-    exports.handler = async (event) => {
-      const groups = event.request.userAttributes['custom:groups'];
-      if (groups) {
-        // Parse groups from Okta (format: "[admin,users]" or "admin,users")
-        const parsed = groups.replace(/[\\[\\]]/g, '').split(',').map(g => g.trim()).filter(Boolean);
-        event.response.claimsOverrideDetails = {
-          groupOverrideDetails: { groupsToOverride: parsed },
-        };
-      }
-      return event;
-    };
-  `),
-  timeout: cdk.Duration.seconds(5),
-  memorySize: 128,
-});
-
-userPool.addTrigger(cognito.UserPoolOperation.PRE_TOKEN_GENERATION, preTokenLambda);
-```
-
-**Important:** CDK's `addTrigger` defaults to V1_0 for Pre Token Generation. V1_0 supports `groupOverrideDetails` which is sufficient for mapping Okta groups to `cognito:groups` in the ID token. V2_0 is only needed if customizing access token scopes (not required here).
-
-## Prisma Schema Changes
-
-### Make `userId` required + add User model
-
-```prisma
-model User {
-  id        String   @id           // Cognito sub (UUID)
-  email     String   @unique
-  name      String?
-  role      String   @default("user")  // "user" or "admin"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  projects Project[]
-
-  @@index([email])
-  @@index([role])
-}
-
-model Project {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      String   // NOW REQUIRED -- FK to User.id
-
-  user    User     @relation(fields: [userId], references: [id])
-  // ... existing relations unchanged
-}
-```
-
-**Migration strategy:** The existing `Project.userId` column is nullable with an `@@index([userId])`. The migration will:
-1. Add the `User` table
-2. Create a default admin user (sean.mcinerney@merkle.com)
-3. Assign all existing projects to the admin user
-4. Alter `userId` to NOT NULL
-5. Add the foreign key constraint
-
-## Environment Variables (New)
-
-| Variable | Where Set | Purpose |
-|----------|-----------|---------|
-| `COGNITO_USER_POOL_ID` | ECS task env (from CDK output) | User Pool ID for JWT verification |
-| `COGNITO_CLIENT_ID` | ECS task env (from CDK output) | App client ID for OAuth flow |
-| `COGNITO_CLIENT_SECRET` | ECS secret (from Secrets Manager) | App client secret for token exchange |
-| `COGNITO_DOMAIN` | ECS task env (from CDK output) | Hosted UI domain for login/logout URLs |
-| `NEXTAUTH_URL` / `APP_URL` | ECS task env | Base URL for callback (ALB DNS) |
-
-## Key Integration Points
-
-### 1. proxy.ts (Route Protection)
-
-```typescript
-// proxy.ts (Next.js 16 -- replaces middleware.ts)
-import { CognitoJwtVerifier } from 'aws-jwt-verify';
-
-const verifier = CognitoJwtVerifier.create({
-  userPoolId: process.env.COGNITO_USER_POOL_ID!,
-  clientId: process.env.COGNITO_CLIENT_ID!,
-  tokenUse: 'id',  // Use ID token (has email, groups claims)
-});
-
-export function proxy(request: Request) {
-  // Public routes: landing page, auth callback, health check
-  // Protected routes: everything else -- verify JWT from cookie
-}
-```
-
-### 2. Server Actions / API Routes (User Context)
-
-Every server action reads the current user from the verified JWT cookie. Prisma queries filter by `userId` for data isolation:
-
-```typescript
-// All project queries include: where: { userId: currentUser.sub }
-// Admin users (cognito:groups includes "admin"): skip userId filter
-```
-
-### 3. CDK Stack (Infrastructure)
-
-Add Cognito resources to the existing `RequirementsFoundryStack` in `infra/lib/requirements-foundry-stack.ts`. New imports: `aws-cdk-lib/aws-cognito`. The Pre Token Generation Lambda and Cognito constructs sit alongside the existing ECS, RDS, and S3 infrastructure.
-
-### 4. Okta Admin Console (Manual Setup)
-
-Okta SAML app configuration is done manually in the Okta admin console, NOT via CDK. Required settings:
-- **Single Sign On URL:** `https://requirements-foundry.auth.us-east-1.amazoncognito.com/saml2/idpresponse`
-- **Audience URI (SP Entity ID):** `urn:amazon:cognito:sp:<UserPoolId>`
-- **Attribute Statements:** `email` -> `user.email`
-- **Group Attribute Statements:** `groups` -> filter by relevant Okta groups (e.g., "RequirementsFoundry_Admin", "RequirementsFoundry_Users")
-
-The Okta metadata URL is then provided to CDK's `UserPoolIdentityProviderSaml` construct.
-
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Auth Library | `aws-jwt-verify` (direct) | `next-auth` / `auth.js` with Cognito provider | NextAuth adds session management, CSRF tokens, database adapter -- all redundant when Cognito handles sessions via JWTs. NextAuth's Cognito provider still requires token verification, so it is an unnecessary wrapper. Adds ~150KB bundle, 5+ config files, and a learning curve for what amounts to cookie parsing + JWT verify. |
-| Auth Library | `aws-jwt-verify` (direct) | AWS Amplify | Amplify is designed for client-side SPAs. It bundles auth, storage, API, analytics into a monolithic SDK. We need exactly one thing: server-side JWT verification. Amplify cannot run in `proxy.ts`. |
-| SAML Flow | Cognito Hosted UI | Custom SAML implementation | SAML requires SP metadata, assertion consumer service, certificate management, XML parsing, and redirect handling. Cognito Hosted UI handles all of this. Building custom SAML is weeks of work with security risk. |
-| JWT Library | `aws-jwt-verify` | `jose` | `jose` is the industry standard (48M weekly downloads) and works on Edge runtime. But since Next.js 16 `proxy.ts` runs on Node.js, the Edge compatibility advantage is irrelevant. `aws-jwt-verify` provides Cognito-specific validation (user pool ID, client ID, token_use) with a single constructor call vs. manual JWKS endpoint construction with `jose`. |
-| Groups Mapping | Pre Token Generation Lambda | Application-side groups parsing | Lambda trigger writes groups directly into the JWT `cognito:groups` claim, making it available everywhere without extra parsing. Application-side parsing requires reading `custom:groups` and parsing in every auth check -- error-prone and inconsistent. |
-| Session Storage | HTTP-only cookies (JWT) | Redis / ElastiCache session store | JWTs are self-contained -- no server-side storage needed. The app already listed ElastiCache as out of scope. Cognito tokens have configurable expiry (1hr access, 30-day refresh by default). Cookie-based sessions work with ECS Fargate's stateless architecture. |
-| Route Protection | `proxy.ts` (Next.js 16) | Per-route `getServerSession()` checks | `proxy.ts` runs before every request, providing centralized auth. Per-route checks are easy to forget, leading to unprotected routes. Proxy catches unauthenticated requests before they reach the route handler. |
+| Technology | Version | Role in Sharing Feature |
+|------------|---------|------------------------|
+| Prisma | 7.2.0 | Schema migration for ProjectShare table, typed queries with includes |
+| Next.js | 16.1.1 | Server actions for share CRUD, server components for share UI |
+| iron-session | 8.0.4 | Session provides `user.email` for authorization checks (unchanged) |
+| Zod | 4.3.5 | Input validation for share/unshare actions |
+| react-hook-form | 7.70.0 | Share dialog form (email input, role select) |
+| @radix-ui/react-dialog | 1.1.15 | Share management modal |
+| @radix-ui/react-select | 2.2.6 | Role selector dropdown (VIEWER/EDITOR) |
+| lucide-react | 0.562.0 | Share icon, user icons in share list |
+| Radix UI components | Various | Already installed: dialog, select, dropdown-menu, alert-dialog -- all needed for share UI |
 
 ## Installation
 
 ```bash
-# App-side: JWT verification for Cognito tokens
-npm install aws-jwt-verify
-
-# Infrastructure: No new packages needed -- aws-cdk-lib already includes cognito constructs
+# No new packages to install.
+# The only change is a Prisma migration:
+npx prisma migrate dev --name add_project_sharing
 ```
 
-## Security Considerations
+## Schema Design
 
-| Concern | Approach |
-|---------|----------|
-| Token storage | HTTP-only, Secure, SameSite=Lax cookies. Not accessible via JavaScript. |
-| CSRF protection | SameSite=Lax cookies prevent cross-origin requests. Authorization code flow uses `state` parameter. |
-| Token refresh | Refresh token stored in HTTP-only cookie. Server-side refresh when access token expires. |
-| Client secret | Stored in Secrets Manager, injected as ECS secret. Never exposed to browser. |
-| SAML assertion | Validated by Cognito (certificate pinning, audience restriction, replay protection). App never touches raw SAML. |
+```prisma
+enum ShareRole {
+  VIEWER
+  EDITOR
+}
+
+model ProjectShare {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userEmail String    // email of the user being shared with
+  role      ShareRole @default(VIEWER)
+  sharedBy  String    // email of the user who shared (audit trail)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([projectId, userEmail])  // one share per user per project
+  @@index([userEmail])              // fast "shared with me" lookups
+  @@index([projectId])              // fast "who has access" lookups
+}
+
+// Add to existing Project model:
+// shares ProjectShare[]
+```
+
+**Design rationale:**
+- `@@unique([projectId, userEmail])` prevents duplicate shares and enables upsert for role changes
+- `onDelete: Cascade` means deleting a project automatically cleans up all shares
+- `sharedBy` provides audit trail without needing a separate audit table
+- `ShareRole` enum is extensible if future roles are needed (e.g., COMMENTER)
+
+## Query Patterns
+
+```typescript
+// "Shared with me" projects
+const sharedProjects = await db.projectShare.findMany({
+  where: { userEmail: user.email },
+  include: {
+    project: {
+      include: { _count: { select: { uploads: true, cards: true, epics: true } } }
+    }
+  }
+});
+
+// Authorization check (extended)
+const share = await db.projectShare.findUnique({
+  where: { projectId_userEmail: { projectId, userEmail: user.email } }
+});
+const canAccess = project.userId === user.email || isAdmin(user.email) || share !== null;
+const canEdit = project.userId === user.email || isAdmin(user.email) || share?.role === 'EDITOR';
+
+// User picker (users who have logged in)
+const knownUsers = await db.project.findMany({
+  select: { userId: true },
+  distinct: ['userId'],
+});
+```
+
+## Version Compatibility
+
+| Package | Current Version | Sharing Feature Needs | Compatible |
+|---------|----------------|----------------------|------------|
+| @prisma/client | 7.2.0 | Enum fields, composite unique, relation includes | Yes -- all features stable since Prisma 5+ |
+| zod | 4.3.5 | z.enum(), z.string().email() | Yes -- basic validators |
+| iron-session | 8.0.4 | No changes needed, provides user.email | Yes |
+| next | 16.1.1 | Server actions, server components | Yes |
 
 ## Sources
 
-- [AWS re:Post: Set Up Okta as SAML IdP in Cognito](https://repost.aws/knowledge-center/cognito-okta-saml-identity-provider) - Official AWS guide for Okta+Cognito SAML
-- [AWS CDK UserPoolIdentityProviderSaml](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_cognito.UserPoolIdentityProviderSaml.html) - CDK construct API reference
-- [aws-jwt-verify on npm](https://www.npmjs.com/package/aws-jwt-verify) - v5.1.1, 460K+ weekly downloads
-- [aws-jwt-verify on GitHub](https://github.com/awslabs/aws-jwt-verify) - Official AWS Labs library
-- [Next.js 16 Upgrade Guide](https://nextjs.org/docs/app/guides/upgrading/version-16) - proxy.ts replaces middleware.ts, Node.js runtime
-- [Cognito Pre Token Generation Lambda](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-lambda-pre-token-generation.html) - Groups override documentation
-- [AWS CDK Cognito module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_cognito-readme.html) - UserPool, SAML, OAuth constructs
-- [Cognito JWT verification](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-tokens-verifying-a-jwt.html) - Token verification best practices
-- [SAML group assertions in Cognito](https://repost.aws/questions/QUjYKehBfFSL-gWEEviEI3cQ/saml-group-assertions-from-idp-to-aws-cognito) - custom:groups mapping pattern
-- [aws-samples/amazon-cognito-example-for-external-idp](https://github.com/aws-samples/amazon-cognito-example-for-external-idp) - Reference CDK implementation
-- [Cognito Hosted UI vs Custom UI](https://aws.amazon.com/blogs/security/use-the-hosted-ui-or-create-a-custom-ui-in-amazon-cognito/) - AWS Security Blog decision guide
-- [jose on npm](https://www.npmjs.com/package/jose) - v6.2.0, 48M+ weekly downloads (not recommended for this project)
-- [aws-jwt-verify Edge runtime issue](https://github.com/awslabs/aws-jwt-verify/issues/108) - Documents incompatibility with Edge runtime (irrelevant for proxy.ts)
-- [Node.js Middleware Runtime in Next.js 16](https://medium.com/@mernstackdevbykevin/node-js-middleware-runtime-in-next-js-16-now-stable-what-this-means-for-your-full-stack-apps-d8f1660f4193) - proxy.ts uses Node.js runtime
+- Existing codebase analysis: `prisma/schema.prisma`, `lib/auth/authorization.ts`, `lib/auth/types.ts`, `package.json`
+- PROJECT.md: established patterns (entity chain ownership, 404-not-403, app-level filtering)
+- Prisma documentation: enum support, composite unique constraints, relation queries -- all verified as stable features in Prisma 7.x (HIGH confidence, features available since Prisma 4+)
+
+---
+*Stack research for: Requirements Foundry v4.0 Project Sharing*
+*Researched: 2026-03-23*
