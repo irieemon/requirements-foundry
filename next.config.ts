@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: "4mb",
+      allowedOrigins: [
+        "https://d2h2lae0fozvlv.cloudfront.net",
+      ],
     },
   },
   serverExternalPackages: ["@prisma/client", "@aws-sdk/client-secrets-manager"],
