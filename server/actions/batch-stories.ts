@@ -26,11 +26,13 @@ export async function startGenerateAllStories(
 
   try {
     // 1. Verify ownership
+    let auth;
     try {
-      await getAuthorizedProject(projectId);
+      auth = await getAuthorizedProject(projectId);
     } catch {
       return { success: false, error: "Project not found" };
     }
+    if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
     // 2. Check for existing active batch story run
     const activeRun = await db.run.findFirst({
@@ -214,7 +216,9 @@ export async function cancelBatchStoryRun(
   }
 
   // Verify ownership
-  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  let auth;
+  try { auth = await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
   if (run.type !== RunType.GENERATE_ALL_STORIES) {
     return { success: false, error: "Not a batch story run" };
@@ -260,7 +264,9 @@ export async function retryFailedEpics(
   }
 
   // Verify ownership
-  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  let auth;
+  try { auth = await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
   if (run.type !== RunType.GENERATE_ALL_STORIES) {
     return { success: false, error: "Not a batch story run" };

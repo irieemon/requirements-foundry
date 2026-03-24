@@ -9,7 +9,9 @@ import { getMssHierarchy, getMssServiceAreaByCode } from "./mss";
 
 export async function generateEpicsForProject(projectId: string) {
   // Verify ownership
-  try { await getAuthorizedProject(projectId); } catch { return { success: false, error: "Project not found" }; }
+  let auth;
+  try { auth = await getAuthorizedProject(projectId); } catch { return { success: false, error: "Project not found" }; }
+  if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
   // Create run record
   const run = await db.run.create({
@@ -178,7 +180,9 @@ export async function generateStoriesForEpic(
   }
 
   // Verify ownership
-  try { await getAuthorizedProject(epic.projectId); } catch { return { success: false, error: "Project not found" }; }
+  let auth;
+  try { auth = await getAuthorizedProject(epic.projectId); } catch { return { success: false, error: "Project not found" }; }
+  if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
   // Create run record
   const run = await db.run.create({

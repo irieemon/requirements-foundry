@@ -9,7 +9,9 @@ import { ExtractionStatus, AnalysisStatus } from "@/lib/types";
 
 export async function createUploadFromText(projectId: string, text: string, filename?: string) {
   // Verify ownership
-  try { await getAuthorizedProject(projectId); } catch { return { success: false, error: "Project not found" }; }
+  let auth;
+  try { auth = await getAuthorizedProject(projectId); } catch { return { success: false, error: "Project not found" }; }
+  if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
   // Create the upload record (text paste = direct parsing, no AI needed)
   const upload = await db.upload.create({
@@ -72,7 +74,9 @@ export async function createUploadFromText(projectId: string, text: string, file
 
 export async function createUploadFromCSV(projectId: string, csvContent: string, filename: string) {
   // Verify ownership
-  try { await getAuthorizedProject(projectId); } catch { return { success: false, error: "Project not found" }; }
+  let auth;
+  try { auth = await getAuthorizedProject(projectId); } catch { return { success: false, error: "Project not found" }; }
+  if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
   // Create the upload record (CSV = direct parsing, no AI needed)
   const upload = await db.upload.create({
@@ -154,7 +158,8 @@ export async function deleteUpload(id: string) {
   const upload = await db.upload.findUnique({ where: { id } });
   if (!upload) return;
 
-  await getAuthorizedProject(upload.projectId);
+  const { canEdit } = await getAuthorizedProject(upload.projectId);
+  if (!canEdit) { return; }
   await db.upload.delete({ where: { id } });
   revalidatePath(`/projects/${upload.projectId}`);
 }

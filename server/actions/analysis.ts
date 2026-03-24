@@ -27,11 +27,13 @@ export async function analyzeProject(
 
   try {
     // 1. Verify ownership
+    let auth;
     try {
-      await getAuthorizedProject(projectId);
+      auth = await getAuthorizedProject(projectId);
     } catch {
       return { success: false, error: "Project not found" };
     }
+    if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
     // 2. Check for existing active run
     const activeRun = await db.run.findFirst({
@@ -201,7 +203,9 @@ export async function cancelRun(
   }
 
   // Verify ownership
-  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  let auth;
+  try { auth = await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
   if (run.status !== RunStatus.RUNNING && run.status !== RunStatus.QUEUED) {
     return { success: false, error: "Run is not active" };
@@ -256,7 +260,9 @@ export async function retryFailedUploads(
   }
 
   // Verify ownership
-  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  let auth;
+  try { auth = await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
   const failedUploadIds = run.runUploads.map((ru) => ru.uploadId);
 

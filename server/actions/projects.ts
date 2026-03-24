@@ -114,7 +114,8 @@ export async function createProject(data: { name: string; description?: string }
 }
 
 export async function updateProject(id: string, data: { name?: string; description?: string }) {
-  await getAuthorizedProject(id);
+  const { canEdit } = await getAuthorizedProject(id);
+  if (!canEdit) { return { success: false, error: "Read-only access" }; }
   const project = await db.project.update({
     where: { id },
     data: {
@@ -128,7 +129,8 @@ export async function updateProject(id: string, data: { name?: string; descripti
 }
 
 export async function deleteProject(id: string) {
-  await getAuthorizedProject(id);
+  const { canEdit } = await getAuthorizedProject(id);
+  if (!canEdit) { return { success: false, error: "Read-only access" }; }
   await db.project.delete({
     where: { id },
   });

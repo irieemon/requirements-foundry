@@ -42,7 +42,9 @@ export async function startGenerateSubtasks(
     }
 
     // Verify ownership
-    try { await getAuthorizedProject(epic.project.id); } catch { return { success: false, error: "Project not found" }; }
+    let auth;
+    try { auth = await getAuthorizedProject(epic.project.id); } catch { return { success: false, error: "Project not found" }; }
+    if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
     if (epic.stories.length === 0) {
       return { success: false, error: "No stories found to generate subtasks for" };
@@ -209,7 +211,9 @@ export async function cancelBatchSubtaskRun(
   }
 
   // Verify ownership
-  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  let auth;
+  try { auth = await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
   if (run.type !== RunType.GENERATE_SUBTASKS) {
     return { success: false, error: "Not a subtask generation run" };
@@ -259,7 +263,9 @@ export async function retryFailedStories(
   }
 
   // Verify ownership
-  try { await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  let auth;
+  try { auth = await getAuthorizedProject(run.projectId); } catch { return { success: false, error: "Project not found" }; }
+  if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
   if (run.type !== RunType.GENERATE_SUBTASKS) {
     return { success: false, error: "Not a subtask generation run" };
