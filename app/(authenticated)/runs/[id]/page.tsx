@@ -8,8 +8,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import { formatDistanceToNow, format } from "date-fns";
 import { Clock, Zap } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth";
-import { isAdmin } from "@/lib/auth/authorization";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
 
 interface RunPageProps {
   params: Promise<{ id: string }>;
@@ -17,17 +16,15 @@ interface RunPageProps {
 
 export default async function RunPage({ params }: RunPageProps) {
   const { id } = await params;
-  const user = await getCurrentUser();
   const run = await getRun(id);
 
   if (!run) {
     notFound();
   }
 
-  // Ownership check: verify run belongs to a project the user owns (or is admin)
-  if (run.project.userId !== user.email && !isAdmin(user.email)) {
-    notFound();
-  }
+  // Authorize via centralized module (checks ownership, shares, admin)
+  // In Server Components, notFound() propagates naturally to Next.js 404 page
+  await getAuthorizedProject(run.project.id);
 
   const inputConfig = run.inputConfig ? JSON.parse(run.inputConfig) : null;
   const outputData = run.outputData ? JSON.parse(run.outputData) : null;

@@ -6,9 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getActiveSubtaskRun } from "@/server/actions/subtasks";
-import { getCurrentUser } from "@/lib/auth";
-import { isAdmin } from "@/lib/auth/authorization";
-import { db } from "@/lib/db";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
 
 // Force Node.js runtime
 export const runtime = "nodejs";
@@ -18,12 +16,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
     const { id } = await params;
 
-    // Ownership check: verify user owns this project (or is admin)
-    const project = await db.project.findUnique({ where: { id }, select: { userId: true } });
-    if (!project || (project.userId !== user.email && !isAdmin(user.email))) {
+    // Authorize via centralized module (checks ownership, shares, admin)
+    try {
+      await getAuthorizedProject(id);
+    } catch {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 

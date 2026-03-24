@@ -10,8 +10,7 @@ import { DocumentProcessor } from "@/lib/documents/processor";
 import { validateFile, getMimeTypeFromExtension } from "@/lib/documents/types";
 import { ExtractionStatus, AnalysisStatus } from "@/lib/types";
 import { uploadToStorage } from "@/lib/storage";
-import { getCurrentUser } from "@/lib/auth";
-import { isAdmin } from "@/lib/auth/authorization";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
 
 // ============================================
 // Types
@@ -50,8 +49,6 @@ interface UploadResponse {
 
 export async function POST(request: NextRequest): Promise<NextResponse<UploadResponse>> {
   try {
-    const user = await getCurrentUser();
-
     // Parse FormData (file sent directly from client)
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -79,15 +76,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
       }
     }
 
-    // Verify project exists and user owns it (or is admin)
-    const project = await db.project.findUnique({
-      where: { id: projectId },
-    });
-
-    if (!project || (project.userId !== user.email && !isAdmin(user.email))) {
+    // Authorize via centralized module (checks ownership, shares, admin)
+    let auth;
+    try {
+      auth = await getAuthorizedProject(projectId);
+    } catch {
       return NextResponse.json(
         { success: false, results: [], error: "Project not found" },
         { status: 404 }
+      );
+    }
+
+    // Viewer guard: uploads are mutations, viewers cannot upload
+    if (!auth.canEdit) {
+      return NextResponse.json(
+        { success: false, results: [], error: "Read-only access" },
+        { status: 403 }
       );
     }
 
@@ -239,7 +243,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<UploadRes
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get("projectId");
 
@@ -247,9 +250,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "projectId is required" }, { status: 400 });
     }
 
-    // Ownership check: verify user owns this project (or is admin)
-    const project = await db.project.findUnique({ where: { id: projectId }, select: { userId: true } });
-    if (!project || (project.userId !== user.email && !isAdmin(user.email))) {
+    // Authorize via centralized module (checks ownership, shares, admin)
+    // No viewer guard needed — GET is read-only
+    try {
+      await getAuthorizedProject(projectId);
+    } catch {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
