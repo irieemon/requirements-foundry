@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Project Sharing
 status: Ready to plan
-stopped_at: Completed 31-03-PLAN.md
-last_updated: "2026-03-24T00:39:01.969Z"
+stopped_at: Completed 31-02-PLAN.md
+last_updated: "2026-03-24T00:40:26.174Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -58,6 +58,7 @@ Recent decisions affecting current work:
 - [Phase 31]: Two-query approach for User lookup + Project with shares (pragmatic over raw SQL)
 - [Phase 31]: Strip shares from returned project to prevent data leakage
 - [Phase 31]: try-catch pattern wraps getAuthorizedRun/getAuthorizedProject in API routes to convert notFound() throws to JSON 404 responses
+- [Phase 31]: Viewer guard uses return for {success,error} functions, throw for throw-based functions
 
 ### Pending Todos
 
@@ -73,6 +74,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-24T00:39:01.966Z
-Stopped at: Completed 31-03-PLAN.md
+Last session: 2026-03-24T00:40:26.172Z
+Stopped at: Completed 31-02-PLAN.md
 Resume file: None

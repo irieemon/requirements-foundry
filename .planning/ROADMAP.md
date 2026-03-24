@@ -98,7 +98,7 @@ See [v3.0 archive](milestones/v3.0-ROADMAP.md) for full details.
 **Milestone Goal:** Enable project owners to share projects with other users as viewers or editors, with clear UI separation between owned and shared projects.
 
 - [x] **Phase 30: Data Foundation** - User table and ProjectShare schema enabling all sharing functionality (completed 2026-03-23)
-- [ ] **Phase 31: Authorization Refactor** - Role-aware access control for owner/editor/viewer/admin across all routes
+- [x] **Phase 31: Authorization Refactor** - Role-aware access control for owner/editor/viewer/admin across all routes (completed 2026-03-24)
 - [ ] **Phase 32: Share Management** - Owner-facing UI for sharing projects and managing collaborators
 - [ ] **Phase 33: Projects Page Integration** - User-facing display of shared projects with role and owner context
 
@@ -130,7 +130,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 31-01-PLAN.md — Core auth module: types, resolveRole, getAuthorizedProject with shares, getAuthorizedProjects, getAuthorizedRun
-- [ ] 31-02-PLAN.md — Viewer mutation guards on all 11 server action files
+- [x] 31-02-PLAN.md — Viewer mutation guards on all 11 server action files
 - [x] 31-03-PLAN.md — Consolidate inline auth checks from 7 API routes and 1 page route
 
 ### Phase 32: Share Management
@@ -172,6 +172,6 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26-29 | v3.0      | 10/10          | Complete | 2026-03-10 |
 | 30. Data Foundation | v4.0 | 1/1 | Complete    | 2026-03-23 |
-| 31. Authorization Refactor | v4.0 | 2/3 | In Progress|  |
+| 31. Authorization Refactor | v4.0 | 3/3 | Complete   | 2026-03-24 |
 | 32. Share Management | v4.0 | 0/? | Not started | - |
 | 33. Projects Page Integration | v4.0 | 0/? | Not started | - |
