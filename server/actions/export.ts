@@ -6,7 +6,8 @@ import { exportToJiraCSV } from "@/lib/export/jira-csv";
 import { exportProjectToJSON } from "@/lib/export/json-export";
 
 export async function exportProjectAsCSV(projectId: string) {
-  await getAuthorizedProject(projectId);
+  const { canEdit } = await getAuthorizedProject(projectId);
+  if (!canEdit) { throw new Error("Read-only access"); }
 
   const epics = await db.epic.findMany({
     where: { projectId },
@@ -23,8 +24,8 @@ export async function exportProjectAsCSV(projectId: string) {
 }
 
 export async function exportProjectAsJSON(projectId: string) {
-  const { project } = await getAuthorizedProject(projectId);
-  // getAuthorizedProject calls notFound() if not found/not authorized
+  const { project, canEdit } = await getAuthorizedProject(projectId);
+  if (!canEdit) { throw new Error("Read-only access"); }
 
   const uploads = await db.upload.findMany({
     where: { projectId },
@@ -48,7 +49,8 @@ export async function exportEpicAsCSV(epicId: string) {
   // Verify ownership via epic's project
   const epicCheck = await db.epic.findUnique({ where: { id: epicId }, select: { projectId: true } });
   if (!epicCheck) throw new Error("Epic not found");
-  await getAuthorizedProject(epicCheck.projectId);
+  const { canEdit } = await getAuthorizedProject(epicCheck.projectId);
+  if (!canEdit) { throw new Error("Read-only access"); }
 
   const epic = await db.epic.findUnique({
     where: { id: epicId },

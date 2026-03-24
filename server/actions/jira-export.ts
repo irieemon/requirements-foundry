@@ -40,7 +40,8 @@ export async function getExportStats(
   projectId: string,
   scope?: ExportScope
 ): Promise<ExportStats> {
-  await getAuthorizedProject(projectId);
+  const { canEdit } = await getAuthorizedProject(projectId);
+  if (!canEdit) { throw new Error("Read-only access"); }
   const effectiveScope: ExportScope = scope || { mode: "all" };
 
   try {
@@ -65,7 +66,8 @@ export async function previewExport(
   projectId: string,
   config: ExportConfig
 ): Promise<ExportPreview> {
-  await getAuthorizedProject(projectId);
+  const { canEdit } = await getAuthorizedProject(projectId);
+  if (!canEdit) { throw new Error("Read-only access"); }
 
   try {
     // Extract data
@@ -135,7 +137,8 @@ export async function generateExport(
   projectId: string,
   config: ExportConfig
 ): Promise<ExportBundle> {
-  await getAuthorizedProject(projectId);
+  const { canEdit } = await getAuthorizedProject(projectId);
+  if (!canEdit) { throw new Error("Read-only access"); }
 
   try {
     return await runExportPipeline(projectId, config);
@@ -153,7 +156,8 @@ export async function generateExport(
 // ─────────────────────────────────────────────────────────────────
 
 export async function getAvailableRuns(projectId: string): Promise<RunOption[]> {
-  await getAuthorizedProject(projectId);
+  const { canEdit } = await getAuthorizedProject(projectId);
+  if (!canEdit) { throw new Error("Read-only access"); }
 
   const runs = await db.run.findMany({
     where: {
@@ -201,7 +205,8 @@ export async function getAvailableRuns(projectId: string): Promise<RunOption[]> 
 // ─────────────────────────────────────────────────────────────────
 
 export async function getEpicsForSelection(projectId: string): Promise<EpicOption[]> {
-  await getAuthorizedProject(projectId);
+  const { canEdit } = await getAuthorizedProject(projectId);
+  if (!canEdit) { throw new Error("Read-only access"); }
   return getEpicOptions(projectId);
 }
 
@@ -211,7 +216,8 @@ export async function getEpicsForSelection(projectId: string): Promise<EpicOptio
 // ─────────────────────────────────────────────────────────────────
 
 export async function getProjectForExport(projectId: string) {
-  await getAuthorizedProject(projectId);
+  const { canEdit } = await getAuthorizedProject(projectId);
+  if (!canEdit) { throw new Error("Read-only access"); }
 
   const project = await db.project.findUnique({
     where: { id: projectId },
@@ -243,7 +249,8 @@ export async function getFullPreviewItems(
   projectId: string,
   config: ExportConfig
 ): Promise<FullPreviewData> {
-  await getAuthorizedProject(projectId);
+  const { canEdit } = await getAuthorizedProject(projectId);
+  if (!canEdit) { throw new Error("Read-only access"); }
 
   try {
     // Extract data from database

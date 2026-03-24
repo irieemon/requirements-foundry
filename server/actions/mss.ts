@@ -454,7 +454,9 @@ export async function updateEpicMss(
     }
 
     // Verify ownership
-    try { await getAuthorizedProject(epic.projectId); } catch { return { success: false, error: "Project not found" }; }
+    let auth;
+    try { auth = await getAuthorizedProject(epic.projectId); } catch { return { success: false, error: "Project not found" }; }
+    if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
     // Validate service area exists if provided
     if (mssServiceAreaId !== null) {
@@ -500,7 +502,9 @@ export async function updateStoryMss(
     }
 
     // Verify ownership
-    try { await getAuthorizedProject(story.epic.projectId); } catch { return { success: false, error: "Project not found" }; }
+    let auth;
+    try { auth = await getAuthorizedProject(story.epic.projectId); } catch { return { success: false, error: "Project not found" }; }
+    if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
     // Validate service area exists if provided
     if (mssServiceAreaId !== null) {

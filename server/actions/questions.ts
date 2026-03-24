@@ -51,7 +51,9 @@ export async function generateQuestionsForUpload(uploadId: string): Promise<{
     }
 
     // Verify ownership
-    try { await getAuthorizedProject(upload.projectId); } catch { return { success: false, error: "Project not found" }; }
+    let auth;
+    try { auth = await getAuthorizedProject(upload.projectId); } catch { return { success: false, error: "Project not found" }; }
+    if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
     // 2. Check if context exists - questions require context form to be submitted first
     if (!upload.context) {
@@ -183,7 +185,9 @@ export async function submitQuestionAnswers(
     }
 
     // Verify ownership
-    try { await getAuthorizedProject(upload.projectId); } catch { return { success: false, error: "Project not found" }; }
+    let auth;
+    try { auth = await getAuthorizedProject(upload.projectId); } catch { return { success: false, error: "Project not found" }; }
+    if (!auth.canEdit) { return { success: false, error: "Read-only access" }; }
 
     if (!upload.context) {
       return { success: false, error: "Upload context not found" };
