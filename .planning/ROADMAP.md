@@ -131,7 +131,7 @@ Plans:
 Plans:
 - [x] 31-01-PLAN.md — Core auth module: types, resolveRole, getAuthorizedProject with shares, getAuthorizedProjects, getAuthorizedRun
 - [ ] 31-02-PLAN.md — Viewer mutation guards on all 11 server action files
-- [ ] 31-03-PLAN.md — Consolidate inline auth checks from 7 API routes and 1 page route
+- [x] 31-03-PLAN.md — Consolidate inline auth checks from 7 API routes and 1 page route
 
 ### Phase 32: Share Management
 **Goal**: Project owners can add, remove, and manage collaborators on their projects
@@ -172,6 +172,6 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26-29 | v3.0      | 10/10          | Complete | 2026-03-10 |
 | 30. Data Foundation | v4.0 | 1/1 | Complete    | 2026-03-23 |
-| 31. Authorization Refactor | v4.0 | 1/3 | In Progress|  |
+| 31. Authorization Refactor | v4.0 | 2/3 | In Progress|  |
 | 32. Share Management | v4.0 | 0/? | Not started | - |
 | 33. Projects Page Integration | v4.0 | 0/? | Not started | - |
