@@ -13,9 +13,9 @@
 
 ### Authorization
 
-- [ ] **AUTH-01**: User can access shared projects based on their effective role (owner/editor/viewer/admin)
+- [x] **AUTH-01**: User can access shared projects based on their effective role (owner/editor/viewer/admin)
 - [ ] **AUTH-02**: User with viewer role cannot trigger mutations (uploads, AI runs, edits, deletions, exports)
-- [ ] **AUTH-03**: Admin can still access all projects regardless of sharing
+- [x] **AUTH-03**: Admin can still access all projects regardless of sharing
 
 ### Share Management
 
@@ -63,9 +63,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | DATA-01 | Phase 30 | Complete |
 | DATA-02 | Phase 30 | Complete |
-| AUTH-01 | Phase 31 | Pending |
+| AUTH-01 | Phase 31 | Complete |
 | AUTH-02 | Phase 31 | Pending |
-| AUTH-03 | Phase 31 | Pending |
+| AUTH-03 | Phase 31 | Complete |
 | SHARE-01 | Phase 32 | Pending |
 | SHARE-02 | Phase 32 | Pending |
 | SHARE-03 | Phase 32 | Pending |

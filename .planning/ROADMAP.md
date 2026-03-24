@@ -129,7 +129,7 @@ Plans:
   5. Unauthorized access to a project returns 404 (not 403), preserving the existing security pattern
 **Plans**: 3 plans
 Plans:
-- [ ] 31-01-PLAN.md — Core auth module: types, resolveRole, getAuthorizedProject with shares, getAuthorizedProjects, getAuthorizedRun
+- [x] 31-01-PLAN.md — Core auth module: types, resolveRole, getAuthorizedProject with shares, getAuthorizedProjects, getAuthorizedRun
 - [ ] 31-02-PLAN.md — Viewer mutation guards on all 11 server action files
 - [ ] 31-03-PLAN.md — Consolidate inline auth checks from 7 API routes and 1 page route
 
@@ -172,6 +172,6 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26-29 | v3.0      | 10/10          | Complete | 2026-03-10 |
 | 30. Data Foundation | v4.0 | 1/1 | Complete    | 2026-03-23 |
-| 31. Authorization Refactor | v4.0 | 0/3 | Not started | - |
+| 31. Authorization Refactor | v4.0 | 1/3 | In Progress|  |
 | 32. Share Management | v4.0 | 0/? | Not started | - |
 | 33. Projects Page Integration | v4.0 | 0/? | Not started | - |
