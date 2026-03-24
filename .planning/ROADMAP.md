@@ -143,8 +143,10 @@ Plans:
   3. Project owner can change a shared user's role between viewer and editor
   4. Project owner can remove a user's access to the project
   5. Non-owners (editors, viewers) cannot access the share management controls
-**Plans**: [To be planned]
-**UI hint**: yes
+**Plans**: 2 plans
+Plans:
+- [ ] 32-01-PLAN.md — Install cmdk/popover deps, share server actions with tests
+- [ ] 32-02-PLAN.md — Share dialog UI, user search combobox, page integration with role gating
 
 ### Phase 33: Projects Page Integration
 **Goal**: Users can distinguish their own projects from shared ones and see collaboration context at a glance
@@ -173,5 +175,5 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 26-29 | v3.0      | 10/10          | Complete | 2026-03-10 |
 | 30. Data Foundation | v4.0 | 1/1 | Complete    | 2026-03-23 |
 | 31. Authorization Refactor | v4.0 | 3/3 | Complete   | 2026-03-24 |
-| 32. Share Management | v4.0 | 0/? | Not started | - |
+| 32. Share Management | v4.0 | 0/2 | Not started | - |
 | 33. Projects Page Integration | v4.0 | 0/? | Not started | - |
