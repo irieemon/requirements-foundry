@@ -5,9 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getBatchStoryProgress } from "@/server/actions/batch-stories";
-import { getCurrentUser } from "@/lib/auth";
-import { isAdmin } from "@/lib/auth/authorization";
-import { db } from "@/lib/db";
+import { getAuthorizedRun } from "@/lib/auth/authorization";
 
 // Cache headers to prevent stale progress data
 const CACHE_HEADERS = {
@@ -21,15 +19,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
     const { id } = await params;
 
-    // Ownership check: verify run belongs to a project the user owns (or is admin)
-    const run = await db.run.findUnique({
-      where: { id },
-      include: { project: { select: { userId: true } } },
-    });
-    if (!run || (run.project.userId !== user.email && !isAdmin(user.email))) {
+    // Authorize via centralized module (checks ownership, shares, admin)
+    try {
+      await getAuthorizedRun(id);
+    } catch {
       return NextResponse.json({ error: "Run not found" }, { status: 404, headers: CACHE_HEADERS });
     }
 
