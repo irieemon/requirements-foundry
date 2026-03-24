@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { getProject } from "@/server/actions/projects";
+import { getAuthorizedProject } from "@/lib/auth/authorization";
+import { ShareDialog } from "@/components/projects/share-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
@@ -38,6 +40,7 @@ interface ProjectPageProps {
 export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
   const { id } = await params;
   const { section: sectionParam } = await searchParams;
+  const { role } = await getAuthorizedProject(id);
   const project = await getProject(id);
 
   if (!project) {
@@ -88,7 +91,14 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         title={project.name}
         description={project.description || undefined}
         breadcrumbs={breadcrumbItems}
-        actions={<ExportProjectButton projectId={project.id} hasEpics={project._count.epics > 0} />}
+        actions={
+          <div className="flex items-center gap-2">
+            {(role === "owner" || role === "admin") && (
+              <ShareDialog projectId={project.id} />
+            )}
+            <ExportProjectButton projectId={project.id} hasEpics={project._count.epics > 0} />
+          </div>
+        }
       />
 
       {/* Main Content */}
