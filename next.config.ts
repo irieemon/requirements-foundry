@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "4mb",
       allowedOrigins: [
-        "https://d2h2lae0fozvlv.cloudfront.net",
+        "d2h2lae0fozvlv.cloudfront.net",
       ],
     },
   },

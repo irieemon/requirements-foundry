@@ -136,6 +136,24 @@ Acceptance Criteria use Given/When/Then format:
   }
   console.log("Created prompt templates");
 
+  // Create test users for share management
+  const testUsers = [
+    { email: "sean.mcinerney@merkle.com", name: "Sean McInerney" },
+    { email: "jane.doe@merkle.com", name: "Jane Doe" },
+    { email: "john.smith@merkle.com", name: "John Smith" },
+    { email: "alice.johnson@merkle.com", name: "Alice Johnson" },
+    { email: "bob.williams@merkle.com", name: "Bob Williams" },
+  ];
+
+  for (const user of testUsers) {
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: { name: user.name },
+      create: user,
+    });
+  }
+  console.log("Created", testUsers.length, "test users");
+
   // Create sample project
   const project = await prisma.project.create({
     data: {

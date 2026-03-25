@@ -100,6 +100,20 @@ export class RequirementsFoundryStack extends cdk.Stack {
       privateDnsEnabled: true,
     });
 
+    // SSM Interface Endpoints - required for ECS Exec into Fargate tasks
+    this.vpc.addInterfaceEndpoint('SsmMessagesEndpoint', {
+      service: ec2.InterfaceVpcEndpointAwsService.SSM_MESSAGES,
+      subnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      securityGroups: [this.endpointSg],
+      privateDnsEnabled: true,
+    });
+    this.vpc.addInterfaceEndpoint('SsmEndpoint', {
+      service: ec2.InterfaceVpcEndpointAwsService.SSM,
+      subnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      securityGroups: [this.endpointSg],
+      privateDnsEnabled: true,
+    });
+
     // RDS Parameter Group - enforce SSL connections (DB-04)
     const parameterGroup = new rds.ParameterGroup(this, 'DatabaseParameterGroup', {
       engine: rds.DatabaseInstanceEngine.postgres({ version: rds.PostgresEngineVersion.VER_16_3 }),
@@ -262,6 +276,16 @@ export class RequirementsFoundryStack extends cdk.Stack {
     // CloudWatch Logs (for container logging)
     taskRole.addToPolicy(new iam.PolicyStatement({
       actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+      resources: ['*'],
+    }));
+    // SSM permissions for ECS Exec
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        'ssmmessages:CreateControlChannel',
+        'ssmmessages:CreateDataChannel',
+        'ssmmessages:OpenControlChannel',
+        'ssmmessages:OpenDataChannel',
+      ],
       resources: ['*'],
     }));
 
@@ -485,6 +509,7 @@ export class RequirementsFoundryStack extends cdk.Stack {
       circuitBreaker: { enable: true, rollback: false },
       minHealthyPercent: 100,
       maxHealthyPercent: 200,
+      enableExecuteCommand: true,
     });
 
     // Wire Fargate service to ALB target group

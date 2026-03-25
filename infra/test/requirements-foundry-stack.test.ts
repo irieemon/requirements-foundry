@@ -116,6 +116,22 @@ describe('RequirementsFoundryStack', () => {
         PrivateDnsEnabled: true,
       });
     });
+
+    test('SSM Messages Interface VPC Endpoint exists', () => {
+      template.hasResourceProperties('AWS::EC2::VPCEndpoint', {
+        ServiceName: 'com.amazonaws.us-east-1.ssmmessages',
+        VpcEndpointType: 'Interface',
+        PrivateDnsEnabled: true,
+      });
+    });
+
+    test('SSM Interface VPC Endpoint exists', () => {
+      template.hasResourceProperties('AWS::EC2::VPCEndpoint', {
+        ServiceName: 'com.amazonaws.us-east-1.ssm',
+        VpcEndpointType: 'Interface',
+        PrivateDnsEnabled: true,
+      });
+    });
   });
 
   describe('RDS PostgreSQL', () => {
@@ -386,6 +402,12 @@ describe('RequirementsFoundryStack', () => {
     test('service has LaunchType FARGATE', () => {
       template.hasResourceProperties('AWS::ECS::Service', {
         LaunchType: 'FARGATE',
+      });
+    });
+
+    test('service has ECS Exec enabled', () => {
+      template.hasResourceProperties('AWS::ECS::Service', {
+        EnableExecuteCommand: true,
       });
     });
   });

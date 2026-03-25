@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-25T13:10:55.944Z",
+  "phase": "32",
+  "phase_name": "share-management",
+  "phase_dir": ".planning/phases/32-share-management",
+  "plan": 2,
+  "task": 4,
+  "total_tasks": 4,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Phase 32 Plan 01 - Share CRUD server actions", "status": "done", "commit": "8cf29b2"},
+    {"id": 2, "name": "Phase 32 Plan 02 - Share dialog UI components", "status": "done", "commit": "58e2f46"},
+    {"id": 3, "name": "Fix allowedOrigins for server actions through CloudFront", "status": "done", "commit": "378b70b (needs recommit with hostname-only fix)"},
+    {"id": 4, "name": "Infra: VPC endpoints + ECS Exec + test user seeding", "status": "done", "progress": "CDK deployed, 5 test users seeded, allowedOrigins fix redeployed"}
+  ],
+  "remaining_tasks": [
+    {"id": 5, "name": "Human UAT testing of share dialog", "status": "not_started"},
+    {"id": 6, "name": "Mark Phase 32 complete in ROADMAP.md", "status": "not_started"},
+    {"id": 7, "name": "Discuss and plan Phase 33 (Projects Page Integration)", "status": "not_started"}
+  ],
+  "blockers": [],
+  "human_actions_pending": [
+    {"action": "Complete human UAT testing of share dialog on deployed environment", "context": "32-HUMAN-UAT.md has 7 test scenarios pending verification", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "allowedOrigins requires bare hostname not full URL", "rationale": "Next.js extracts hostname from Origin header before comparing against allowedOrigins list", "phase": "32"},
+    {"decision": "Added ssm + ssmmessages VPC endpoints for ECS Exec", "rationale": "Needed to exec into Fargate containers for DB seeding and debugging", "phase": "32"},
+    {"decision": "Seeded 5 test users via ECS Exec with base64 script injection", "rationale": "No direct DB access from local; ECS Exec + Secrets Manager for DB URL construction", "phase": "32"}
+  ],
+  "uncommitted_files": [
+    "next.config.ts",
+    "infra/lib/requirements-foundry-stack.ts",
+    "infra/test/requirements-foundry-stack.test.ts",
+    "prisma/seed.ts",
+    "scripts/deploy.sh",
+    ".planning/REQUIREMENTS.md",
+    ".planning/ROADMAP.md",
+    ".planning/STATE.md"
+  ],
+  "next_action": "Commit uncommitted infra/config changes, complete human UAT for Phase 32, then /gsd:discuss-phase 33",
+  "context_notes": "Phase 32 code is complete and deployed. The allowedOrigins fix (hostname-only, no protocol) was the key blocker — now resolved and redeployed. Share dialog confirmed working by user. Human UAT items in 32-HUMAN-UAT.md still need formal sign-off. Phase 33 (Projects Page Integration) is a UI phase — recommend /gsd:ui-phase or /gsd:discuss-phase before planning."
+}
