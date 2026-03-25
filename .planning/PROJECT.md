@@ -56,25 +56,20 @@ Requirements Foundry is a multi-user tool that transforms uploaded documents int
 - ✓ Public landing page with SSO login — v3.0
 - ✓ Protected routes with auth middleware — v3.0
 - ✓ User identity display with logout menu — v3.0
+- ✓ Project owner can share their project with one or more existing users — v4.0
+- ✓ Role-based sharing: viewer (read-only) or editor (full access) — v4.0
+- ✓ "Shared with me" section on projects page separating owned vs shared — v4.0
+- ✓ Share management UI (add/remove users, change roles) — v4.0
+- ✓ User picker showing accounts who have previously signed in — v4.0
+- ✓ Admins retain full visibility across all projects — v4.0
 
 ### Active
 
-- Project owner can share their project with one or more existing users
-- Role-based sharing: viewer (read-only) or editor (full access)
-- "Shared with me" section on projects page separating owned vs shared
-- Share management UI (add/remove users, change roles)
-- User picker showing accounts who have previously signed in
-- Admins retain full visibility across all projects
+(No active requirements — next milestone not yet defined)
 
-## Current Milestone: v4.0 Project Sharing
+## Current State
 
-**Goal:** Enable project owners to share projects with other users as viewers or editors, with clear UI separation between owned and shared projects.
-
-**Target features:**
-- Direct user-to-user project sharing with viewer/editor roles
-- Share management UI with user picker
-- "Shared with me" section on projects page
-- Admin full-access override preserved
+**v4.0 Project Sharing shipped 2026-03-25.** All 11 requirements delivered across 4 phases, 8 plans. Human UAT passed for share management and projects page integration.
 
 ### Deferred
 
@@ -106,13 +101,15 @@ Requirements Foundry is a multi-user tool that transforms uploaded documents int
 
 ## Context
 
-**Current state (v4.0 Phase 30 complete):**
+**Current state (v4.0 shipped):**
 - ~70,000+ lines of TypeScript/TSX/JS/JSON
 - Tech stack: Next.js 16, Prisma 7, Bedrock Claude AI, AWS (ECS Fargate, RDS, S3, ALB, Cognito, Secrets Manager)
 - Infrastructure: CDK (TypeScript), GitHub Actions CI/CD with OIDC
 - Authentication: Cognito + Okta SAML SSO, iron-session cookies, JWT verification via aws-jwt-verify
-- Data isolation: per-user project ownership with centralized authorization module
-- Identity: User table with login-time upsert from Cognito claims, ProjectShare junction table for multi-user access
+- Authorization: Centralized role-based access control (owner/editor/viewer/admin) with ProjectShare junction table
+- Sharing: Owner-facing share dialog with user search, role management, and non-owner gating
+- Projects page: Two-section layout (My Projects / Shared with me) with role badges and owner attribution
+- Runs page: Includes runs from shared projects with project name display
 - Admin: hardcoded admin email with UI toggle for all-projects view
 - All generative flows working with real-time progress on AWS
 - Complete MSS taxonomy management
@@ -171,6 +168,12 @@ Requirements Foundry is a multi-user tool that transforms uploaded documents int
 | 404-not-403 for unauthorized access | Prevents leaking project existence | ✓ Good |
 | Entity chain ownership (not userId on every table) | Fewer schema changes, single source of truth | ✓ Good |
 | Admin defaults to own projects | Safe default; explicit opt-in for all-projects view | ✓ Good |
+| User table over Cognito ListUsers | Faster autocomplete, no rate limits, FK-safe | ✓ Good |
+| Migration backfill from Project.userId | Existing users appear in User table without re-login | ✓ Good |
+| Highest-wins role resolution (admin>owner>editor>viewer) | Simple, predictable priority without complex flag separation | ✓ Good |
+| Two-query auth (User lookup + Project with shares) | Pragmatic over raw SQL, clean separation | ✓ Good |
+| cmdk + Popover combobox for user search | Server-side filtering with shouldFilter=false | ✓ Good |
+| Return shape split (ownedProjects/sharedProjects) | Cleaner UI section separation, no client-side filtering | ✓ Good |
 
 ## Constraints
 
@@ -199,4 +202,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-23 — Phase 30 Data Foundation complete*
+*Last updated: 2026-03-25 after v4.0 milestone*

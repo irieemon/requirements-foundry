@@ -1,5 +1,22 @@
 # Project Milestones: Requirements Foundry
 
+## v4.0 Project Sharing (Shipped: 2026-03-25)
+
+**Phases completed:** 4 phases, 8 plans, 15 tasks
+
+**Key accomplishments:**
+
+- User and ProjectShare Prisma models with migration backfill and login-time upsert in auth callback
+- Role-based authorization with ProjectShare lookup, resolveRole priority function, and enriched AuthResult return shape across getAuthorizedProject, getAuthorizedProjects, and getAuthorizedRun
+- canEdit guard added to 29 mutation functions across 10 server action files, blocking viewer role with Read-only access rejection
+- Replaced all inline project.userId ownership checks across 7 API routes and 1 page route with centralized getAuthorizedRun/getAuthorizedProject helpers, adding viewer guard on upload mutations
+- Share CRUD server actions with owner/admin gating, cmdk+popover UI primitives, and 19 passing unit tests
+- Share dialog with user search combobox, role management list, and owner-gated project page integration
+- Two-section project list with "My Projects" / "Shared with me" sections, role badges (Editor/Viewer), and owner name display on shared cards
+- OR query for owned + shared project runs with per-run projectName display in RunList
+
+---
+
 ## v3.0 Authentication & Multi-User (Shipped: 2026-03-10)
 
 **Delivered:** Added Cognito + Okta SAML SSO authentication with per-user project isolation, admin role bypass, and polished user identity display -- transforming a single-user tool into a secure multi-tenant application.
@@ -26,6 +43,7 @@
 **Git range:** `test(26-01)` → `docs: create v3.0 milestone audit report`
 
 **Tech debt:**
+
 - ADMIN-01: isAdmin uses hardcoded ADMIN_EMAIL instead of Okta group claims (pipeline wired but unused)
 - Runs page admins see all runs by default with no My/All toggle (asymmetry with projects page)
 - 3 pre-existing CDK test failures (ALB security group, internal flag, DesiredCount)
@@ -60,6 +78,7 @@
 **Git range:** `feat(21-01)` → `docs(phase-25)`
 
 **Known gaps:**
+
 - 23-03-SUMMARY.md missing (multi-session deployment debugging, work completed)
 - AI-01/AI-04 checkbox omissions in REQUIREMENTS.md (validated by smoke test)
 

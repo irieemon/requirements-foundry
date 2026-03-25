@@ -2,6 +2,53 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v4.0 — Project Sharing
+
+**Shipped:** 2026-03-25
+**Phases:** 4 | **Plans:** 8 | **Sessions:** ~4
+
+### What Was Built
+- User table with login-time upsert and ProjectShare junction table for multi-user access
+- Centralized role-based authorization (owner/editor/viewer/admin) with highest-wins priority across all routes and server actions
+- Viewer mutation guards on 29 functions across 10 server action files
+- Share dialog with user search combobox (cmdk+popover), role management, and owner-gated access
+- Two-section projects page (My Projects / Shared with me) with role badges and owner attribution
+- Runs page expanded to include shared project runs with project name display
+
+### What Worked
+- Building directly on v3.0's centralized authorization module — Phase 31 extended existing patterns rather than reinventing
+- TDD carried forward from v3.0 with 30 auth tests and 19 share action tests catching issues before deployment
+- Discuss-phase context documents captured key decisions (User table vs Cognito, highest-wins role priority) that prevented mid-execution pivots
+- Phase ordering was optimal: data foundation → authorization → share UI → display integration — zero circular dependencies
+- Human UAT on deployed environment caught no issues (8/8 automated + 8/8 human tests passed)
+
+### What Was Inefficient
+- Phase 32 ROADMAP checkbox for 32-02 never got checked to `[x]` despite summary existing — recurring issue from v3.0
+- Phase 32 completion required manual `/gsd:execute-phase` to trigger state update even though all plans were already done
+- Nyquist validation strategies created but not exercised (same pattern as v3.0)
+- Pre-existing CDK test failures (3) still unresolved from v2.0
+
+### Patterns Established
+- `resolveRole` priority function: admin > owner > editor > viewer with explicit precedence
+- Server-side `shouldFilter=false` pattern for cmdk combobox with debounced search
+- Return shape split pattern (`{ownedProjects, sharedProjects}`) for clean UI section separation without client-side filtering
+- Batch `User.findMany` for efficient N-record display name lookups
+- P2002 Prisma error code detection for duplicate share prevention
+
+### Key Lessons
+1. **Extend centralized modules, don't duplicate** — adding share resolution to existing `getAuthorizedProject` was cleaner than parallel auth paths
+2. **User table beats external IdP queries** — local User table made autocomplete instant vs Cognito rate-limited ListUsers
+3. **OR queries with conditional spread** — `{OR: [ownedClause, ...(dbUser ? [shareClause] : [])]}` pattern handles optional join conditions cleanly
+4. **Two-section return shapes > client filtering** — splitting at the server avoids client-side role detection logic
+5. **Phase completion tracking needs automation** — manual state sync after plans are done is error-prone across milestones
+
+### Cost Observations
+- Model mix: ~70% opus (planning, milestone), ~30% sonnet (verification, checking)
+- Sessions: ~4 across 3 days
+- Notable: 8 plans in 3 days with zero rework — fastest feature milestone by defect rate
+
+---
+
 ## Milestone: v3.0 — Authentication & Multi-User
 
 **Shipped:** 2026-03-10
@@ -107,10 +154,12 @@
 | v1.2 | ~4 | 5 | Fastest milestone, 8 plans in 7 days |
 | v2.0 | ~12 | 5 | Infrastructure + deployment, multi-session debugging |
 | v3.0 | ~3 | 4 | Fastest execution (32min), TDD across all phases |
+| v4.0 | ~4 | 4 | Zero-defect feature delivery, role-based sharing |
 
 ### Top Lessons (Verified Across Milestones)
 
-1. Small, atomic plans execute faster and with fewer issues than large monolithic ones (v1.0, v1.1, v1.2, v2.0, v3.0)
+1. Small, atomic plans execute faster and with fewer issues than large monolithic ones (v1.0, v1.1, v1.2, v2.0, v3.0, v4.0)
 2. Human checkpoints for deployment validation are essential — automated tests can't verify browser-based flows (v1.0, v2.0)
 3. Parallel execution where dependencies allow saves significant wall-clock time (v2.0 phases 21+22)
-4. Centralized helpers for cross-cutting concerns (authorization, auth) pay off immediately when many files need the same pattern (v3.0)
+4. Centralized helpers for cross-cutting concerns (authorization, auth) pay off immediately when many files need the same pattern (v3.0, v4.0)
+5. Discuss-phase context documents prevent mid-execution pivots by locking key design decisions early (v4.0)

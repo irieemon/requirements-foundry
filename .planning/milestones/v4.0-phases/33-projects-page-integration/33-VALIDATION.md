@@ -17,18 +17,18 @@ created: 2026-03-25
 
 | Property | Value |
 |----------|-------|
-| **Framework** | jest 29.x (existing) |
-| **Config file** | jest.config.ts |
-| **Quick run command** | `npx jest --testPathPattern="authorization" --no-coverage` |
-| **Full suite command** | `npx jest --no-coverage` |
+| **Framework** | vitest (existing) |
+| **Config file** | vitest.config.mts |
+| **Quick run command** | `npx vitest run lib/auth/__tests__/authorization.test.ts` |
+| **Full suite command** | `npx vitest run` |
 | **Estimated runtime** | ~15 seconds |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `npx jest --testPathPattern="authorization" --no-coverage`
-- **After every plan wave:** Run `npx jest --no-coverage`
+- **After every task commit:** Run `npx vitest run lib/auth/__tests__/authorization.test.ts`
+- **After every plan wave:** Run `npx vitest run`
 - **Before `/gsd:verify-work`:** Full suite must be green
 - **Max feedback latency:** 15 seconds
 
