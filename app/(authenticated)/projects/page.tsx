@@ -12,16 +12,17 @@ export default async function ProjectsPage({
 }) {
   const params = await searchParams;
   const viewAll = params.view === "all";
-  const { projects, user, isAdmin } = await getAuthorizedProjects(viewAll);
+  const { ownedProjects, sharedProjects, user, isAdmin } = await getAuthorizedProjects(viewAll);
 
-  // For admin "All" view, annotate projects with owner info
-  const annotatedProjects = projects.map((project) => ({
-    ...project,
-    ownerLabel:
-      isAdmin && viewAll && project.userId !== user.email
-        ? project.userId
-        : undefined,
-  }));
+  const isAdminViewAll = isAdmin && viewAll;
+
+  // Admin viewAll: annotate with owner email as before
+  const adminAnnotatedProjects = isAdminViewAll
+    ? ownedProjects.map((project: typeof ownedProjects[number]) => ({
+        ...project,
+        ownerLabel: project.userId !== user.email ? project.userId : undefined,
+      }))
+    : undefined;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -42,7 +43,11 @@ export default async function ProjectsPage({
 
       <div className="flex-1 p-6">
         <div className="max-w-7xl mx-auto">
-          <ProjectList projects={annotatedProjects} />
+          {isAdminViewAll ? (
+            <ProjectList projects={adminAnnotatedProjects!} />
+          ) : (
+            <ProjectList ownedProjects={ownedProjects} sharedProjects={sharedProjects} />
+          )}
         </div>
       </div>
     </div>

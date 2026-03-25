@@ -6,8 +6,8 @@ import { getAuthorizedProject, getAuthorizedProjects } from "@/lib/auth/authoriz
 import { getCurrentUser } from "@/lib/auth";
 
 export async function getProjects() {
-  const { projects } = await getAuthorizedProjects();
-  return projects;
+  const { ownedProjects, sharedProjects } = await getAuthorizedProjects();
+  return [...ownedProjects, ...sharedProjects];
 }
 
 export async function getProjectName(id: string) {

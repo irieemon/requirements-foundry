@@ -22,6 +22,8 @@ interface ProjectCardProps {
     description: string | null;
     createdAt: Date;
     ownerLabel?: string;
+    role?: string;
+    ownerName?: string;
     _count: {
       uploads: number;
       cards: number;
@@ -52,6 +54,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
     }
   };
 
+  const isShared = project.role && project.role !== "owner" && project.role !== "admin";
+  const canDelete = !project.role || project.role === "owner" || project.role === "admin";
+
   return (
     <Card
       className="hover:shadow-md transition-shadow cursor-pointer"
@@ -73,25 +78,42 @@ export function ProjectCard({ project }: ProjectCardProps) {
           {project.description && (
             <CardDescription className="line-clamp-2">{project.description}</CardDescription>
           )}
+          {project.ownerName && (
+            <p className="text-xs text-muted-foreground">
+              Shared by {project.ownerName}
+            </p>
+          )}
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={(e) => e.stopPropagation()}
+        <div className="flex items-center gap-1 shrink-0">
+          {isShared && (
+            <Badge
+              variant={project.role === "editor" ? "secondary" : "outline"}
+              className="text-xs"
             >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {project.role === "editor" ? "Editor" : "Viewer"}
+            </Badge>
+          )}
+          {canDelete && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-2 mb-3">
