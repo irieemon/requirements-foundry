@@ -159,7 +159,7 @@ Plans:
   4. Runs page includes runs from shared projects the user has access to
 **Plans**: 2 plans
 Plans:
-- [ ] 33-01-PLAN.md — Split getAuthorizedProjects return shape, two-section project list with role badges and owner names
+- [x] 33-01-PLAN.md — Split getAuthorizedProjects return shape, two-section project list with role badges and owner names
 - [ ] 33-02-PLAN.md — Runs page query expansion for shared projects with per-run project names
 
 ## Progress
@@ -178,4 +178,4 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 30. Data Foundation | v4.0 | 1/1 | Complete    | 2026-03-23 |
 | 31. Authorization Refactor | v4.0 | 3/3 | Complete   | 2026-03-24 |
 | 32. Share Management | v4.0 | 1/2 | In Progress|  |
-| 33. Projects Page Integration | v4.0 | 0/2 | Not started | - |
+| 33. Projects Page Integration | v4.0 | 1/2 | In Progress|  |

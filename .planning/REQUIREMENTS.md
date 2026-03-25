@@ -19,15 +19,15 @@
 
 ### Share Management
 
-- [ ] **SHARE-01**: User can share their project with one or more existing users via a share dialog
-- [ ] **SHARE-02**: User can search for other users by email or name when sharing (user picker)
-- [ ] **SHARE-03**: User can remove a share or change a shared user's role (viewer/editor)
+- [x] **SHARE-01**: User can share their project with one or more existing users via a share dialog
+- [x] **SHARE-02**: User can search for other users by email or name when sharing (user picker)
+- [x] **SHARE-03**: User can remove a share or change a shared user's role (viewer/editor)
 
 ### Projects Page
 
-- [ ] **PAGE-01**: User can see shared projects in a separate "Shared with me" section
-- [ ] **PAGE-02**: User can see their role (viewer/editor) as a badge on shared project cards
-- [ ] **PAGE-03**: User can see the project owner's name on shared project cards
+- [x] **PAGE-01**: User can see shared projects in a separate "Shared with me" section
+- [x] **PAGE-02**: User can see their role (viewer/editor) as a badge on shared project cards
+- [x] **PAGE-03**: User can see the project owner's name on shared project cards
 
 ## Future Requirements
 
@@ -66,12 +66,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-01 | Phase 31 | Complete |
 | AUTH-02 | Phase 31 | Complete |
 | AUTH-03 | Phase 31 | Complete |
-| SHARE-01 | Phase 32 | Pending |
-| SHARE-02 | Phase 32 | Pending |
-| SHARE-03 | Phase 32 | Pending |
-| PAGE-01 | Phase 33 | Pending |
-| PAGE-02 | Phase 33 | Pending |
-| PAGE-03 | Phase 33 | Pending |
+| SHARE-01 | Phase 32 | Complete |
+| SHARE-02 | Phase 32 | Complete |
+| SHARE-03 | Phase 32 | Complete |
+| PAGE-01 | Phase 33 | Complete |
+| PAGE-02 | Phase 33 | Complete |
+| PAGE-03 | Phase 33 | Complete |
 
 **Coverage:**
 - v4.0 requirements: 11 total
