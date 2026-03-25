@@ -22,6 +22,7 @@ vi.mock("@/lib/auth", () => ({
 const mockFindUnique = vi.fn();
 const mockFindMany = vi.fn();
 const mockUserFindUnique = vi.fn();
+const mockUserFindMany = vi.fn();
 const mockRunFindUnique = vi.fn();
 vi.mock("@/lib/db", () => ({
   db: {
@@ -31,6 +32,7 @@ vi.mock("@/lib/db", () => ({
     },
     user: {
       findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
+      findMany: (...args: unknown[]) => mockUserFindMany(...args),
     },
     run: {
       findUnique: (...args: unknown[]) => mockRunFindUnique(...args),
@@ -264,38 +266,37 @@ describe("authorization", () => {
       { id: "proj-2", name: "Project 2", userId: "someone@example.com" },
     ];
 
-    it("returns all projects with role 'admin' when admin passes viewAll=true", async () => {
-      mockGetCurrentUser.mockResolvedValue(adminUser);
-      mockFindMany.mockResolvedValue(allProjects);
+    it("returns { ownedProjects, sharedProjects, user, isAdmin } shape", async () => {
+      mockGetCurrentUser.mockResolvedValue(regularUser);
+      mockUserFindUnique.mockResolvedValue(null);
+      mockFindMany.mockResolvedValueOnce([]);
 
-      const result = await getAuthorizedProjects(true);
-      expect(result.projects).toHaveLength(2);
-      expect(result.projects[0]).toHaveProperty("role", "admin");
-      expect(result.projects[1]).toHaveProperty("role", "admin");
-      expect(result.isAdmin).toBe(true);
+      const result = await getAuthorizedProjects();
+      expect(result).toHaveProperty("ownedProjects");
+      expect(result).toHaveProperty("sharedProjects");
+      expect(result).toHaveProperty("user");
+      expect(result).toHaveProperty("isAdmin");
+      expect(result).not.toHaveProperty("projects");
     });
 
-    it("returns admin's owned projects with role 'admin' when viewAll is false", async () => {
-      mockGetCurrentUser.mockResolvedValue(adminUser);
-      mockUserFindUnique.mockResolvedValue({ id: "admin-cuid" });
-      // First call: owned projects, second call: shared projects
+    it("returns owned projects in ownedProjects with role 'owner'", async () => {
+      mockGetCurrentUser.mockResolvedValue(regularUser);
+      mockUserFindUnique.mockResolvedValue({ id: "user-cuid" });
       mockFindMany
         .mockResolvedValueOnce([allProjects[0]])
         .mockResolvedValueOnce([]);
+      mockUserFindMany.mockResolvedValue([]);
 
-      const result = await getAuthorizedProjects(false);
-      expect(result.projects).toHaveLength(1);
-      expect(result.projects[0]).toHaveProperty("role", "admin");
-      expect(result.isAdmin).toBe(true);
+      const result = await getAuthorizedProjects();
+      expect(result.ownedProjects).toHaveLength(1);
+      expect(result.ownedProjects[0]).toHaveProperty("role", "owner");
+      expect(result.sharedProjects).toHaveLength(0);
     });
 
-    it("returns owned projects with role 'owner' plus shared projects with their share roles", async () => {
+    it("returns shared projects with share role and ownerName", async () => {
       mockGetCurrentUser.mockResolvedValue(regularUser);
       mockUserFindUnique.mockResolvedValue({ id: "user-cuid" });
 
-      const ownedProjects = [
-        { id: "proj-1", name: "Project 1", userId: "user@example.com" },
-      ];
       const sharedProjects = [
         {
           id: "proj-2",
@@ -306,57 +307,116 @@ describe("authorization", () => {
       ];
 
       mockFindMany
-        .mockResolvedValueOnce(ownedProjects)
+        .mockResolvedValueOnce([])
         .mockResolvedValueOnce(sharedProjects);
+      mockUserFindMany.mockResolvedValue([
+        { email: "someone@example.com", name: "Someone" },
+      ]);
 
       const result = await getAuthorizedProjects();
-      expect(result.projects).toHaveLength(2);
-      expect(result.projects[0]).toHaveProperty("role", "owner");
-      expect(result.projects[1]).toHaveProperty("role", "editor");
-      expect(result.isAdmin).toBe(false);
+      expect(result.sharedProjects).toHaveLength(1);
+      expect(result.sharedProjects[0]).toHaveProperty("role", "editor");
+      expect(result.sharedProjects[0]).toHaveProperty("ownerName", "Someone");
+    });
+
+    it("falls back to email when User.name is null", async () => {
+      mockGetCurrentUser.mockResolvedValue(regularUser);
+      mockUserFindUnique.mockResolvedValue({ id: "user-cuid" });
+
+      const sharedProjects = [
+        {
+          id: "proj-2",
+          name: "Project 2",
+          userId: "someone@example.com",
+          shares: [{ role: "viewer" }],
+        },
+      ];
+
+      mockFindMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(sharedProjects);
+      mockUserFindMany.mockResolvedValue([
+        { email: "someone@example.com", name: null },
+      ]);
+
+      const result = await getAuthorizedProjects();
+      expect(result.sharedProjects[0]).toHaveProperty("ownerName", "someone@example.com");
+    });
+
+    it("falls back to email when no User record found for owner", async () => {
+      mockGetCurrentUser.mockResolvedValue(regularUser);
+      mockUserFindUnique.mockResolvedValue({ id: "user-cuid" });
+
+      const sharedProjects = [
+        {
+          id: "proj-2",
+          name: "Project 2",
+          userId: "someone@example.com",
+          shares: [{ role: "viewer" }],
+        },
+      ];
+
+      mockFindMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(sharedProjects);
+      mockUserFindMany.mockResolvedValue([]);
+
+      const result = await getAuthorizedProjects();
+      expect(result.sharedProjects[0]).toHaveProperty("ownerName", "someone@example.com");
+    });
+
+    it("admin viewAll returns all in ownedProjects, empty sharedProjects", async () => {
+      mockGetCurrentUser.mockResolvedValue(adminUser);
+      mockFindMany.mockResolvedValue(allProjects);
+
+      const result = await getAuthorizedProjects(true);
+      expect(result.ownedProjects).toHaveLength(2);
+      expect(result.ownedProjects[0]).toHaveProperty("role", "admin");
+      expect(result.ownedProjects[1]).toHaveProperty("role", "admin");
+      expect(result.sharedProjects).toHaveLength(0);
+      expect(result.isAdmin).toBe(true);
+    });
+
+    it("admin non-viewAll separates owned and shared", async () => {
+      mockGetCurrentUser.mockResolvedValue(adminUser);
+      mockUserFindUnique.mockResolvedValue({ id: "admin-cuid" });
+
+      const adminOwned = [
+        { id: "proj-1", name: "Project 1", userId: "sean.mcinerney@merkle.com" },
+      ];
+      const adminShared = [
+        {
+          id: "proj-2",
+          name: "Project 2",
+          userId: "someone@example.com",
+          shares: [{ role: "editor" }],
+        },
+      ];
+
+      mockFindMany
+        .mockResolvedValueOnce(adminOwned)
+        .mockResolvedValueOnce(adminShared);
+      mockUserFindMany.mockResolvedValue([
+        { email: "someone@example.com", name: "Someone" },
+      ]);
+
+      const result = await getAuthorizedProjects(false);
+      expect(result.ownedProjects).toHaveLength(1);
+      expect(result.ownedProjects[0]).toHaveProperty("role", "admin");
+      expect(result.sharedProjects).toHaveLength(1);
+      expect(result.sharedProjects[0]).toHaveProperty("role", "editor");
+      expect(result.isAdmin).toBe(true);
     });
 
     it("returns only owned projects when user has no User record", async () => {
       mockGetCurrentUser.mockResolvedValue(regularUser);
       mockUserFindUnique.mockResolvedValue(null);
-
-      const ownedProjects = [
-        { id: "proj-1", name: "Project 1", userId: "user@example.com" },
-      ];
-
-      // Only one findMany call for owned; shared query returns [] because no dbUser
-      mockFindMany.mockResolvedValueOnce(ownedProjects);
+      mockFindMany.mockResolvedValueOnce([allProjects[0]]);
 
       const result = await getAuthorizedProjects();
-      expect(result.projects).toHaveLength(1);
-      expect(result.projects[0]).toHaveProperty("role", "owner");
-    });
-
-    it("returns { projects, user, isAdmin } shape", async () => {
-      mockGetCurrentUser.mockResolvedValue(regularUser);
-      mockUserFindUnique.mockResolvedValue(null);
-      mockFindMany.mockResolvedValueOnce([]);
-
-      const result = await getAuthorizedProjects();
-      expect(result).toHaveProperty("projects");
-      expect(result).toHaveProperty("user");
-      expect(result).toHaveProperty("isAdmin");
-    });
-
-    it("returns non-admin user's owned projects only when viewAll=true (non-admin ignores viewAll)", async () => {
-      mockGetCurrentUser.mockResolvedValue(regularUser);
-      mockUserFindUnique.mockResolvedValue({ id: "user-cuid" });
-
-      const ownedProjects = [
-        { id: "proj-1", name: "Project 1", userId: "user@example.com" },
-      ];
-      mockFindMany
-        .mockResolvedValueOnce(ownedProjects)
-        .mockResolvedValueOnce([]);
-
-      const result = await getAuthorizedProjects(true);
-      expect(result.projects).toHaveLength(1);
-      expect(result.isAdmin).toBe(false);
+      expect(result.ownedProjects).toHaveLength(1);
+      expect(result.ownedProjects[0]).toHaveProperty("role", "owner");
+      expect(result.sharedProjects).toHaveLength(0);
     });
   });
 

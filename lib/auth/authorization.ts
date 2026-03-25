@@ -122,7 +122,8 @@ export async function getAuthorizedProjects(viewAll: boolean = false) {
       },
     });
     return {
-      projects: projects.map((p) => ({ ...p, role: "admin" as ProjectRole })),
+      ownedProjects: projects.map((p) => ({ ...p, role: "admin" as ProjectRole })),
+      sharedProjects: [] as Array<(typeof projects)[0] & { role: ProjectRole; ownerName: string }>,
       user,
       isAdmin: true,
     };
@@ -171,6 +172,17 @@ export async function getAuthorizedProjects(viewAll: boolean = false) {
     role: (admin ? "admin" : "owner") as ProjectRole,
   }));
 
+  // Batch-fetch owner names for shared projects (per D-09)
+  const ownerEmails = [...new Set(sharedProjects.map((p) => p.userId))];
+  const owners =
+    ownerEmails.length > 0
+      ? await db.user.findMany({
+          where: { email: { in: ownerEmails } },
+          select: { email: true, name: true },
+        })
+      : [];
+  const ownerMap = new Map(owners.map((o) => [o.email, o.name || o.email]));
+
   const annotatedShared = sharedProjects.map((p) => {
     const { shares: _shares, ...rest } = p as typeof p & {
       shares?: Array<{ role: string }>;
@@ -179,11 +191,13 @@ export async function getAuthorizedProjects(viewAll: boolean = false) {
       ...rest,
       role: ((p as typeof p & { shares?: Array<{ role: string }> }).shares?.[0]
         ?.role || "viewer") as ProjectRole,
+      ownerName: ownerMap.get(p.userId) || p.userId, // D-10: fallback to email
     };
   });
 
   return {
-    projects: [...annotatedOwned, ...annotatedShared],
+    ownedProjects: annotatedOwned,
+    sharedProjects: annotatedShared,
     user,
     isAdmin: admin,
   };
