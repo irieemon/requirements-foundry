@@ -25,6 +25,7 @@ interface Run {
   durationMs: number | null;
   tokensUsed: number | null;
   errorMsg: string | null;
+  projectName?: string;
 }
 
 interface RunListProps {
@@ -162,7 +163,7 @@ export function RunList({ runs, showProject, projectName }: RunListProps) {
                 </TableCell>
                 {showProject && (
                   <TableCell className="text-muted-foreground">
-                    {projectName || "-"}
+                    {run.projectName || projectName || "-"}
                   </TableCell>
                 )}
                 <TableCell>

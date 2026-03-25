@@ -4,10 +4,29 @@ import { PageHeader } from "@/components/layout/page-header";
 import { RunList } from "@/components/runs/run-list";
 import { getCurrentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/auth/authorization";
+import type { Prisma } from "@prisma/client";
 
 export default async function RunsPage() {
   const user = await getCurrentUser();
-  const where = isAdmin(user.email) ? {} : { project: { userId: user.email } };
+  const admin = isAdmin(user.email);
+
+  let where: Prisma.RunWhereInput = {};
+  if (!admin) {
+    // Look up User.id for share query (ProjectShare.userId is FK to User.id)
+    const dbUser = await db.user.findUnique({
+      where: { email: user.email },
+      select: { id: true },
+    });
+    where = {
+      OR: [
+        { project: { userId: user.email } },
+        ...(dbUser
+          ? [{ project: { shares: { some: { userId: dbUser.id } } } }]
+          : []),
+      ],
+    };
+  }
+
   const runs = await db.run.findMany({
     where,
     orderBy: { createdAt: "desc" },
