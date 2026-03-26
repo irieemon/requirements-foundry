@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
@@ -90,22 +91,24 @@ export function BugReportButton({ user }: BugReportButtonProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {!open && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <button
-                className="fixed bottom-20 right-6 md:bottom-6 z-50 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-95 transition-opacity duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={cooldown}
-                aria-label="Report a bug"
-              >
-                <Bug className="h-5 w-5" />
-              </button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent side="left">
-            {cooldown ? "Report submitted recently" : "Report Bug"}
-          </TooltipContent>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <button
+                  className="fixed bottom-20 right-6 md:bottom-6 z-50 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-95 transition-opacity duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={cooldown}
+                  aria-label="Report a bug"
+                >
+                  <Bug className="h-5 w-5" />
+                </button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              {cooldown ? "Report submitted recently" : "Report Bug"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
 
       <DialogContent className="sm:max-w-md">
