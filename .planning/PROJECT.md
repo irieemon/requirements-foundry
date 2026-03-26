@@ -65,7 +65,18 @@ Requirements Foundry is a multi-user tool that transforms uploaded documents int
 
 ### Active
 
-(No active requirements — next milestone not yet defined)
+(Defining requirements for v5.0 Bug Reporting)
+
+## Current Milestone: v5.0 Bug Reporting
+
+**Goal:** Enable users to report bugs from anywhere in the app, notify the admin via email, and provide an admin dashboard for tracking and managing reports.
+
+**Target features:**
+- Floating "Report Bug" button (lower-left) opening a modal with freeform text description
+- Bug report saved to database with submitter, timestamp, page URL, description
+- Email notification to admin via AWS SES on submission
+- Dedicated admin-only "Bug Reports" page with all reports and status management
+- Status workflow on reports (open/in-progress/resolved/closed)
 
 ## Current State
 
@@ -202,4 +213,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-25 after v4.0 milestone*
+*Last updated: 2026-03-26 after v5.0 milestone start*

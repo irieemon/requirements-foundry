@@ -1,42 +1,44 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.0
-milestone_name: Project Sharing
-status: v4.0 milestone complete
-stopped_at: Completed 33-02-PLAN.md
-last_updated: "2026-03-25T20:58:59.205Z"
+milestone: v5.0
+milestone_name: Bug Reporting
+status: Defining requirements
+stopped_at: null
+last_updated: "2026-03-26"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-23)
+See: .planning/PROJECT.md (updated 2026-03-26)
 
-**Core value:** Enable project owners to share projects with other users as viewers or editors, with clear UI separation between owned and shared projects.
-**Current focus:** Phase 33 — Projects Page Integration
+**Core value:** Transform uploaded documents into structured, exportable requirements with AI — securely isolated per user with corporate SSO.
+**Current focus:** Defining v5.0 Bug Reporting requirements
 
 ## Current Position
 
-Phase: 33
-Plan: Not started
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-26 — Milestone v5.0 started
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 64 (across v1.0-v3.0)
+- Total plans completed: 72 (across v1.0-v4.0)
 - Average duration: ~3.2 min (v3.0 baseline)
-- Total execution time: ~3.4 hours
+- Total execution time: ~3.8 hours
 
-**Recent Trend (v3.0):**
+**Recent Trend (v4.0):**
 
-- 10 plans in 32 minutes (avg 3.2 min/plan)
+- 8 plans in v4.0 milestone
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -48,23 +50,9 @@ Plan: Not started
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- [v3.0]: Entity chain ownership (Project is root; child tables carry no userId)
-- [v3.0]: 404-not-403 for unauthorized access (prevents leaking project existence)
 - [v3.0]: Centralized authorization module in lib/auth/authorization.ts
 - [v4.0]: User table approach over Cognito ListUsers (faster, no rate limits, FK-safe)
-- [v4.0]: Backfill User table from SELECT DISTINCT userId FROM Project at migration time
-- [Phase 30]: Non-blocking upsert: User upsert in auth callback wrapped in try-catch so login succeeds even if DB fails
-- [Phase 30]: Email as User match key: upsert matches on email for consistency with Project.userId pattern
-- [Phase 31]: Two-query approach for User lookup + Project with shares (pragmatic over raw SQL)
-- [Phase 31]: Strip shares from returned project to prevent data leakage
-- [Phase 31]: try-catch pattern wraps getAuthorizedRun/getAuthorizedProject in API routes to convert notFound() throws to JSON 404 responses
-- [Phase 31]: Viewer guard uses return for {success,error} functions, throw for throw-based functions
-- [Phase 32]: P2002 error detection via code property check for Prisma duplicate detection
-- [Phase 32]: searchUsers excludes owner by looking up User record by Project.userId email
-- [Phase 32]: Command+Popover combobox with shouldFilter=false for server-side search pattern
-- [Phase 33]: Return shape change from {projects} to {ownedProjects, sharedProjects} for cleaner UI section separation
-- [Phase 33]: Batch User.findMany for owner display names on shared projects (efficient N-project lookup)
-- [Phase 33]: OR query with conditional spread for share clause (avoids query when no dbUser)
+- [v4.0]: Highest-wins role resolution (admin>owner>editor>viewer)
 
 ### Pending Todos
 
@@ -72,14 +60,11 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- Authorization checks scattered in ~6 API route handlers outside centralized module (must consolidate in Phase 31)
-- No User table exists yet; user picker and owner display depend on Phase 30 completing first
-- Concurrent editor run conflicts deferred to v4.x (acceptable for v4.0 launch)
 - Okta SAML app integration requires IT team action (external dependency)
 - Corporate VPN routing to internal ALB not available (using internet-facing as workaround)
 
 ## Session Continuity
 
-Last session: 2026-03-25T18:44:43.373Z
-Stopped at: Completed 33-02-PLAN.md
+Last session: 2026-03-26
+Stopped at: Milestone v5.0 initialization
 Resume file: None
