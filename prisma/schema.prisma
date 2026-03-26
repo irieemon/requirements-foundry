@@ -517,3 +517,23 @@ model MssActivity {
   @@unique([serviceAreaId, code])
   @@index([serviceAreaId])
 }
+
+// ============================================
+// Bug Reports (app-level feedback, not project-scoped)
+// ============================================
+
+model BugReport {
+  id               String   @id @default(cuid())
+  description      String   @db.Text
+  pageUrl          String
+  submitterEmail   String
+  submitterName    String
+  browserMetadata  String   @db.Text
+  status           String   @default("open")
+  adminNotes       String?  @db.Text
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
