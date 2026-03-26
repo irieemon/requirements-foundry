@@ -140,7 +140,10 @@ Plans:
   3. After submitting, the user sees a success toast and the bug report is saved to the database
   4. The admin receives a rich HTML email with report details and a direct link to the admin dashboard
   5. If SES fails, the bug report is still saved (email is fire-and-forget, not blocking)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 35-01-PLAN.md — Email template, SES send function, and submitBugReport server action with tests
+- [ ] 35-02-PLAN.md — BugReportButton FAB + Dialog component and AppShell integration
 **UI hint**: yes
 
 ### Phase 36: Admin Bug Dashboard
@@ -171,5 +174,5 @@ Phases execute in numeric order: 34 -> 35 -> 36
 | 26-29 | v3.0      | 10/10          | Complete | 2026-03-10 |
 | 30-33 | v4.0      | 8/8            | Complete | 2026-03-25 |
 | 34. Schema & SES Infrastructure | v5.0 | 0/2 | Complete    | 2026-03-26 |
-| 35. Bug Report Submission Flow | v5.0 | 0/? | Not started | - |
+| 35. Bug Report Submission Flow | v5.0 | 0/2 | Not started | - |
 | 36. Admin Bug Dashboard | v5.0 | 0/? | Not started | - |
