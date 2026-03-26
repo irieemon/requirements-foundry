@@ -151,7 +151,7 @@ Accent reserved for: FAB button background, "Submit Report" primary CTA button. 
 | Property | Value |
 |----------|-------|
 | Layout | `DialogFooter` -- right-aligned, `flex gap-2` |
-| Cancel | `<Button variant="outline">Cancel</Button>` -- closes dialog, no side effects |
+| Dismiss | `<Button variant="outline">Never mind</Button>` -- closes dialog, no side effects |
 | Submit | `<Button>Submit Report</Button>` -- primary variant (bg-primary) |
 | Submit loading | Icon swaps to `Loader2` with `animate-spin`, text changes to "Submitting...", button disabled |
 | Submit disabled when | description.trim().length < 10 OR submitting OR cooldown active |
@@ -194,7 +194,7 @@ Accent reserved for: FAB button background, "Submit Report" primary CTA button. 
 | Character count | "{n}/2000" |
 | FAB tooltip | "Report Bug" |
 | Submit loading text | "Submitting..." |
-| Cancel button | "Cancel" |
+| Dismiss button | "Never mind" |
 | Cooldown FAB tooltip | "Report submitted recently" |
 
 No empty state in this phase (the modal is an action trigger, not a data display).
