@@ -2,10 +2,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock @aws-sdk/client-ses
 const mockSend = vi.fn();
-vi.mock("@aws-sdk/client-ses", () => ({
-  SESClient: vi.fn().mockImplementation(() => ({ send: mockSend })),
-  SendEmailCommand: vi.fn(),
-}));
+vi.mock("@aws-sdk/client-ses", () => {
+  return {
+    SESClient: class MockSESClient {
+      send = mockSend;
+    },
+    SendEmailCommand: class MockSendEmailCommand {
+      constructor(public input: unknown) {}
+    },
+  };
+});
 
 import {
   escapeHtml,
@@ -136,12 +142,13 @@ describe("bug-report-email", () => {
     });
 
     it("calls SESClient.send with correct parameters", async () => {
-      const { SendEmailCommand } = await import("@aws-sdk/client-ses");
       mockSend.mockResolvedValueOnce({});
       await sendBugReportEmail(sampleReport);
 
       expect(mockSend).toHaveBeenCalledTimes(1);
-      expect(SendEmailCommand).toHaveBeenCalledWith(
+      // The SendEmailCommand instance is passed to send
+      const sentCommand = mockSend.mock.calls[0][0];
+      expect(sentCommand.input).toEqual(
         expect.objectContaining({
           Source: "noreply@example.com",
           Destination: {
