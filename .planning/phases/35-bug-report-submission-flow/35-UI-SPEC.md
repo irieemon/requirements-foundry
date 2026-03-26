@@ -59,9 +59,11 @@ Exceptions:
 | Role | Size | Weight | Line Height | Usage in Phase 35 |
 |------|------|--------|-------------|-------------------|
 | Body | 14px (text-sm) | 400 (normal) | 1.5 (leading-normal) | Textarea input text, muted page URL hint |
-| Label | 14px (text-sm) | 500 (medium) | 1.4 (leading-snug) | "What went wrong?" field label |
+| Label | 14px (text-sm) | 600 (semibold) | 1.4 (leading-snug) | "What went wrong?" field label |
 | Heading | 18px (text-lg) | 600 (semibold) | 1.2 (leading-tight) | Dialog title "Report a Bug" |
 | Caption | 12px (text-xs) | 400 (normal) | 1.5 (leading-normal) | Character count indicator, validation hint |
+
+Two-weight scale: 400 (normal) for Body and Caption, 600 (semibold) for Label and Heading.
 
 Font: Geist Sans for all UI text. Geist Mono not used in this phase.
 
@@ -126,7 +128,7 @@ Accent reserved for: FAB button background, "Submit Report" primary CTA button. 
 | Property | Value |
 |----------|-------|
 | Component | shadcn `Textarea` |
-| Label | "What went wrong?" (text-sm font-medium) |
+| Label | "What went wrong?" (text-sm font-semibold) |
 | Placeholder | "Describe the issue you encountered..." |
 | Rows | 4 (initial height) |
 | Max length | 2000 characters |
