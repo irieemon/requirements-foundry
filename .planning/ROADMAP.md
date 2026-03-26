@@ -170,6 +170,6 @@ Phases execute in numeric order: 34 -> 35 -> 36
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26-29 | v3.0      | 10/10          | Complete | 2026-03-10 |
 | 30-33 | v4.0      | 8/8            | Complete | 2026-03-25 |
-| 34. Schema & SES Infrastructure | v5.0 | 0/2 | Not started | - |
+| 34. Schema & SES Infrastructure | v5.0 | 0/2 | Planned    |  |
 | 35. Bug Report Submission Flow | v5.0 | 0/? | Not started | - |
 | 36. Admin Bug Dashboard | v5.0 | 0/? | Not started | - |

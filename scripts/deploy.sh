@@ -28,7 +28,7 @@ ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 ECR_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
 
 echo "==> Building Docker image..."
-${CONTAINER_CLI} build --platform linux/amd64 -t "${ECR_REPO}:latest" .
+${CONTAINER_CLI} build -t "${ECR_REPO}:latest" .
 
 echo "==> Authenticating with ECR..."
 aws ecr get-login-password --region "${AWS_REGION}" | \
