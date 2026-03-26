@@ -61,25 +61,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUB-01 | — | Pending |
-| SUB-02 | — | Pending |
-| SUB-03 | — | Pending |
-| SUB-04 | — | Pending |
-| EMAIL-01 | — | Pending |
-| EMAIL-02 | — | Pending |
-| ADMIN-01 | — | Pending |
-| ADMIN-02 | — | Pending |
-| ADMIN-03 | — | Pending |
-| ADMIN-04 | — | Pending |
-| ADMIN-05 | — | Pending |
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
+| INFRA-01 | Phase 34 | Pending |
+| INFRA-02 | Phase 34 | Pending |
+| SUB-01 | Phase 35 | Pending |
+| SUB-02 | Phase 35 | Pending |
+| SUB-03 | Phase 35 | Pending |
+| SUB-04 | Phase 35 | Pending |
+| EMAIL-01 | Phase 35 | Pending |
+| EMAIL-02 | Phase 35 | Pending |
+| ADMIN-01 | Phase 36 | Pending |
+| ADMIN-02 | Phase 36 | Pending |
+| ADMIN-03 | Phase 36 | Pending |
+| ADMIN-04 | Phase 36 | Pending |
+| ADMIN-05 | Phase 36 | Pending |
 
 **Coverage:**
 - v5.0 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 ⚠️
+- Mapped to phases: 13
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-26*
-*Last updated: 2026-03-26 after initial definition*
+*Last updated: 2026-03-26 after roadmap creation*
