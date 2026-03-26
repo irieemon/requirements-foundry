@@ -10,14 +10,14 @@ Requirements for Bug Reporting milestone. Each maps to roadmap phases.
 ### Bug Report Submission
 
 - [ ] **SUB-01**: User can click a persistent "Report Bug" button visible on all authenticated pages
-- [ ] **SUB-02**: User can describe a bug in a freeform text modal that captures page URL and user identity automatically
+- [x] **SUB-02**: User can describe a bug in a freeform text modal that captures page URL and user identity automatically
 - [ ] **SUB-03**: User sees a success toast confirming their bug report was submitted
-- [ ] **SUB-04**: Bug report captures browser metadata (userAgent, viewport size) automatically
+- [x] **SUB-04**: Bug report captures browser metadata (userAgent, viewport size) automatically
 
 ### Email Notifications
 
-- [ ] **EMAIL-01**: Admin receives an email notification via AWS SES when a bug report is submitted
-- [ ] **EMAIL-02**: Notification email is rich HTML with report details and a direct link to the admin dashboard
+- [x] **EMAIL-01**: Admin receives an email notification via AWS SES when a bug report is submitted
+- [x] **EMAIL-02**: Notification email is rich HTML with report details and a direct link to the admin dashboard
 
 ### Admin Dashboard
 
@@ -64,11 +64,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-01 | Phase 34 | Complete |
 | INFRA-02 | Phase 34 | Complete |
 | SUB-01 | Phase 35 | Pending |
-| SUB-02 | Phase 35 | Pending |
+| SUB-02 | Phase 35 | Complete |
 | SUB-03 | Phase 35 | Pending |
-| SUB-04 | Phase 35 | Pending |
-| EMAIL-01 | Phase 35 | Pending |
-| EMAIL-02 | Phase 35 | Pending |
+| SUB-04 | Phase 35 | Complete |
+| EMAIL-01 | Phase 35 | Complete |
+| EMAIL-02 | Phase 35 | Complete |
 | ADMIN-01 | Phase 36 | Pending |
 | ADMIN-02 | Phase 36 | Pending |
 | ADMIN-03 | Phase 36 | Pending |
