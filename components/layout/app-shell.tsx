@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Sidebar } from "./sidebar";
 import { MobileNav } from "./mobile-nav";
 import type { UserInfo } from "@/lib/auth/types";
+import { BugReportButton } from "@/components/bug-report/bug-report-button";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -64,6 +65,7 @@ export function AppShell({ children, user, isAdmin }: AppShellProps) {
       >
         {children}
       </div>
+      <BugReportButton user={user} />
     </div>
   );
 }
