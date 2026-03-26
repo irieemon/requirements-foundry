@@ -125,7 +125,10 @@ See [v4.0 archive](milestones/v4.0-ROADMAP.md) for full details.
   2. Prisma migration applies cleanly to the production RDS instance
   3. SES email identity is verified in us-east-1 and the ECS task role has ses:SendEmail permission
   4. BUG_REPORT_ADMIN_EMAIL and SES_SENDER_EMAIL environment variables are available to the ECS task
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 34-01-PLAN.md — BugReport Prisma model and database migration
+- [ ] 34-02-PLAN.md — SES email identity, IAM permissions, and CDK tests
 
 ### Phase 35: Bug Report Submission Flow
 **Goal**: Any authenticated user can report a bug from any page without losing context, and the admin receives an email notification
@@ -167,6 +170,6 @@ Phases execute in numeric order: 34 -> 35 -> 36
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26-29 | v3.0      | 10/10          | Complete | 2026-03-10 |
 | 30-33 | v4.0      | 8/8            | Complete | 2026-03-25 |
-| 34. Schema & SES Infrastructure | v5.0 | 0/? | Not started | - |
+| 34. Schema & SES Infrastructure | v5.0 | 0/2 | Not started | - |
 | 35. Bug Report Submission Flow | v5.0 | 0/? | Not started | - |
 | 36. Admin Bug Dashboard | v5.0 | 0/? | Not started | - |
