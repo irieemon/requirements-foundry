@@ -1,448 +1,418 @@
-# Architecture Research: Project Sharing Integration
+# Architecture Research
 
-**Domain:** Multi-user project sharing for existing per-user ownership app
-**Researched:** 2026-03-23
+**Domain:** Bug reporting with email notifications integration into existing Next.js + AWS app
+**Researched:** 2026-03-26
 **Confidence:** HIGH
 
-## Existing Architecture Snapshot
-
-The current system uses a clean, centralized authorization pattern:
+## System Overview
 
 ```
-Project.userId (email string)  =  sole ownership signal
-                |
-   getAuthorizedProject()  -->  owns it OR isAdmin() ? allow : notFound()
-   getAuthorizedProjects() -->  where: { userId: email } (or {} for admin viewAll)
-                |
-   Entity chain: Project -> Upload -> Card, Project -> Epic -> Story -> Subtask
-   (no userId on child tables -- ownership derived by walking up to Project)
+┌─────────────────────────────────────────────────────────────────────┐
+│                     Presentation Layer                               │
+├─────────────────────────────────────────────────────────────────────┤
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────────────┐   │
+│  │ BugReportFAB  │  │ BugReportModal│  │ Admin BugReports Page │   │
+│  │ (all pages)   │  │ (dialog)      │  │ (/bug-reports)        │   │
+│  └───────┬───────┘  └───────┬───────┘  └───────────┬───────────┘   │
+│          │                  │                       │               │
+├──────────┴──────────────────┴───────────────────────┴───────────────┤
+│                     Server Actions Layer                             │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │              server/actions/bug-reports.ts                    │    │
+│  │  submitBugReport() | getBugReports() | updateBugStatus()     │    │
+│  └────────┬──────────────────────────────┬─────────────────────┘    │
+│           │                              │                          │
+├───────────┴──────────────────────────────┴──────────────────────────┤
+│                     Service Layer                                    │
+│  ┌──────────────────┐  ┌──────────────────────────────────────┐     │
+│  │   Prisma (DB)    │  │   lib/email/ses.ts (SES client)      │     │
+│  │   BugReport      │  │   sendBugReportNotification()         │     │
+│  └──────────────────┘  └──────────────────────────────────────┘     │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                     Infrastructure Layer                              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────────────────────┐       │
+│  │ RDS PG   │  │ AWS SES  │  │ ECS Fargate (existing)       │       │
+│  │ (exists) │  │ (NEW)    │  │ + ses:SendEmail IAM policy    │       │
+│  └──────────┘  └──────────┘  └──────────────────────────────┘       │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key files that enforce access:**
-- `lib/auth/authorization.ts` -- `getAuthorizedProject()`, `getAuthorizedProjects()`, `isAdmin()`
-- `server/actions/projects.ts` -- all mutations call `getAuthorizedProject()` first
-- `app/(authenticated)/runs/page.tsx` -- inline `where: { project: { userId } }` filter
-- `app/(authenticated)/projects/page.tsx` -- calls `getAuthorizedProjects(viewAll)`
+### Component Responsibilities
 
-## Integration Architecture
+| Component | Responsibility | New or Modified |
+|-----------|----------------|-----------------|
+| `BugReportFAB` | Floating action button rendered in authenticated layout, visible on all pages | **NEW** component |
+| `BugReportModal` | Dialog with textarea for description, captures current URL automatically | **NEW** component |
+| `server/actions/bug-reports.ts` | Server actions: submit, list, update status | **NEW** file |
+| `lib/email/ses.ts` | SES email client wrapper, sends formatted bug report notification | **NEW** file |
+| `app/(authenticated)/bug-reports/page.tsx` | Admin-only page listing all bug reports with status management | **NEW** page |
+| `prisma/schema.prisma` | BugReport model addition | **MODIFIED** (add model) |
+| `infra/lib/requirements-foundry-stack.ts` | SES identity + IAM policy for task role | **MODIFIED** (add SES permissions) |
+| `app/(authenticated)/layout.tsx` | Render BugReportFAB for all authenticated users | **MODIFIED** (add FAB) |
+| `components/layout/sidebar.tsx` | Add "Bug Reports" nav item for admin users | **MODIFIED** (conditional nav) |
 
-### New Data Model: ProjectShare
+## Recommended Project Structure
 
-A single new junction table is all that is needed. No changes to existing tables.
-
-```
-+----------------+         +--------------------+
-|   Project      | 1-----* |  ProjectShare      |
-|                |         |                    |
-|  id            |         |  id                |
-|  userId        | (owner) |  projectId   FK    |
-|  name          |         |  sharedWith        | (email -- matches UserInfo.email)
-|  ...           |         |  role              | ("viewer" | "editor")
-|                |         |  createdAt         |
-|                |         |  createdBy         | (who shared it)
-+----------------+         +--------------------+
-                              @@unique([projectId, sharedWith])
-                              @@index([sharedWith])
-                              @@index([projectId])
-```
-
-**Why email as the share key (not Cognito `sub`):**
-- All existing ownership uses `Project.userId` which stores email
-- `UserInfo.email` is the identity pivot throughout the app
-- The user picker needs to show emails anyway (corporate SSO, no display names beyond email)
-- Consistent with existing patterns -- zero migration of identity format
-
-**Why a junction table (not JSON array on Project):**
-- Queryable: "find all projects shared with me" is a single indexed query
-- Updatable: add/remove shares without rewriting the whole project row
-- Auditable: `createdAt` and `createdBy` per share record
-- Standard Prisma relation pattern, no JSON parsing
-
-### Prisma Schema Addition
-
-```prisma
-model ProjectShare {
-  id         String   @id @default(cuid())
-  projectId  String
-  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sharedWith String   // email of the user who receives access
-  role       String   // "viewer" | "editor"
-  createdBy  String   // email of the user who shared it
-  createdAt  DateTime @default(now())
-
-  @@unique([projectId, sharedWith])
-  @@index([sharedWith])
-  @@index([projectId])
-}
-```
-
-Add to `Project` model:
-```prisma
-shares ProjectShare[]
-```
-
-### Authorization Module Changes
-
-The authorization module (`lib/auth/authorization.ts`) is the **single integration point** for access control. Every page and server action already calls into it.
-
-#### Modified: `getAuthorizedProject()`
-
-Current logic: `owns it OR isAdmin -> allow`
-New logic: `owns it OR isAdmin OR has ProjectShare -> allow`
-
-```typescript
-export type ProjectRole = "owner" | "editor" | "viewer" | "admin";
-
-export async function getAuthorizedProject(projectId: string) {
-  const user = await getCurrentUser();
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-  });
-
-  if (!project) notFound();
-
-  // Determine role
-  let role: ProjectRole;
-  if (isAdmin(user.email)) {
-    role = "admin";
-  } else if (project.userId === user.email) {
-    role = "owner";
-  } else {
-    // Check for share
-    const share = await db.projectShare.findUnique({
-      where: {
-        projectId_sharedWith: { projectId, sharedWith: user.email },
-      },
-    });
-    if (!share) notFound();
-    role = share.role as ProjectRole; // "viewer" | "editor"
-  }
-
-  return { project, user, role };
-}
-```
-
-**Impact:** Every existing call site already destructures `{ project, user, isAdmin }`. Changing the return to include `role` instead of `isAdmin` requires updating call sites, but the logic is straightforward:
-- `isAdmin` becomes `role === "admin"` or `role === "owner" || role === "admin"`
-- Viewer restrictions: `role === "viewer"` -> hide mutation buttons
-
-#### Modified: `getAuthorizedProjects()`
-
-Must return three categories: owned, shared with me, and (for admin) all.
-
-```typescript
-export async function getAuthorizedProjects(viewAll: boolean = false) {
-  const user = await getCurrentUser();
-  const admin = isAdmin(user.email);
-
-  if (admin && viewAll) {
-    // Admin all-projects view -- unchanged
-    const projects = await db.project.findMany({ where: {}, ... });
-    return { ownedProjects: projects, sharedProjects: [], user, isAdmin: true };
-  }
-
-  // Own projects
-  const ownedProjects = await db.project.findMany({
-    where: { userId: user.email },
-    ...projectInclude,
-  });
-
-  // Shared with me
-  const shares = await db.projectShare.findMany({
-    where: { sharedWith: user.email },
-    include: {
-      project: { include: projectCountInclude },
-    },
-  });
-  const sharedProjects = shares.map((s) => ({
-    ...s.project,
-    shareRole: s.role,
-  }));
-
-  return { ownedProjects, sharedProjects, user, isAdmin: admin };
-}
-```
-
-#### New: Permission Check Helpers
-
-```typescript
-export function canEdit(role: ProjectRole): boolean {
-  return role === "owner" || role === "editor" || role === "admin";
-}
-
-export function canManageShares(role: ProjectRole): boolean {
-  return role === "owner" || role === "admin";
-}
-
-export function canDelete(role: ProjectRole): boolean {
-  return role === "owner" || role === "admin";
-}
-```
-
-### Runs Page Filter Update
-
-`app/(authenticated)/runs/page.tsx` currently uses an inline query filter:
-```typescript
-const where = isAdmin(user.email) ? {} : { project: { userId: user.email } };
-```
-
-This must expand to include shared projects:
-```typescript
-const where = isAdmin(user.email)
-  ? {}
-  : {
-      project: {
-        OR: [
-          { userId: user.email },
-          { shares: { some: { sharedWith: user.email } } },
-        ],
-      },
-    };
-```
-
-## Component Boundaries
-
-### New Components
-
-| Component | Type | Responsibility |
-|-----------|------|----------------|
-| `components/projects/share-dialog.tsx` | Client | Modal dialog for managing shares on a project |
-| `components/projects/share-user-picker.tsx` | Client | Autocomplete/search for existing users to share with |
-| `components/projects/shared-project-list.tsx` | Server/Client | "Shared with me" section on projects page |
-| `components/projects/share-badge.tsx` | Client | Shows role badge (Viewer/Editor) on shared project cards |
-
-### Modified Components
-
-| Component | Change |
-|-----------|--------|
-| `app/(authenticated)/projects/page.tsx` | Split into "My Projects" and "Shared with me" sections |
-| `components/projects/project-list.tsx` | Accept `shareRole` prop, conditionally show role badge |
-| `components/projects/project-card.tsx` | Show share badge, conditionally hide delete for non-owners |
-| `app/(authenticated)/projects/[id]/page.tsx` | Pass `role` down, conditionally hide mutation UI for viewers |
-| `app/(authenticated)/runs/page.tsx` | Expand where clause to include shared projects |
-
-### New Server Actions
-
-| Action | File | Purpose |
-|--------|------|---------|
-| `getProjectShares(projectId)` | `server/actions/sharing.ts` | List current shares for a project |
-| `shareProject(projectId, email, role)` | `server/actions/sharing.ts` | Create a share (owner/admin only) |
-| `updateShareRole(shareId, role)` | `server/actions/sharing.ts` | Change viewer <-> editor |
-| `removeShare(shareId)` | `server/actions/sharing.ts` | Revoke access |
-| `searchUsers(query)` | `server/actions/sharing.ts` | Search Cognito users for picker |
-
-### No New API Routes Needed
-
-All mutations use server actions (the existing pattern). The user search for the picker can also be a server action -- it queries Cognito's `ListUsers` API via AWS SDK, which runs server-side.
-
-## Data Flow
-
-### Share Creation Flow
+New files only (existing structure unchanged):
 
 ```
-Owner clicks "Share" button on project detail page
-    |
-ShareDialog opens -> owner types email -> UserPicker queries searchUsers()
-    |
-searchUsers() server action -> Cognito ListUsers API -> returns matching emails
-    |
-Owner selects user, picks role (viewer/editor) -> calls shareProject()
-    |
-shareProject() server action:
-  1. getAuthorizedProject(projectId) -- verify caller is owner/admin
-  2. Verify target email exists in Cognito (prevent sharing with non-existent users)
-  3. db.projectShare.create({ projectId, sharedWith, role, createdBy })
-  4. revalidatePath(`/projects/${projectId}`)
-    |
-ShareDialog refreshes share list
-```
-
-### Shared Project Access Flow
-
-```
-Shared user navigates to /projects
-    |
-getAuthorizedProjects() returns { ownedProjects, sharedProjects }
-    |
-Projects page renders two sections:
-  "My Projects" -- ownedProjects (existing grid)
-  "Shared with me" -- sharedProjects (same grid, with role badges)
-    |
-User clicks shared project card -> /projects/[id]
-    |
-getAuthorizedProject(id) checks ProjectShare table -> returns role: "viewer"|"editor"
-    |
-Project detail page renders with role-based UI:
-  viewer: all read sections visible, mutation buttons hidden
-  editor: full access (same as owner except no share management or delete)
-```
-
-### Authorization Decision Tree
-
-```
-getAuthorizedProject(projectId):
-  |
-  Is user admin?
-  |-- YES -> role = "admin" (full access)
-  |-- NO
-      |
-      Is user the owner (Project.userId === email)?
-      |-- YES -> role = "owner" (full access + share management)
-      |-- NO
-          |
-          Does ProjectShare exist for (projectId, email)?
-          |-- YES -> role = share.role ("viewer" | "editor")
-          |-- NO -> notFound() (404, no existence leak)
-```
-
-## Recommended Project Structure (New/Modified Files)
-
-```
-prisma/
-  schema.prisma                             # ADD ProjectShare model
-  migrations/2026XXXX_add_project_sharing/  # New migration
-
-lib/auth/
-  authorization.ts                          # MODIFY: role-based checks, share lookups
-
-server/actions/
-  sharing.ts                                # NEW: share CRUD + user search
-  projects.ts                               # MODIFY: return role from getProject
-
 app/(authenticated)/
-  projects/
-    page.tsx                                # MODIFY: two-section layout
-  projects/[id]/
-    page.tsx                                # MODIFY: pass role, conditional UI
-  runs/
-    page.tsx                                # MODIFY: expand where clause
-
-components/projects/
-  share-dialog.tsx                          # NEW: share management modal
-  share-user-picker.tsx                     # NEW: user autocomplete
-  shared-project-list.tsx                   # NEW: "shared with me" section
-  share-badge.tsx                           # NEW: role indicator badge
-  project-card.tsx                          # MODIFY: role badge, conditional delete
-  project-list.tsx                          # MODIFY: accept shareRole prop
+├── bug-reports/
+│   └── page.tsx              # Admin-only bug reports dashboard
+components/
+├── bug-reports/
+│   ├── bug-report-fab.tsx    # Floating button + modal trigger (client component)
+│   ├── bug-report-modal.tsx  # Submission dialog (client component)
+│   ├── bug-report-table.tsx  # Admin table with status filters
+│   └── status-update.tsx     # Status dropdown for admin actions
+server/actions/
+├── bug-reports.ts            # Server actions for CRUD + email trigger
+lib/
+├── email/
+│   └── ses.ts                # SES client singleton + send helper
+prisma/migrations/
+├── YYYYMMDD_add_bug_reports/ # Migration for BugReport model
 ```
+
+### Structure Rationale
+
+- **`components/bug-reports/`:** Follows existing pattern (components/projects/, components/subtasks/, components/layout/)
+- **`server/actions/bug-reports.ts`:** Follows existing pattern (one file per domain: shares.ts, projects.ts, etc.)
+- **`lib/email/ses.ts`:** New domain folder under lib/ matching lib/auth/, lib/db. Isolated because email is a cross-cutting concern potentially reused later
+- **`app/(authenticated)/bug-reports/`:** Top-level route under authenticated layout, same as /projects and /runs
 
 ## Architectural Patterns
 
-### Pattern 1: Centralized Role Resolution
+### Pattern 1: Server Action with Side Effect (Email)
 
-**What:** Resolve the user's role once in `getAuthorizedProject()`, pass it through the component tree. Never re-check authorization in individual components.
-**When to use:** Every page/action that accesses a project.
-**Trade-offs:** Single source of truth for auth, but requires threading `role` through props.
+**What:** The `submitBugReport` server action saves to DB then fires SES email as a non-blocking side effect. If the email fails, the bug report is still saved -- email failure should not block the user.
 
-**Why this fits:** The existing app already uses this exact pattern with `getAuthorizedProject()`. Adding role resolution there means zero new authorization code paths.
+**When to use:** Any server action that triggers a notification as secondary effect.
 
-### Pattern 2: UI Gating by Role (Not by Data Absence)
-
-**What:** Hide mutation UI elements (upload buttons, delete, analyze, generate) based on `role === "viewer"`, not by removing data from the query.
-**When to use:** Project detail page sections.
-**Trade-offs:** Simpler than creating separate "read-only" queries. Viewers still receive the same data payload, but this is acceptable -- they already have read access.
+**Trade-offs:** Simple, no queuing infrastructure needed. If SES is down, email is lost (acceptable for POC internal tool). For production, consider SQS dead-letter queue.
 
 **Example:**
 ```typescript
-// In project detail page
-const { project, role } = await getProjectWithRole(id);
-// Pass role to child components
-<AnalyzePanel projectId={project.id} uploads={project.uploads} readOnly={role === "viewer"} />
+"use server";
+
+import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { sendBugReportNotification } from "@/lib/email/ses";
+
+export async function submitBugReport(data: { description: string; pageUrl: string }) {
+  const user = await getCurrentUser();
+
+  const report = await db.bugReport.create({
+    data: {
+      description: data.description,
+      pageUrl: data.pageUrl,
+      submitterEmail: user.email,
+      submitterName: user.name || user.email,
+      status: "open",
+    },
+  });
+
+  // Fire-and-forget: don't block the user on email delivery
+  sendBugReportNotification(report).catch((err) => {
+    console.error("Failed to send bug report email:", err);
+  });
+
+  return { success: true, id: report.id };
+}
 ```
 
-### Pattern 3: Cognito ListUsers for User Discovery
+### Pattern 2: Layout-Level Global UI (FAB)
 
-**What:** Use Cognito's `ListUsers` API to find shareable users rather than maintaining a separate users table.
-**When to use:** The user picker when sharing a project.
-**Trade-offs:** No local user table to maintain. But Cognito ListUsers has a 60-user page limit and is eventually consistent. For a corporate app with <1000 users this is fine.
+**What:** The floating action button is rendered in the authenticated layout, making it available on every page without per-page modifications.
 
-**Why not a local User table:** The app deliberately avoids one. Users exist only in Cognito. Adding a local User table just for sharing is premature -- Cognito ListUsers with email filter is sufficient for the picker.
+**When to use:** UI elements that must appear globally across all authenticated routes.
 
-## Anti-Patterns
+**Trade-offs:** Simple placement in layout.tsx. The FAB is a client component (needs onClick), but layout.tsx is a server component -- solved by making BugReportFAB a self-contained client component imported into the server layout.
 
-### Anti-Pattern 1: Duplicating Auth Checks in Components
+**Example:**
+```typescript
+// app/(authenticated)/layout.tsx -- MODIFIED
+import { BugReportFAB } from "@/components/bug-reports/bug-report-fab";
 
-**What people do:** Check `isOwner` or `isShared` inside individual React components or server actions instead of using the centralized authorization module.
-**Why it's wrong:** Creates divergent authorization logic. Missed checks = security holes. Violates the existing "single gate" pattern.
-**Do this instead:** Always go through `getAuthorizedProject()` which returns the role. Thread the role through props.
+export default async function AuthenticatedLayout({ children }) {
+  const user = await getCurrentUser();
+  const admin = isAdmin(user.email);
 
-### Anti-Pattern 2: Adding userId to Child Tables
+  return (
+    <AppShell user={user} isAdmin={admin}>
+      <main id="main-content" role="main" className="min-h-screen">
+        {children}
+      </main>
+      <BugReportFAB userName={user.name || user.email} />
+    </AppShell>
+  );
+}
+```
 
-**What people do:** Add a `sharedWith` or `accessibleBy` field to every child table (Upload, Card, Epic, etc.).
-**Why it's wrong:** The existing design uses entity chain ownership (Project is the root). Adding user references to children breaks this pattern and creates consistency nightmares.
-**Do this instead:** Keep authorization at the Project level only. The ProjectShare table is the single addition.
+### Pattern 3: Admin-Gated Page with isAdmin Check
 
-### Anti-Pattern 3: Fetching All Users Eagerly
+**What:** The bug reports dashboard page checks admin status server-side and returns notFound() for non-admins, matching the existing 404-not-403 pattern.
 
-**What people do:** Load all Cognito users into the picker on dialog open.
-**Why it's wrong:** Slow for larger user pools. Unnecessary data transfer.
-**Do this instead:** Debounced search-as-you-type. Query Cognito ListUsers with the email filter parameter. Return max 10 results.
+**When to use:** Admin-only pages.
 
-### Anti-Pattern 4: Using Middleware for Share Authorization
+**Trade-offs:** Consistent with existing authorization patterns. Admin detection uses same `isAdmin(email)` function from `lib/auth/authorization.ts`.
 
-**What people do:** Try to check share permissions in Next.js middleware.
-**Why it's wrong:** The app already avoids middleware for auth (per CVE-2025-29927 decision). Middleware runs on the edge and cannot reliably query the database.
-**Do this instead:** Keep authorization in server components and server actions via `getAuthorizedProject()`.
+**Example:**
+```typescript
+// app/(authenticated)/bug-reports/page.tsx
+import { getCurrentUser } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth/authorization";
+import { notFound } from "next/navigation";
 
-## Scaling Considerations
+export default async function BugReportsPage() {
+  const user = await getCurrentUser();
+  if (!isAdmin(user.email)) notFound();
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| <50 users (current) | Cognito ListUsers for picker, no caching needed |
-| 50-500 users | Add local User table synced via Cognito PostAuth trigger for faster picker queries |
-| 500+ users | Add pagination to share management, consider share groups/teams |
+  // ... fetch and render bug reports
+}
+```
 
-### First Bottleneck: User Picker Performance
+## Data Flow
 
-At ~50+ users, Cognito ListUsers API calls may feel slow (200-500ms per query). Mitigation: add a local `User` table populated by a Cognito PostAuthentication Lambda trigger. This is a future optimization, not needed for v4.0.
+### Bug Report Submission Flow
 
-### Second Bottleneck: Projects Page Query Count
+```
+User clicks FAB (any page)
+    |
+    v
+BugReportModal opens (client component)
+    |-- Captures window.location.href automatically
+    |-- User types description
+    |-- Clicks Submit
+    |
+    v
+submitBugReport() server action
+    |
+    +--> db.bugReport.create() --> RDS PostgreSQL
+    |
+    +--> sendBugReportNotification() (fire-and-forget)
+              |
+              v
+         SES SendEmail API --> Admin email inbox
+    |
+    v
+Return { success: true } --> Toast confirmation
+```
 
-With many shares, `getAuthorizedProjects()` makes two queries (owned + shared). This is fine for <100 shares per user. If it becomes an issue, combine into a single query with `OR` clause.
+### Admin Status Management Flow
 
-## Build Order (Dependency-Driven)
+```
+Admin navigates to /bug-reports
+    |
+    v
+Server component: isAdmin() check --> notFound() if not admin
+    |
+    v
+db.bugReport.findMany({ orderBy: { createdAt: "desc" } })
+    |
+    v
+Render table with status dropdowns
+    |
+    v
+Admin selects new status --> updateBugStatus() server action
+    |
+    v
+db.bugReport.update({ status }) --> revalidatePath("/bug-reports")
+```
 
-The following order respects dependencies -- each step builds on the previous:
+### Key Data Flows
 
-| Phase | What | Why This Order |
-|-------|------|----------------|
-| 1 | Schema: add `ProjectShare` model + migration | Everything depends on the data model |
-| 2 | Authorization: modify `getAuthorizedProject()` to return `role`, add `canEdit()`/`canManageShares()` helpers | All UI and actions depend on role resolution |
-| 3 | Server actions: `server/actions/sharing.ts` (CRUD for shares, user search) | Share dialog needs these |
-| 4 | UI: Share dialog + user picker components | Core sharing workflow |
-| 5 | Projects page: split into "My Projects" / "Shared with me" sections | Depends on `getAuthorizedProjects()` changes |
-| 6 | Project detail: role-based UI gating (hide mutations for viewers) | Depends on role being available from step 2 |
-| 7 | Runs page: expand filter to include shared projects | Independent of UI work, but needs schema from step 1 |
+1. **Submission:** Client component --> server action --> Prisma insert + SES email (parallel, email is fire-and-forget)
+2. **Admin listing:** Server component --> Prisma query --> server-rendered table with client-side status dropdowns
+3. **Status update:** Client event --> server action --> Prisma update --> revalidatePath
 
-## Integration Points Summary
+## New Database Model
 
-### Internal Boundaries
+```prisma
+model BugReport {
+  id             String   @id @default(cuid())
+  description    String   @db.Text
+  pageUrl        String   // URL where the bug was reported from
+  submitterEmail String   // Email of the user who submitted
+  submitterName  String   // Display name at time of submission
+  status         String   @default("open") // open | in-progress | resolved | closed
+  adminNotes     String?  @db.Text // Optional admin response/notes
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-| Boundary | Change | Risk |
-|----------|--------|------|
-| `authorization.ts` <-> all server actions | Return `role` instead of `isAdmin` boolean | LOW -- mechanical refactor, all call sites known |
-| `authorization.ts` <-> Prisma | Add ProjectShare queries | LOW -- standard Prisma relation |
-| Projects page <-> ProjectList component | Pass `shareRole` prop | LOW -- additive prop |
-| Project detail page <-> child section components | Pass `readOnly` / `role` prop | LOW -- additive prop, children just hide buttons |
-| Share dialog <-> Cognito | `ListUsers` API call via AWS SDK | MEDIUM -- new AWS API integration, needs IAM permissions |
+  @@index([status])
+  @@index([submitterEmail])
+  @@index([createdAt])
+}
+```
+
+**Design decisions:**
+- **No foreign key to User:** Bug reports store submitterEmail directly (like Project.userId pattern). Avoids requiring User record lookup during submission.
+- **No foreign key to Project:** Bug reports are app-wide, not project-scoped. The pageUrl captures context.
+- **Status as string (not enum):** Matches existing pattern (Run.status, Upload.extractionStatus). Avoids migration for status additions.
+- **adminNotes field:** Allows admin to add resolution notes without a separate comments model. Keep it simple for v5.0.
+
+## AWS SES Integration
+
+### SES Setup Requirements
+
+1. **Verify sender identity:** Verify a single email address (e.g., the admin email) in SES. For a POC with one admin recipient, email identity verification is sufficient -- no domain verification needed.
+
+2. **Sandbox mode consideration:** SES starts in sandbox mode. For an internal-only tool with one verified recipient (the admin), sandbox mode works fine. Both sender and recipient must be verified in sandbox. Since the admin email is used as both sender and recipient, verifying it once covers both.
+
+3. **IAM permissions:** Add `ses:SendEmail` and `ses:SendRawEmail` to the ECS task role.
+
+4. **No VPC endpoint needed:** The ECS tasks run in `PRIVATE_WITH_EGRESS` subnets with NAT Gateway (confirmed in CDK stack). SES API calls go through the NAT Gateway to the public SES endpoint. This is the simplest approach and works with the existing network architecture.
+
+### SES Client Implementation
+
+```typescript
+// lib/email/ses.ts
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+
+const ses = new SESClient({ region: process.env.AWS_REGION || "us-east-1" });
+
+const ADMIN_EMAIL = process.env.BUG_REPORT_ADMIN_EMAIL || "sean.mcinerney@merkle.com";
+const FROM_EMAIL = process.env.SES_FROM_EMAIL || ADMIN_EMAIL; // In sandbox, from must be verified
+
+export async function sendBugReportNotification(report: {
+  id: string;
+  description: string;
+  pageUrl: string;
+  submitterEmail: string;
+  submitterName: string;
+  createdAt: Date;
+}) {
+  const command = new SendEmailCommand({
+    Source: FROM_EMAIL,
+    Destination: { ToAddresses: [ADMIN_EMAIL] },
+    Message: {
+      Subject: { Data: `[Bug Report] New report from ${report.submitterName}` },
+      Body: {
+        Html: {
+          Data: `<h2>New Bug Report</h2>
+            <p><strong>From:</strong> ${report.submitterName} (${report.submitterEmail})</p>
+            <p><strong>Page:</strong> ${report.pageUrl}</p>
+            <p><strong>Time:</strong> ${report.createdAt.toISOString()}</p>
+            <hr/>
+            <p>${report.description.replace(/\n/g, "<br/>")}</p>`,
+        },
+        Text: {
+          Data: `New Bug Report\n\nFrom: ${report.submitterName} (${report.submitterEmail})\nPage: ${report.pageUrl}\nTime: ${report.createdAt.toISOString()}\n\n${report.description}`,
+        },
+      },
+    },
+  });
+
+  await ses.send(command);
+}
+```
+
+### CDK Infrastructure Changes
+
+```typescript
+// In requirements-foundry-stack.ts -- ADD to taskRole policies:
+
+// SES send email (for bug report notifications)
+taskRole.addToPolicy(new iam.PolicyStatement({
+  actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+  resources: ['*'], // Can scope to specific identity ARN after verification
+}));
+
+// ADD environment variable to container:
+environment: {
+  // ... existing vars ...
+  BUG_REPORT_ADMIN_EMAIL: alarmEmail || 'sean.mcinerney@merkle.com',
+},
+```
+
+**Note:** SES email identity verification is a manual one-time step (click link in verification email). CDK can create an `ses.EmailIdentity` resource to initiate it, but the human must still click the verification link. This can be done as a CDK resource or manually via AWS Console -- either works.
+
+## Integration Points
 
 ### External Services
 
 | Service | Integration Pattern | Notes |
 |---------|---------------------|-------|
-| Cognito | `ListUsers` via `@aws-sdk/client-cognito-identity-provider` | Already in dependencies for auth flow. Need `cognito-idp:ListUsers` IAM permission on ECS task role. Filter by email prefix for search. |
+| AWS SES | `@aws-sdk/client-ses` SendEmailCommand from ECS task | Uses IAM task role credentials (auto-resolved via SDK credential chain). Traffic goes through NAT Gateway. |
+| RDS PostgreSQL | Prisma client (existing `lib/db`) | New BugReport model, standard migration |
 
-### IAM Permission Addition
+### Internal Boundaries
 
-The ECS task role needs `cognito-idp:ListUsers` permission scoped to the Cognito User Pool ARN. This is a CDK change in the infra stack.
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| Layout --> BugReportFAB | Props (userName) | FAB is client component in server layout |
+| BugReportModal --> server action | `submitBugReport()` call | Standard server action pattern |
+| server action --> SES | Fire-and-forget async call | Email failure logged, does not fail submission |
+| Sidebar --> bug-reports page | Conditional nav link | Only shown when `isAdmin` prop is true |
+| bug-reports page --> server action | `getBugReports()`, `updateBugStatus()` | Admin-gated, standard Prisma queries |
+
+### Modified Existing Files (Minimal Touchpoints)
+
+| File | Change | Risk |
+|------|--------|------|
+| `prisma/schema.prisma` | Add BugReport model (append) | LOW -- additive, no existing model changes |
+| `app/(authenticated)/layout.tsx` | Import and render BugReportFAB | LOW -- one line addition |
+| `components/layout/sidebar.tsx` | Add conditional "Bug Reports" nav item for admins | LOW -- guarded by isAdmin |
+| `infra/lib/requirements-foundry-stack.ts` | Add SES IAM policy to taskRole + env var | LOW -- additive policy statement |
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Blocking on Email Delivery
+
+**What people do:** `await sendEmail()` in the server action and return error to user if email fails.
+**Why it's wrong:** SES can have transient failures. The bug report is the primary artifact -- the email is a notification convenience. Blocking makes submission feel slow and fragile.
+**Do this instead:** Fire-and-forget with `.catch()` logging. The bug report exists in the database regardless of email delivery.
+
+### Anti-Pattern 2: Separate API Route for Submission
+
+**What people do:** Create `app/api/bug-reports/route.ts` with POST handler instead of a server action.
+**Why it's wrong:** The existing codebase uses server actions exclusively (12 action files, zero custom API routes for mutations). An API route would break the convention.
+**Do this instead:** Use `"use server"` action in `server/actions/bug-reports.ts`, matching shares.ts, projects.ts, etc.
+
+### Anti-Pattern 3: Complex Status Machine
+
+**What people do:** Build a full state machine with transitions, validation rules, notification on every transition, audit history.
+**Why it's wrong:** This is a POC internal tool with one admin. The status field is a simple string with four values. Over-engineering wastes time.
+**Do this instead:** Simple string update via server action. No transition validation beyond "must be one of four values". Add audit/history later if needed.
+
+### Anti-Pattern 4: SQS/SNS for Email Delivery
+
+**What people do:** Send bug report to SQS queue, have a Lambda consumer send the email for "reliability."
+**Why it's wrong:** Massive over-engineering for an internal POC that sends maybe 1-5 emails per week. Adds Lambda, SQS, IAM, DLQ infrastructure for a single-recipient notification.
+**Do this instead:** Direct SES call from the ECS container. If email fails, it is logged. Admin can always check the /bug-reports dashboard.
+
+## Scaling Considerations
+
+| Scale | Architecture Adjustments |
+|-------|--------------------------|
+| 1-50 users (current) | Direct SES from server action, single admin recipient. No changes needed. |
+| 50-500 users | Consider rate limiting submissions per user (e.g., max 5/hour). Add email template in SES for consistent formatting. |
+| 500+ users | Move to SQS + Lambda for email (decouple). Add multiple admin recipients. Consider assignment workflow. |
+
+### Scaling Priorities
+
+1. **First bottleneck:** None expected. Bug reports are low-volume writes. SES handles 1/sec in sandbox, 14/sec in production.
+2. **Only real concern:** Spam/abuse -- a user submitting hundreds of reports. Mitigate with simple client-side debounce and optional server-side rate check.
+
+## Build Order Recommendation
+
+Based on dependency analysis:
+
+1. **Phase 1: Schema + Server Actions** -- BugReport model, migration, CRUD server actions (no email yet)
+2. **Phase 2: UI Components** -- FAB, Modal, layout integration, admin page with table
+3. **Phase 3: SES Integration** -- Email client, CDK changes, wire into submit action
+4. **Phase 4: Polish** -- Status filters, admin notes, toast confirmations, edge cases
+
+**Rationale:** Schema first because everything depends on it. UI second because it can be tested with DB-only flow (no email). SES third because it requires CDK deploy and manual SES verification -- isolating it avoids blocking UI work.
 
 ## Sources
 
-- Codebase analysis: `lib/auth/authorization.ts`, `server/actions/projects.ts`, `prisma/schema.prisma`
-- Existing patterns: entity chain ownership (PROJECT.md Key Decisions), centralized authorization module
-- Prisma relation patterns: standard junction table with `@@unique` compound key
-- AWS Cognito ListUsers: standard SDK pattern, already using `@aws-sdk/client-cognito-identity-provider`
+- Existing codebase analysis: `lib/auth/authorization.ts`, `server/actions/shares.ts`, `infra/lib/requirements-foundry-stack.ts`, `prisma/schema.prisma`, `app/(authenticated)/layout.tsx`, `components/layout/sidebar.tsx`
+- [AWS SES SDK for JavaScript v3 - Sending Email](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/ses-examples-sending-email.html)
+- [Sending emails from ECS Fargate in isolated subnet](https://www.devgem.io/posts/how-to-send-emails-from-an-aws-ecs-fargate-task-in-an-isolated-subnet) -- confirms NAT Gateway approach for private subnets with egress
 
 ---
-*Architecture research for: Requirements Foundry v4.0 Project Sharing*
-*Researched: 2026-03-23*
+*Architecture research for: Bug reporting integration into Requirements Foundry v5.0*
+*Researched: 2026-03-26*

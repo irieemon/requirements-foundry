@@ -1,151 +1,237 @@
-# Stack Research: Project Sharing & Role-Based Permissions (v4.0)
+# Stack Research: Bug Reporting with Email Notifications (v5.0)
 
-**Domain:** Multi-user project sharing with viewer/editor roles
-**Researched:** 2026-03-23
+**Domain:** Bug reporting system with email notifications and admin dashboard
+**Researched:** 2026-03-26
 **Confidence:** HIGH
 
-## Key Finding: No New Dependencies Required
+## Key Finding: One New Dependency Required
 
-The existing stack (Prisma 7, Next.js 16, iron-session, Zod 4) provides everything needed for project sharing. This milestone is a **schema + authorization logic change**, not a technology addition.
+The only new package needed is `@aws-sdk/client-sesv2` for sending email notifications via AWS SES. Everything else -- the bug report modal, admin dashboard, status management, database schema -- is built entirely with the existing stack (Prisma 7, Next.js 16, Radix UI, Zod 4, CDK).
 
-## What Changes (Within Existing Stack)
+## New Stack Addition
 
-### Prisma Schema Addition
+### AWS SES v2 SDK (Email Sending)
 
-| Change | What | Why |
-|--------|------|-----|
-| New `ProjectShare` model | Junction table: projectId + userEmail + role enum | Explicit many-to-many with metadata (role, timestamps). Prisma 7 supports enum fields and composite unique constraints natively. |
-| New `ShareRole` enum | `VIEWER`, `EDITOR` | Prisma enums map to PostgreSQL enums, providing type-safe role validation at the database level. |
-| New relation on `Project` | `shares ProjectShare[]` | Enables `include: { shares: true }` in queries and cascading deletes when project is removed. |
-| New index | `@@index([userEmail])` on ProjectShare | Required for "Shared with me" queries -- finds all shares for a given user efficiently. |
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| `@aws-sdk/client-sesv2` | ^3.1015.0 | Send bug report notification emails to admin | AWS SES v2 is the current API (v1 is legacy). The app already uses `@aws-sdk/client-s3` (^3.1002.0) and `@aws-sdk/client-secrets-manager` (^3.1003.0), so this follows the established pattern of modular AWS SDK v3 imports. SES v2 provides `SendEmailCommand` with simple and raw email modes. The `^3` range will resolve to a compatible version with existing AWS SDK packages due to shared core. |
 
-**Why a junction table, not a JSON field:** The app needs to query "all projects shared with user X" efficiently. A `sharedWith Json?` field on Project would require scanning all projects. A junction table with an index on `userEmail` is O(1) lookup via index scan.
+**Why SES v2 over SES v1:** The `@aws-sdk/client-ses` (v1 API) package is in maintenance mode. AWS recommends `@aws-sdk/client-sesv2` for all new integrations. The v2 API has a cleaner command interface and supports newer features like contact lists and templates.
 
-**Why `userEmail` not `userId`:** The existing schema uses `Project.userId` as email string (set from `user.email` in session). There is no `User` table. Keeping consistency with the existing pattern avoids a migration to add a User model. The `userEmail` on ProjectShare matches the same identifier used in `Project.userId`.
+### CDK Infrastructure Addition
 
-### Authorization Module Changes
-
-| Change | File | Why |
-|--------|------|-----|
-| Extend `getAuthorizedProject()` | `lib/auth/authorization.ts` | Currently checks `project.userId === user.email \|\| isAdmin`. Must add: "OR user has a ProjectShare record for this project." |
-| Add role-aware helper | `lib/auth/authorization.ts` | New `getProjectRole()` function returns `'owner' \| 'editor' \| 'viewer' \| null`. Used by UI to conditionally show/hide edit controls. |
-| Extend `getAuthorizedProjects()` | `lib/auth/authorization.ts` | Must return both owned projects AND shared projects, with a flag indicating ownership vs shared status. |
-
-### Zod Validation (Already Installed)
-
-| Schema | Purpose | Why Zod |
-|--------|---------|---------|
-| `shareProjectSchema` | Validate share request: `{ email: z.string().email(), role: z.enum(['VIEWER', 'EDITOR']) }` | Already used throughout the app for form validation (react-hook-form + @hookform/resolvers). No new dependency. |
-| `updateShareSchema` | Validate role change: `{ shareId: z.string(), role: z.enum(['VIEWER', 'EDITOR']) }` | Same pattern as existing action validators. |
-
-## What NOT to Add
-
-| Technology | Why NOT | What to Do Instead |
-|------------|---------|-------------------|
-| CASL / casbin / any RBAC library | Massive overkill for two roles (viewer/editor) on a single resource type (projects). These libraries solve complex cross-resource policy engines. This app has ONE authorization check: "can this user access this project, and at what level?" | Simple `getProjectRole()` function returning `'owner' \| 'editor' \| 'viewer' \| null`. ~20 lines of code. |
-| User model / table | The app identifies users by email from Cognito claims. Adding a `User` table requires syncing with Cognito (on first login, etc.), migration complexity, and FK changes across the schema. Not needed for v4.0. | Use `userEmail: String` in ProjectShare, matching the existing `Project.userId` pattern. A User table may make sense in a future milestone for profiles/preferences, but sharing doesn't require it. |
-| Invitation / email system | The milestone spec says "User picker showing accounts who have previously signed in." This means sharing with existing users only, not inviting external users. No email delivery needed. | Query `SELECT DISTINCT userId FROM Project` (or add a lightweight seen-users query) to populate the user picker. Users must have logged in at least once. |
-| WebSocket / real-time notifications | No requirement for real-time "you've been shared on" notifications. The user discovers shared projects when they visit the projects page. | Shared projects appear in "Shared with me" section on next page load. |
-| Middleware-level auth changes | The existing `proxy.ts` route protection already gates all `/projects/[id]` routes through `getAuthorizedProject()`. Sharing just changes what "authorized" means inside that function. | Modify the authorization module only. No middleware changes needed. |
-| Row-Level Security (PostgreSQL) | Already ruled out in PROJECT.md (Prisma doesn't support RLS session variables). App-level filtering is the established pattern. | Continue with app-level authorization in `getAuthorizedProject()`. |
+| Technology | Already Installed | Purpose | Why |
+|------------|-------------------|---------|-----|
+| `aws-cdk-lib/aws-ses` | Yes (part of aws-cdk-lib ^2.241.0) | CDK constructs for SES email identity verification | `ses.EmailIdentity` with `ses.Identity.email()` creates and auto-verifies a sender email address. No new CDK package needed -- `aws-cdk-lib` bundles all service modules. |
 
 ## Existing Stack Usage (No Changes Needed)
 
-| Technology | Version | Role in Sharing Feature |
-|------------|---------|------------------------|
-| Prisma | 7.2.0 | Schema migration for ProjectShare table, typed queries with includes |
-| Next.js | 16.1.1 | Server actions for share CRUD, server components for share UI |
-| iron-session | 8.0.4 | Session provides `user.email` for authorization checks (unchanged) |
-| Zod | 4.3.5 | Input validation for share/unshare actions |
-| react-hook-form | 7.70.0 | Share dialog form (email input, role select) |
-| @radix-ui/react-dialog | 1.1.15 | Share management modal |
-| @radix-ui/react-select | 2.2.6 | Role selector dropdown (VIEWER/EDITOR) |
-| lucide-react | 0.562.0 | Share icon, user icons in share list |
-| Radix UI components | Various | Already installed: dialog, select, dropdown-menu, alert-dialog -- all needed for share UI |
+These existing technologies cover all v5.0 requirements without modification:
+
+### Database (Prisma 7.2.0)
+
+| What | How Used in v5.0 |
+|------|------------------|
+| New `BugReport` model | Schema: id, userId, userEmail, description, pageUrl, status (enum), createdAt, updatedAt. Standard Prisma migration. |
+| Status enum | `open`, `in-progress`, `resolved`, `closed` as string field (matching existing pattern of string enums like Run.status). |
+| Relations | `BugReport` has no FK to Project -- bug reports are app-wide, tied to User only. |
+| Queries | Admin dashboard: `findMany` with status filtering, ordering by createdAt. Simple CRUD -- no complex joins. |
+
+### UI Components (Already Installed)
+
+| Component | Package | v5.0 Usage |
+|-----------|---------|------------|
+| `Dialog` | `@radix-ui/react-dialog` 1.1.15 | Bug report submission modal |
+| `Textarea` | Custom (already in `components/ui/textarea.tsx`) | Bug description input |
+| `Button` | Custom (already in `components/ui/button.tsx`) | Submit button, floating trigger button |
+| `Form` | `react-hook-form` 7.70.0 + `@hookform/resolvers` 5.2.2 | Form validation for bug report |
+| `Table` | Custom (already in `components/ui/table.tsx`) | Admin bug report list |
+| `StatusPill` | Custom (already in `components/ui/status-pill.tsx`) | Status display (open/in-progress/resolved/closed) |
+| `Badge` | Custom (already in `components/ui/badge.tsx`) | Status badges in admin view |
+| `Select` | `@radix-ui/react-select` 2.2.6 | Status change dropdown in admin dashboard |
+| `DropdownMenu` | `@radix-ui/react-dropdown-menu` 2.1.16 | Actions menu on each bug report row |
+| Icons | `lucide-react` 0.562.0 | Bug icon for floating button, status icons |
+| Toast | `sonner` 2.0.7 | Success/error feedback on submission |
+
+### Validation (Zod 4.3.5)
+
+| Schema | Purpose |
+|--------|---------|
+| `bugReportSchema` | `{ description: z.string().min(10).max(2000), pageUrl: z.string().url() }` |
+| `updateBugStatusSchema` | `{ reportId: z.string(), status: z.enum(['open', 'in-progress', 'resolved', 'closed']) }` |
+
+### Auth (iron-session 8.0.4)
+
+| What | How Used |
+|------|----------|
+| Session identity | `user.email` and `user.name` attached to bug report on submission |
+| Admin check | Existing `isAdmin()` function gates the admin bug reports page -- same pattern as projects admin toggle |
+| Route protection | Existing `proxy.ts` pattern protects `/admin/bug-reports` route |
+
+### Server Actions (Next.js 16.1.1)
+
+| Action | Pattern |
+|--------|---------|
+| `submitBugReport` | Server action: validate input, save to DB, send SES email, return result. Follows existing `createProject` / `shareProject` patterns. |
+| `updateBugReportStatus` | Server action: admin-only, validate status transition, update DB. Follows existing admin action patterns. |
+| `getBugReports` | Server component data fetching with Prisma, same as `getProjects`. |
 
 ## Installation
 
 ```bash
-# No new packages to install.
-# The only change is a Prisma migration:
-npx prisma migrate dev --name add_project_sharing
+# One new package
+npm install @aws-sdk/client-sesv2
+
+# No other packages needed.
+# Prisma migration:
+npx prisma migrate dev --name add_bug_reports
 ```
+
+## CDK Changes Required
+
+```typescript
+// In requirements-foundry-stack.ts, add:
+import * as ses from 'aws-cdk-lib/aws-ses';
+
+// 1. SES Email Identity (verified sender address)
+const sesIdentity = new ses.EmailIdentity(this, 'BugReportSender', {
+  identity: ses.Identity.email('noreply@requirementsfoundry.internal'),
+  // Or use a context variable for the sender email
+});
+
+// 2. Grant ECS task role permission to send emails
+taskRole.addToPrincipalPolicy(new iam.PolicyStatement({
+  actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+  resources: ['*'], // SES identities are region-wide
+}));
+
+// 3. Add environment variable to ECS task definition
+// SES_SENDER_EMAIL: sender address
+// ADMIN_NOTIFICATION_EMAIL: recipient (the admin)
+```
+
+**SES Sandbox Note:** New AWS accounts start in SES sandbox mode, which only allows sending to verified email addresses. For this POC internal tool, sandbox mode is acceptable -- the admin email just needs to be verified. No need to request production access unless sending to arbitrary users later.
+
+## Alternatives Considered
+
+| Recommended | Alternative | Why Not |
+|-------------|-------------|---------|
+| `@aws-sdk/client-sesv2` (direct) | `nodemailer` with SES transport | Nodemailer adds unnecessary abstraction. The app sends ONE type of email (bug notification) to ONE recipient (admin). Direct SES SDK call is ~15 lines of code. Nodemailer is for apps with complex email needs (templates, attachments, SMTP fallback). |
+| `@aws-sdk/client-sesv2` (direct) | AWS SNS email subscription | SNS is for pub/sub fan-out. Bug report emails need structured HTML content (description, URL, user info). SNS email subscriptions send raw text with no formatting control. The existing SNS alarm topic is appropriate for simple alerts, not formatted emails. |
+| SES `SendEmailCommand` (simple) | SES `SendRawEmailCommand` | Simple email mode handles subject + HTML/text body natively. Raw mode is for MIME-encoded emails with attachments, custom headers. Bug notifications don't need attachments. |
+| CDK `ses.EmailIdentity` | Manual SES verification in console | CDK keeps infrastructure as code consistent with the rest of the stack. Email identity verification is a one-line CDK construct. Manual console steps break the IaC pattern. |
+| String status field | Prisma enum type | The existing codebase uses string fields for statuses (Run.status, Upload.extractionStatus) with TypeScript type unions for type safety. Only RunStoryStatus uses a Prisma enum. Follow the dominant pattern (string field) for consistency. |
+
+## What NOT to Add
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `nodemailer` | Overkill for single-recipient notification emails. Adds a dependency with SMTP transport complexity the app doesn't need. | Direct `@aws-sdk/client-sesv2` `SendEmailCommand` |
+| `react-email` / `@react-email/components` | Email template library for complex transactional emails. This app sends ONE email type with 4 fields. A template string is sufficient. | Inline HTML template string in the server action |
+| `bull` / `bullmq` / any queue library | Email sending should NOT be async-queued. SES API calls complete in <200ms. The existing pattern is synchronous server actions. Adding a queue for one email per bug report is massive over-engineering. | Call SES directly in the server action. If it fails, catch the error and still save the bug report (email is nice-to-have, not critical). |
+| Separate email microservice / Lambda | One email type, one recipient, called from one place. A Lambda adds deployment complexity, cold start latency, and IAM complexity for zero benefit. | Send from the ECS application directly via AWS SDK |
+| `@tanstack/react-table` | The admin bug report list is a simple table with ~5 columns and no complex sorting/filtering/pagination needs (internal tool, likely <100 reports). The existing `components/ui/table.tsx` handles this. | Existing table component with manual sorting if needed |
+| WebSocket for real-time bug report updates | Admin checks the dashboard manually. No requirement for push notifications to the admin page. The app's established pattern is polling or page refresh. | Standard page load data fetching |
 
 ## Schema Design
 
 ```prisma
-enum ShareRole {
-  VIEWER
-  EDITOR
+model BugReport {
+  id          String   @id @default(cuid())
+  userId      String   // User.id of submitter
+  userEmail   String   // email for display (denormalized for convenience)
+  userName    String?  // display name at time of submission
+  description String   @db.Text  // freeform bug description
+  pageUrl     String   // URL where the bug was reported from
+  status      String   @default("open")  // open | in-progress | resolved | closed
+  adminNotes  String?  @db.Text  // optional admin response/notes
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([userId])
+  @@index([createdAt])
 }
-
-model ProjectShare {
-  id        String    @id @default(cuid())
-  projectId String
-  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  userEmail String    // email of the user being shared with
-  role      ShareRole @default(VIEWER)
-  sharedBy  String    // email of the user who shared (audit trail)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  @@unique([projectId, userEmail])  // one share per user per project
-  @@index([userEmail])              // fast "shared with me" lookups
-  @@index([projectId])              // fast "who has access" lookups
-}
-
-// Add to existing Project model:
-// shares ProjectShare[]
 ```
 
 **Design rationale:**
-- `@@unique([projectId, userEmail])` prevents duplicate shares and enables upsert for role changes
-- `onDelete: Cascade` means deleting a project automatically cleans up all shares
-- `sharedBy` provides audit trail without needing a separate audit table
-- `ShareRole` enum is extensible if future roles are needed (e.g., COMMENTER)
+- `userId` + `userEmail` denormalized: userId for FK integrity with User table, email for display without joins (matches existing patterns)
+- `@db.Text` on description and adminNotes: PostgreSQL TEXT type for unlimited length
+- No relation to Project: bug reports are about the app itself, not project-specific
+- `adminNotes` field: allows admin to add context when changing status, useful for tracking
+- Status as string (not Prisma enum): follows dominant codebase pattern (Run.status, Upload.status use strings)
 
-## Query Patterns
+## Email Template Pattern
 
 ```typescript
-// "Shared with me" projects
-const sharedProjects = await db.projectShare.findMany({
-  where: { userEmail: user.email },
-  include: {
-    project: {
-      include: { _count: { select: { uploads: true, cards: true, epics: true } } }
-    }
-  }
-});
+// lib/email/bug-report-notification.ts
+import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 
-// Authorization check (extended)
-const share = await db.projectShare.findUnique({
-  where: { projectId_userEmail: { projectId, userEmail: user.email } }
-});
-const canAccess = project.userId === user.email || isAdmin(user.email) || share !== null;
-const canEdit = project.userId === user.email || isAdmin(user.email) || share?.role === 'EDITOR';
+const ses = new SESv2Client({ region: process.env.AWS_REGION || 'us-east-1' });
 
-// User picker (users who have logged in)
-const knownUsers = await db.project.findMany({
-  select: { userId: true },
-  distinct: ['userId'],
-});
+export async function sendBugReportNotification(report: {
+  userEmail: string;
+  userName: string | null;
+  description: string;
+  pageUrl: string;
+  createdAt: Date;
+}) {
+  const command = new SendEmailCommand({
+    FromEmailAddress: process.env.SES_SENDER_EMAIL,
+    Destination: {
+      ToAddresses: [process.env.ADMIN_NOTIFICATION_EMAIL!],
+    },
+    Content: {
+      Simple: {
+        Subject: { Data: `[Bug Report] New report from ${report.userName || report.userEmail}` },
+        Body: {
+          Html: { Data: buildHtmlEmail(report) },
+          Text: { Data: buildTextEmail(report) },
+        },
+      },
+    },
+  });
+  await ses.send(command);
+}
 ```
+
+**Pattern notes:**
+- SES client instantiated once at module level (reused across requests in ECS)
+- Both HTML and plain text body for email client compatibility
+- Sender and recipient addresses from environment variables (set in CDK)
+- No retry logic needed: SES accepts the email or throws immediately. If SES is down, the bug report is still saved to DB.
 
 ## Version Compatibility
 
-| Package | Current Version | Sharing Feature Needs | Compatible |
-|---------|----------------|----------------------|------------|
-| @prisma/client | 7.2.0 | Enum fields, composite unique, relation includes | Yes -- all features stable since Prisma 5+ |
-| zod | 4.3.5 | z.enum(), z.string().email() | Yes -- basic validators |
-| iron-session | 8.0.4 | No changes needed, provides user.email | Yes |
-| next | 16.1.1 | Server actions, server components | Yes |
+| Package | Current Version | v5.0 Addition | Compatible | Notes |
+|---------|----------------|---------------|------------|-------|
+| `@aws-sdk/client-sesv2` | NEW | ^3.1015.0 | Yes | Shares `@smithy/*` core with existing `@aws-sdk/client-s3` ^3.1002.0. npm deduplicates shared dependencies. |
+| `@aws-sdk/client-s3` | ^3.1002.0 | No change | Yes | Already installed, validates SDK v3 pattern works in this environment |
+| `aws-cdk-lib` | ^2.241.0 | `aws-cdk-lib/aws-ses` (already bundled) | Yes | No CDK version change needed. SES constructs stable since CDK v2.0. |
+| `@prisma/client` | ^7.2.0 | New migration only | Yes | Standard `migrate dev` for new table |
+| `react-hook-form` | ^7.70.0 | Bug report form | Yes | Same pattern as existing forms |
+| `zod` | ^4.3.5 | Validation schemas | Yes | Same pattern as existing validation |
+
+## SES Operational Considerations
+
+| Concern | Detail |
+|---------|--------|
+| **Sandbox mode** | Acceptable for POC. Admin email must be verified in SES console (or via CDK EmailIdentity). Sends only to verified addresses. |
+| **Production access** | Only needed if sending to non-verified addresses. For bug reports (admin-only recipient), sandbox is fine permanently. |
+| **Region** | Use us-east-1 (same as all other AWS resources). SES is available in us-east-1. |
+| **Cost** | $0.10 per 1,000 emails. Bug reports will be single-digit per week. Effectively free. |
+| **Rate limits** | Sandbox: 1 email/second, 200/day. Production: much higher. Neither limit matters for bug report volume. |
+| **Bounce handling** | Not needed. Sending to a single known admin address. No mailing list concerns. |
+| **DKIM/SPF** | Not needed for email identity (single address). Only relevant for domain identities. Verification email is sent to the address. |
 
 ## Sources
 
-- Existing codebase analysis: `prisma/schema.prisma`, `lib/auth/authorization.ts`, `lib/auth/types.ts`, `package.json`
-- PROJECT.md: established patterns (entity chain ownership, 404-not-403, app-level filtering)
-- Prisma documentation: enum support, composite unique constraints, relation queries -- all verified as stable features in Prisma 7.x (HIGH confidence, features available since Prisma 4+)
+- [@aws-sdk/client-sesv2 npm](https://www.npmjs.com/package/@aws-sdk/client-sesv2) -- latest version 3.1015.0, verified 2026-03-26
+- [AWS SES v2 JavaScript SDK docs](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/sesv2/) -- SendEmailCommand API reference
+- [CDK EmailIdentity construct](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ses.EmailIdentity.html) -- CDK v2 SES identity creation
+- [SES sandbox docs](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html) -- sandbox limitations and production access process
+- Existing codebase: `package.json`, `prisma/schema.prisma`, `infra/lib/requirements-foundry-stack.ts`, `components/ui/*.tsx` -- verified all existing components and patterns
 
 ---
-*Stack research for: Requirements Foundry v4.0 Project Sharing*
-*Researched: 2026-03-23*
+*Stack research for: Requirements Foundry v5.0 Bug Reporting*
+*Researched: 2026-03-26*

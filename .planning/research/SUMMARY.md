@@ -1,166 +1,167 @@
 # Project Research Summary
 
-**Project:** Requirements Foundry v4.0 — Project Sharing & Role-Based Permissions
-**Domain:** Retrofitting multi-user collaboration onto a single-owner requirements management tool
-**Researched:** 2026-03-23
+**Project:** Requirements Foundry v5.0
+**Domain:** In-app bug reporting with email notifications and admin dashboard
+**Researched:** 2026-03-26
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Requirements Foundry v4.0 adds user-to-user project sharing with viewer and editor roles to a previously single-owner application. The research conclusion is unambiguous: this milestone is a schema extension and authorization refactor, not a technology addition. The existing stack (Prisma 7, Next.js 16, iron-session, Zod 4, Radix UI) provides every capability needed. A single new `ProjectShare` junction table, a modified `getAuthorizedProject()` function that returns an explicit role, and a new `User` table populated via login upsert are the entire data layer footprint. No new npm dependencies are required.
+Requirements Foundry v5.0 adds a lightweight in-app bug reporting system to an existing Next.js 16 + AWS (ECS Fargate, RDS PostgreSQL, CDK) application. This is a well-understood CRUD feature with one meaningful integration point: AWS SES for email notifications. Every required UI component, auth pattern, admin gating mechanism, and database infrastructure already exists in the codebase. The only genuinely new work is one Prisma model, two server actions, a floating button with modal, an admin dashboard page, and wiring up SES. The only new npm dependency is `@aws-sdk/client-sesv2` — everything else is already installed. Estimated complexity is LOW-MEDIUM; this is the lightest milestone the project has seen.
 
-The recommended approach follows the existing app's centralized authorization pattern: all access control flows through `lib/auth/authorization.ts`, the `ProjectShare` table is indexed for efficient "shared with me" lookups, and permissions are resolved once per request and threaded through the component tree. The correct mental model is Linear's approach — authenticated SSO users only, explicit per-user sharing, no public links — which matches the corporate security constraints of this tool. Two roles (viewer, editor) plus the existing owner/admin hierarchy cover all realistic collaboration needs without the complexity of per-entity ACLs or a full RBAC library.
+The recommended approach follows the established codebase patterns throughout: server actions (not API routes) for mutations, fire-and-forget SES calls (not blocking), `isAdmin()` + notFound() for admin gating (not 403), string fields for status (not Prisma enums), and Radix UI primitives for the modal. Build order should proceed schema-first (BugReport model + migration), then user-facing submission flow, then admin dashboard, then polish and differentiators. The CDK infrastructure changes (SES identity + IAM policy) must deploy before the application code that sends email goes live.
 
-The dominant risk is not technical but implementation discipline: the existing codebase has authorization checks scattered across both the centralized module and inline in at least six API route handlers. If the inline checks are not updated alongside the centralized function, shared users will experience partial access (project pages load but run polling and upload endpoints return 404). The authorization consolidation must happen in Phase 1, before any sharing UI is built. A secondary risk is that the app currently has no `User` table — users exist only in Cognito — and the share user picker cannot function without a local queryable source. Adding the `User` model with an upsert on every login is the enabling prerequisite for the share management UI.
+The primary risks are infrastructure-related: SES sandbox mode silently blocking email delivery, missing IAM permissions on the ECS task role, and SES region mismatch during identity verification. All three are LOW recovery cost but will cause silent failures if not addressed before deployment. The secondary architectural risk is placing the email call in the critical path of the submission server action — if SES fails transient, bug report submissions will appear to fail from the user's perspective. The fire-and-forget pattern (`sendEmail().catch(log)`) is non-negotiable and must be the architecture from day one.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack requires no changes. All necessary capabilities exist in the current dependencies. The `ProjectShare` junction table uses Prisma 7's native enum fields (`ShareRole: VIEWER | EDITOR`), composite unique constraints (`@@unique([projectId, userEmail])`), and cascade deletes — all stable features since Prisma 4. Zod 4 validates share inputs. Radix UI Dialog and Select (already installed) provide the share management modal and role dropdown. The only new integration is Cognito's `ListUsers` API for user discovery if not using a local User table, which uses `@aws-sdk/client-cognito-identity-provider` already in the dependency tree.
+The stack research confirmed that one new package is all that's needed: `@aws-sdk/client-sesv2` (^3.1015.0), which shares the `@smithy/*` core already installed via `@aws-sdk/client-s3`. Everything else — dialog, textarea, form validation, table, status pill, toast, select, auth — is already in the codebase. CDK infrastructure changes use `aws-cdk-lib/aws-ses` (already bundled in the installed `aws-cdk-lib ^2.241.0`) to create an `ses.EmailIdentity` construct and add `ses:SendEmail` to the existing ECS task role. SES sandbox mode is acceptable for this POC since both sender and recipient (the admin) are the same known email address that can be verified once.
 
 **Core technologies:**
-- **Prisma 7**: Schema migration for `ProjectShare` and `User` models, typed queries with relation includes — no new dependency, uses existing patterns
-- **Next.js 16 Server Actions**: All share CRUD operations as server actions — consistent with existing mutation pattern throughout the app
-- **iron-session 8**: Session provides `user.email` for authorization checks — unchanged, remains the identity pivot
-- **Zod 4**: Input validation for share/unshare/role-change actions — same pattern as existing action validators
-- **Radix UI Dialog + Select**: Share management modal and role dropdown — already installed, no new packages needed
-
-**What NOT to add:** CASL/casbin (two roles on one resource type is massive overkill), a WebSocket layer (users collaborate asynchronously; AI generation is the bottleneck, not simultaneous editing), or email notifications via SES (out of scope; in-app discovery is sufficient for this use case).
+- `@aws-sdk/client-sesv2` ^3.1015.0: send bug notification emails to admin — only new dependency; SES v2 is the current API (v1 is maintenance-mode)
+- `aws-cdk-lib/aws-ses` (already installed): CDK construct to verify SES email identity and grant IAM permissions — keeps infrastructure as code consistent with the rest of the stack
+- Prisma 7.2.0 (existing): BugReport model with string status field — follows the dominant codebase pattern of Run.status, Upload.extractionStatus as strings
+- `@radix-ui/react-dialog` (existing): modal for bug report submission — already used for share management dialog in v4.0
+- `react-hook-form` ^7.70.0 + `zod` ^4.3.5 (existing): form validation — same pattern as all other forms in the application
+- `sonner` ^2.0.7 (existing): submission feedback toast — already installed and used throughout
 
 ### Expected Features
 
-**Must have (table stakes — v4.0 launch):**
-- User table (new Prisma model, upserted on every login from Cognito claims) — enables picker and owner name display
-- ProjectShare table with migration — the data foundation for all sharing functionality
-- Authorization layer refactor — `getAuthorizedProject()` returns `{ project, user, role: 'owner' | 'editor' | 'viewer' | 'admin' }` and ALL inline checks consolidated here
-- Mutation guards across all 11 server action files — viewers blocked from all write operations with clear feedback
-- Share management UI — modal accessible to project owner; lists current shares with role dropdown and remove action
-- User picker autocomplete — searches local User table; 7-9 max suggestions; prevents self-share and duplicates
-- "Shared with me" section on projects page — separate from "My Projects"; displays owner name and role badge
-- Read-only visual indicators — disabled buttons with "View only" context for viewers; no confusing errors on click
-- Runs page visibility for shared projects — shared users see runs for projects they have access to
+All research agrees this feature is well-scoped. The full feedback loop (user submits report → admin receives email → admin manages status) is achievable in 3-4 phases with no architectural surprises.
 
-**Should have (differentiators — v4.x after validation):**
-- Transfer ownership — when an employee leaves; simple `project.userId` swap with confirmation dialog
-- Bulk share — multi-select in user picker for team onboarding; batch insert in one transaction
-- In-app share notification — "N new projects shared with you" indicator; no email/SES dependency
-- Share count on owner project cards — "Shared with N people" badge; trivial count query
+**Must have (table stakes — v5.0 launch):**
+- Floating "Report Bug" button on all authenticated pages — users need a persistent, discoverable entry point or they revert to email/Slack and reports get lost
+- Modal form with freeform description textarea — standard UX pattern, no page navigation, no context loss
+- Automatic page URL and user identity capture — zero friction; the system knows who is logged in and where they are
+- SES email notification to admin on submission — admin needs immediate notification, not to discover reports hours later by checking a dashboard
+- Admin-only bug reports page at `/bug-reports` — dedicated place to see all reports with status, submitter, date, description preview
+- Status workflow (open/in-progress/resolved/closed) with admin update capability — without status, the list becomes an undifferentiated pile
+- Admin-only sidebar nav item gated by `isAdmin` prop — using lucide `Bug` icon, consistent with existing sidebar pattern
+- Success toast on submission — users need confirmation their report was received or they will submit duplicates
 
-**Defer (v5+):**
-- Email notifications via SES — significant scope: templates, preferences, bounce handling; in-app discovery suffices
-- Okta group-based auto-sharing — requires group sync pipeline; removes explicit owner control
-- Audit log for share changes — separate concern already in the deferred backlog; build sharing first, audit later
-- Commenter role — only if a commenting feature is actually built; premature to add a role for a non-existent capability
+**Should have (differentiators — v5.x after validation):**
+- Browser/viewport metadata capture (userAgent, viewport size) — reduces follow-up questions needed for reproduction
+- Admin notes on reports — internal paper trail without building a full ticketing system
+- Filter/sort on admin dashboard — necessary once reports accumulate past ~20
+- Open report count badge in sidebar — admin sees urgency without navigating to the page
+- Rich HTML email template with direct admin dashboard link — admin can triage from inbox without opening the app
+
+**Defer (v6+):**
+- Reporter status visibility (users see their own report history) — creates a new user-facing page, SES sends to arbitrary addresses, and bidirectional communication expectations
+- Screenshot/file attachment uploads — requires S3 upload flow, file type validation, preview rendering; page URL + description is sufficient for this internal tool
+- Full ticketing features (assignment, due dates, labels, sprints) — JIRA/Linear already exist and do this infinitely better
 
 ### Architecture Approach
 
-The integration architecture is additive: one new junction table, one new `User` model, and modifications to the existing authorization module and three pages. The entity chain ownership pattern (Project is the root; child tables carry no userId) is preserved and extended — the `ProjectShare` table is the sole addition at the project level, not scattered across child tables. All authorization resolves once in `getAuthorizedProject()`, which now returns an explicit role. The `canEdit()`, `canManageShares()`, and `canDelete()` helper functions derived from that role are the only permission logic downstream components need. User discovery uses the local `User` table (preferred: faster, no rate limits, FK-safe) over Cognito `ListUsers`.
+The architecture fits cleanly within the existing layer structure. Only four existing files need modification (all additive, all low-risk): `prisma/schema.prisma` (add BugReport model), `app/(authenticated)/layout.tsx` (add FAB), `components/layout/sidebar.tsx` (add admin nav item), and `infra/lib/requirements-foundry-stack.ts` (add SES IAM policy + env var). All new code is in new files that follow established directory conventions.
 
 **Major components:**
-1. **`lib/auth/authorization.ts` (modified)** — sole authorization source of truth; resolves owner/admin/editor/viewer/none for every project access; exposes `canEdit()`, `canManageShares()`, `canDelete()` helpers; eliminates all inline checks in API route handlers
-2. **`server/actions/sharing.ts` (new)** — share CRUD (`getProjectShares`, `shareProject`, `updateShareRole`, `removeShare`) and user search (`searchUsers`); all guarded by `canManageShares()` check
-3. **`components/projects/share-dialog.tsx` + `share-user-picker.tsx` (new)** — owner-only UI for managing shares; autocomplete over User table; prevents self-share and duplicates
-4. **`app/(authenticated)/projects/page.tsx` (modified)** — two-section layout ("My Projects" / "Shared with me") using updated `getAuthorizedProjects()` return shape
-5. **`app/(authenticated)/runs/page.tsx` (modified)** — expand `where` clause to include shared projects alongside owned projects
+1. `BugReportFAB` + `BugReportModal` (`components/bug-reports/`) — floating button visible on all authenticated pages; modal captures URL automatically on open; self-contained client component imported into the server layout; uses existing Radix Dialog, react-hook-form, sonner
+2. `server/actions/bug-reports.ts` — three server actions: `submitBugReport` (validate + DB write + fire-and-forget SES), `getBugReports` (admin-gated Prisma query), `updateBugReportStatus` (admin-gated status update + revalidatePath)
+3. `lib/email/ses.ts` — SES v2 client singleton; `sendBugReportNotification()` with HTML + plaintext body; decoupled from submission critical path via fire-and-forget
+4. `app/(authenticated)/bug-reports/page.tsx` — admin-only server component; `isAdmin()` check with `notFound()` redirect; Prisma query ordered by createdAt desc; table rendered with existing `table.tsx` and `status-pill.tsx`
+5. `BugReport` Prisma model — id, description (Text), pageUrl, submitterEmail, submitterName, status (string, default "open"), adminNotes (Text, nullable), createdAt, updatedAt; indexes on status, submitterEmail, createdAt
 
 ### Critical Pitfalls
 
-1. **Scattered inline ownership checks create authorization gaps** — The codebase has `project.userId !== user.email` checks in at least 6 API route handlers outside the centralized module. Updating the centralized function without updating inline checks means shared users get partial access (project page works; run polling and upload endpoints silently 404). Prevention: audit every `project.userId` reference before writing sharing logic; consolidate all checks into `authorization.ts` in Phase 1. Verify with: `grep -r "project.userId" app/ server/ lib/` returning matches ONLY in `lib/auth/authorization.ts`.
+1. **SES sandbox silently blocks email delivery** — verify BOTH sender AND admin recipient email identities in SES us-east-1 via CDK `ses.EmailIdentity` before deploying app code; bug reports save successfully but admin never receives notifications; add CloudWatch alarm for SES send failures to surface silent failures; sandbox mode is permanently acceptable since the admin email is a single known address
 
-2. **Viewer role not enforced on mutating server actions** — The current auth model is binary (access/no-access). Developers add the share check to `getAuthorizedProject()`, declare the feature done, and ship a viewer who can trigger AI generation runs and delete cards. Prevention: `assertCanEdit(role)` helper called at the top of every write action; automated tests for each server action verifying viewers receive a permission error.
+2. **Missing `ses:SendEmail` IAM permission on ECS task role** — add `ses:SendEmail` and `ses:SendRawEmail` to taskRole in CDK stack scoped to SES identity ARN; works locally (developer has personal AWS credentials) but fails on ECS with `AccessDeniedException`; deploy CDK changes before app code ships
 
-3. **No User table breaks the user picker and creates orphaned shares** — The app has no local `User` model; users exist only in Cognito. Without a User table, developers fall back to Cognito `ListUsers` (rate-limited at 5 req/sec, slow) or allow sharing with arbitrary emails that produce orphaned share records for users who never sign in. Prevention: add the `User` model in Phase 2 with an upsert on every auth callback login; `ProjectShare` references `User` via FK to prevent orphaned records.
+3. **Email failure blocks bug report submission** — use fire-and-forget with `.catch()` logging; never `await` the SES call inside the response path or inside a Prisma transaction; the report is the primary artifact, email is notification convenience; return success based solely on DB write
 
-4. **Runs page and API route handlers bypass `getAuthorizedProject()`** — The runs page queries runs with an inline `project: { userId: user.email }` filter. Run detail pages and upload API routes check ownership inline. These paths will silently deny shared users access. Prevention: design a `getAccessibleProjectIds(userEmail)` helper as part of the Phase 1 auth refactor; use it as the building block for all list queries on child entities.
+4. **Admin server actions missing authorization** — check `isAdmin()` as the FIRST line of every admin server action (getBugReports, updateBugReportStatus); UI-only admin gating is insufficient since Next.js server actions are independently callable HTTP endpoints; follow the existing 404-not-403 convention
 
-5. **N+1 queries on the "Shared with me" projects page** — Naively fetching shared projects as "get share IDs, then fetch each project individually" produces one query per shared project. Prevention: include `_count` in the `ProjectShare.findMany` query with a nested project include; return a unified `ProjectWithAccess` type from `getAuthorizedProjects()` so the component receives a single list to group, not two sequential round trips.
+5. **SES region mismatch** — verify identity explicitly in us-east-1, not whatever region the AWS Console last showed; set `region: process.env.AWS_REGION || 'us-east-1'` in the SES client constructor; CDK `ses.EmailIdentity` automatically uses the stack's region which eliminates this risk if CDK is used
 
 ## Implications for Roadmap
 
-Based on research, the dependency chain is clear and suggests a four-phase structure. The architecture research provides an explicit build order; the pitfalls research confirms the sequencing is mandatory, not advisory.
+Based on dependency analysis and pitfall mapping across all four research files, a 4-phase structure is recommended. ARCHITECTURE.md explicitly proposes this ordering; PITFALLS.md confirms the sequencing is mandatory.
 
-### Phase 1: Authorization Foundation
+### Phase 1: Schema and CDK Infrastructure
 
-**Rationale:** Every other phase depends on this. The authorization module must return an explicit role before any UI or server action can enforce permissions correctly. Pitfalls 1, 2, and 4 (scattered checks, viewer enforcement, entity chain gaps) are all caused by doing this phase wrong or out of order. This is the highest-risk phase and must be completed before Phase 2.
-**Delivers:** Consolidated authorization module with no inline checks remaining; `getAuthorizedProject()` returning `{ project, user, role }`; `canEdit()` / `canManageShares()` / `canDelete()` helpers; `getAccessibleProjectIds()` for child entity queries; admin permission hierarchy clearly defined as admin > owner > editor > viewer.
-**Addresses:** Authorization enforcement across all routes (highest-effort table-stakes feature from FEATURES.md); admin full-access override preservation.
-**Avoids:** P1 (scattered checks), P2 (viewer enforcement gaps), P4 (entity chain breaks), P6 (admin/sharing ambiguity).
-**Research flag:** No additional research needed — codebase is fully analyzed, pattern is well-established.
+**Rationale:** The BugReport Prisma model is the data foundation that everything else depends on. The SES identity + IAM permissions must be deployed before application code that sends email ships — Pitfalls 1, 2, and 5 are all infrastructure-first failures. These two concerns (schema migration and CDK infra) can deploy together as a single CDK + Prisma migration step.
+**Delivers:** BugReport model + migration applied to production DB; SES email identity verified in us-east-1; `ses:SendEmail` and `ses:SendRawEmail` on ECS task role; `BUG_REPORT_ADMIN_EMAIL` and `SES_SENDER_EMAIL` env vars on ECS task definition; CDK deployed and verified before app code ships
+**Addresses:** Table stakes — BugReport Prisma model (P1), SES CDK infrastructure (P1)
+**Avoids:** Pitfall 1 (sandbox blocking), Pitfall 2 (missing IAM), Pitfall 5 (region mismatch)
 
-### Phase 2: Data Layer (Schema + User Table)
+### Phase 2: Bug Report Submission Flow
 
-**Rationale:** The `User` table and `ProjectShare` table are the data foundations for all sharing UI. The User table must be populated before the picker can function. The `ProjectShare` table must exist before the authorization checks added in Phase 1 can query it. This phase also includes the login upsert so the User table self-populates going forward.
-**Delivers:** `User` Prisma model + migration with upsert in auth callback; `ProjectShare` model + migration with `ShareRole` enum, composite unique, and cascade delete; updated `getAuthorizedProjects()` returning `{ ownedProjects, sharedProjects }` with unified `ProjectWithAccess` type including counts.
-**Uses:** Prisma 7 enum fields, composite unique constraints, relation includes; existing iron-session callback for login upsert trigger.
-**Avoids:** P5 (no User table / orphaned shares), P4 (N+1 query — design unified query shape here).
-**Research flag:** No additional research needed — schema design is fully specified in STACK.md and ARCHITECTURE.md.
+**Rationale:** With schema + infra in place, the user-facing submission path can be built and fully tested end-to-end. This is the highest user-value surface: it enables every user to report bugs immediately. It touches only new files (low merge risk) plus one additive line in layout.tsx.
+**Delivers:** Floating FAB visible on all authenticated pages; modal with description textarea, auto-captured URL, and submitter identity; `submitBugReport` server action (validate + DB write + fire-and-forget SES); `lib/email/ses.ts` SES client; success toast on submission; layout.tsx modification (add FAB)
+**Uses:** `@aws-sdk/client-sesv2`, Radix Dialog, react-hook-form + Zod, sonner toast
+**Implements:** BugReportFAB, BugReportModal, `lib/email/ses.ts`, submit server action
+**Avoids:** Pitfall 3 (email blocking submission), double-submit (loading state + disabled button), wrong URL capture (capture on FAB click, not modal render)
 
-### Phase 3: Share Management + Projects Page UI
+### Phase 3: Admin Dashboard
 
-**Rationale:** Server actions and UI for creating and managing shares, plus the "Shared with me" section, can be built together once the data layer is in place. These are the user-visible deliverables of the milestone.
-**Delivers:** `server/actions/sharing.ts` (getProjectShares, shareProject, updateShareRole, removeShare, searchUsers); share dialog + user picker components; "Shared with me" section on projects page with role badges and owner names; share button on project cards/headers; owner-only access guards on share management UI.
-**Implements:** Share creation flow and shared project access flow from ARCHITECTURE.md; user picker with 7-9 suggestion limit and debounced search.
-**Avoids:** P5 (picking users who don't exist — User table FK prevents this); UX pitfalls (no visual distinction between owned and shared projects, share management buried, exact-match-only picker).
-**Research flag:** No additional research needed — component boundaries and data flows are fully specified in ARCHITECTURE.md.
+**Rationale:** Admin management can be built in parallel with Phase 2 (both depend only on the schema) but is slightly lower user priority than the submission flow. The admin page is DB-only reads — no SES dependency. It requires careful attention to authorization since it introduces admin-only server actions.
+**Delivers:** `/bug-reports` admin page with table view (status, submitter, date, description preview, pageUrl); status dropdown with `updateBugReportStatus` server action; admin-only sidebar nav item with Bug icon; `getBugReports` server action; sidebar.tsx modification (add conditional nav item)
+**Implements:** BugReportTable, StatusUpdate components, `app/(authenticated)/bug-reports/page.tsx`
+**Avoids:** Pitfall 4 (admin auth bypass — `isAdmin()` as first line of every admin server action, 404-not-403)
 
-### Phase 4: Viewer Enforcement + Read-Only UI
+### Phase 4: Polish and Differentiators
 
-**Rationale:** Viewer role enforcement is separated from share creation because it requires touching all 11 server action files and every mutation-bearing UI component. Treating it as a dedicated phase ensures it receives complete attention rather than being bolted on at the end of Phase 3.
-**Delivers:** `assertCanEdit()` calls in all write server actions; disabled/hidden mutation controls for viewers in project detail page; role-conditional UI in upload panel, run trigger, epic/story/subtask generation, JIRA export, and delete; "View only" indicators with tooltip context; runs page `where` clause expansion for shared project visibility; run detail page sharing-aware authorization check.
-**Avoids:** P2 (viewer enforcement), P3 (runs page entity chain gap), UX pitfall of viewers seeing all UI controls but receiving confusing errors on click.
-**Research flag:** No additional research needed — the 11 server action files are identified; the pattern is straightforward.
+**Rationale:** Once the core feedback loop (submit → email → admin dashboard → status update) is working and getting real usage, the P2 features that make the experience notably better can be added. These are all LOW complexity. Usage data from Phase 1-3 should inform which P2 features to prioritize first.
+**Delivers:** Browser/viewport metadata capture (userAgent, viewport size stored as JSON); filter/sort on admin dashboard (query params for status filter, sort by date); open report count badge in sidebar (count query on layout render); rich HTML email template with admin dashboard link; admin notes on reports; rate limiting on submission (max 5/hour per user via DB count check); character counter on description textarea (2000 char max); mobile layout check for FAB position
+**Addresses:** All P2 features from FEATURES.md; UX pitfalls (loading state, double-submit prevention, mobile layout)
 
 ### Phase Ordering Rationale
 
-- Phases 1 and 2 are strictly prerequisite: you cannot safely add the ProjectShare table without the authorization module ready to query it, and you cannot build share UI without the data to back it
-- Phase 3 depends on both the authorization module (to check `canManageShares()`) and the User table (for the picker)
-- Phase 4 is intentionally last so that viewer enforcement is validated end-to-end against real share records and real UI
-- The ARCHITECTURE.md build order (Schema -> Auth -> Server Actions -> UI -> Page -> Detail -> Runs) is resequenced slightly here: authorization refactor precedes schema creation because the refactor defines the interface the schema will serve
+- Phase 1 is strictly prerequisite: the BugReport model is needed by every other phase, and SES infra must be deployed before the email call in Phase 2 can succeed
+- Phase 2 before Phase 3 because the submission flow has higher user value and is fully testable end-to-end once infra is ready; both phases only depend on Phase 1
+- Phase 3 as its own phase because admin server action authorization requires dedicated attention — Pitfall 4 is the easiest pitfall to miss and needs to be explicitly verified
+- Phase 4 last because P2 features are additive enhancements that benefit from real usage data; rate limiting in particular is best calibrated after seeing actual submission patterns
 
 ### Research Flags
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1:** Authorization consolidation is a mechanical refactor of a well-understood pattern; the codebase has been fully analyzed and inline check locations are known
-- **Phase 2:** Schema design is fully specified; Prisma junction table with enum is standard and version-compatible
-- **Phase 3:** Component boundaries and server action signatures are fully specified in ARCHITECTURE.md
-- **Phase 4:** Viewer enforcement pattern is clear; the 11 server action files are identified
+Phases with standard patterns (skip `/gsd:research-phase`):
+- **Phase 1:** CDK `ses.EmailIdentity` construct and Prisma migration are well-documented patterns; exact CDK changes are specified in STACK.md and ARCHITECTURE.md
+- **Phase 2:** All UI components exist; server action pattern is established across 12 existing action files; fire-and-forget SES pattern is specified in ARCHITECTURE.md with code samples
+- **Phase 3:** Admin page follows identical pattern to existing admin views; `isAdmin()` + notFound() is the established convention
+- **Phase 4:** All individual P2 features are documented patterns (metadata capture, query params for filtering, badge count query, rate limiting via DB count)
 
-No phase requires a `/gsd:research-phase` call. All necessary detail is in the four research files.
+No phases require a `/gsd:research-phase` call. All necessary implementation detail is in the four research files and the existing codebase.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Direct codebase analysis of package.json and schema; all technologies verified as having the required capabilities in their current installed versions; no new dependencies needed |
-| Features | HIGH | MVP feature set derived from codebase constraints (no User table, no commenting system) and direct comparison with industry patterns; Linear's model confirmed as the correct archetype for a corporate SSO tool |
-| Architecture | HIGH | Based on direct analysis of authorization.ts, all server action files, and prisma/schema.prisma; component boundaries and data flows fully specified with code samples |
-| Pitfalls | HIGH | Based on direct codebase analysis of 6 API route handlers with inline ownership checks and 11 server action files; pitfalls are identified from actual code, not inference |
+| Stack | HIGH | One new package identified with version; all other components verified in existing `package.json` and codebase; AWS SDK v3 version compatibility confirmed via shared `@smithy/*` core |
+| Features | HIGH | Features cross-validated against codebase capabilities, UX best practices for in-app reporting, and internal tool constraints; anti-features clearly reasoned with specific "why not" rationale |
+| Architecture | HIGH | Based on direct codebase analysis of existing server action patterns, admin gating, Prisma schema, CDK stack, and layout structure; component boundaries match established conventions with code samples provided |
+| Pitfalls | HIGH | Six critical pitfalls with direct codebase evidence (e.g., ECS task role confirmed to have NO SES permissions via reading `requirements-foundry-stack.ts`); all recovery paths rated LOW cost |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **IAM permission for Cognito ListUsers:** If the Cognito ListUsers approach is chosen for user discovery instead of the local User table, the ECS task role needs `cognito-idp:ListUsers` scoped to the User Pool ARN. This is a CDK infra change. Recommendation: use the User table approach (no IAM change, no rate limits, FK integrity enforced). Confirm before Phase 2 schema work begins.
-- **Cognito vs. User table for user discovery:** STACK.md recommends the User table; ARCHITECTURE.md describes both approaches. Decide explicitly before Phase 2. Recommendation is the User table.
-- **Backfilling the User table:** On first deploy, the User table will be empty. Existing users will not appear in the picker until they log in again. Options: (a) accept the cold-start gap, (b) backfill from `SELECT DISTINCT userId FROM Project` at migration time, (c) backfill from Cognito ListUsers at migration time. Option (b) is simplest and sufficient — plan this as part of the Phase 2 migration script.
-- **Concurrent run conflicts (P7):** Multiple editors on the same project can trigger AI generation simultaneously, potentially producing duplicate runs. Acceptable to defer a robust locking solution to a v4.x patch. A transaction-based run creation guard with a "run already in progress" response is sufficient for v4.0 and should be addressed in Phase 4.
+- **`notifiedAt` column:** PITFALLS.md recommends adding a nullable `notifiedAt` DateTime to the BugReport model to track email delivery status and enable future retry visibility. STACK.md's schema does not include it. Recommend adding it in Phase 1 schema design — one nullable DateTime column with near-zero cost that makes the admin dashboard more informative and enables future retry logic.
+
+- **SES sandbox verification step:** Sandbox mode is confirmed acceptable for this POC, but the admin email must be manually verified in SES us-east-1 (either via CDK `ses.EmailIdentity` or the AWS Console). This is a human action that cannot be automated. Flag in Phase 1: verify before running CDK deploy, or deploy CDK EmailIdentity construct which sends the verification email automatically.
+
+- **Rate limiting approach:** Research flags the need for rate limiting (max 5 reports/user/hour) but does not specify implementation details. For this internal tool a simple DB-based check (`count WHERE userId = X AND createdAt > now()-1hr`) is sufficient — no Redis or external service needed. Confirm this approach during Phase 2 planning rather than adding infrastructure overhead.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Existing codebase: `lib/auth/authorization.ts`, `prisma/schema.prisma`, `package.json`, `server/actions/*.ts` — direct analysis, all findings verified against actual code
-- `.planning/PROJECT.md` — v4.0 milestone requirements, established architectural decisions (entity chain ownership, 404-not-403, app-level filtering, no middleware auth)
-- Prisma 7 documentation — enum support, composite unique constraints, relation queries, cascade deletes — all verified as stable features since Prisma 4
+- Existing codebase: `package.json`, `prisma/schema.prisma`, `infra/lib/requirements-foundry-stack.ts`, `lib/auth/authorization.ts`, `components/layout/app-shell.tsx`, `components/layout/sidebar.tsx`, `server/actions/` — direct analysis confirming existing patterns, gaps, and exact file modification points
+- [AWS SES v2 JavaScript SDK docs](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/sesv2/) — SendEmailCommand API reference, verified 2026-03-26
+- [CDK EmailIdentity construct docs](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ses.EmailIdentity.html) — CDK v2 SES identity creation, stable since CDK v2.0
+- [AWS SES sandbox docs](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html) — sandbox limitations and production access process
+- [AWS SES IAM access control](https://docs.aws.amazon.com/ses/latest/dg/control-user-access.html) — task role permission scoping
 
 ### Secondary (MEDIUM confidence)
-- [Google Drive Roles and Permissions](https://developers.google.com/workspace/drive/api/guides/ref-roles) — role hierarchy reference for table stakes determination
-- [Baymard: Autocomplete Design Best Practices](https://baymard.com/blog/autocomplete-design) — 7-9 suggestion limit, match highlighting recommendation
-- [Permify: Modeling Google Docs Access Management](https://permify.co/post/modeling-google-docs-access-management-using-permify/) — ReBAC pattern reference
+- [How to Send Transactional Email with AWS SES in Next.js — SuprSend](https://www.suprsend.com/post/how-to-implement-email-sending-in-next-js-with-aws-ses) — SES + Next.js integration pattern
+- [Sending emails from ECS Fargate in isolated subnet — devgem.io](https://www.devgem.io/posts/how-to-send-emails-from-an-aws-ecs-fargate-task-in-an-isolated-subnet) — confirms NAT Gateway approach for private subnets with egress
+- [Next.js Server Action security — Arcjet](https://blog.arcjet.com/next-js-server-action-security/) — admin server action authorization patterns
+- [In-App Bug Reporting: The Complete Guide — Gleap](https://www.gleap.io/blog/in-app-bug-reporting-guide) — UX patterns for in-app reporting
 
-### Tertiary (supporting context)
-- Competitor analysis (Google Docs, Figma, Notion, Linear) — used to confirm Linear's model (authenticated users only, no public links) is the correct archetype for a corporate SSO tool; public sharing features of Google Docs and Figma are explicitly out of scope
+### Tertiary (LOW confidence — context only)
+- [Issue Tracker Dashboard Example — Bold BI](https://www.boldbi.com/dashboard-examples/information-technology/issue-tracker-dashboard/) — admin dashboard layout inspiration; not used for implementation guidance given existing `table.tsx` component covers all requirements
 
 ---
-*Research completed: 2026-03-23*
+*Research completed: 2026-03-26*
 *Ready for roadmap: yes*
