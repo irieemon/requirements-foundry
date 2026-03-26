@@ -9,6 +9,8 @@ describe('RequirementsFoundryStack', () => {
     const app = new cdk.App({
       context: {
         oktaMetadataUrl: 'https://test.okta.com/app/test123/sso/saml/metadata',
+        bugReportAdminEmail: 'admin@test.example.com',
+        sesSenderEmail: 'noreply@test.example.com',
       },
     });
     const stack = new RequirementsFoundryStack(app, 'TestStack', {
@@ -539,6 +541,50 @@ describe('RequirementsFoundryStack', () => {
     test('CognitoClientId output exists', () => {
       template.hasOutput('CognitoClientId', {
         Export: { Name: 'rf-prod-cognito-client-id' },
+      });
+    });
+  });
+
+  describe('SES Infrastructure', () => {
+    test('SES email identity exists', () => {
+      template.hasResourceProperties('AWS::SES::EmailIdentity', {
+        EmailIdentity: Match.anyValue(),
+      });
+    });
+
+    test('Task role has ses:SendEmail permission', () => {
+      template.hasResourceProperties('AWS::IAM::Policy', {
+        PolicyDocument: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: Match.arrayWith(['ses:SendEmail']),
+            }),
+          ]),
+        }),
+      });
+    });
+
+    test('ECS container includes BUG_REPORT_ADMIN_EMAIL environment variable', () => {
+      template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+        ContainerDefinitions: Match.arrayWith([
+          Match.objectLike({
+            Environment: Match.arrayWith([
+              Match.objectLike({ Name: 'BUG_REPORT_ADMIN_EMAIL' }),
+            ]),
+          }),
+        ]),
+      });
+    });
+
+    test('ECS container includes SES_SENDER_EMAIL environment variable', () => {
+      template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+        ContainerDefinitions: Match.arrayWith([
+          Match.objectLike({
+            Environment: Match.arrayWith([
+              Match.objectLike({ Name: 'SES_SENDER_EMAIL' }),
+            ]),
+          }),
+        ]),
       });
     });
   });

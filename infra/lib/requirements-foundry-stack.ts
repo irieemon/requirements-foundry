@@ -23,6 +23,7 @@ import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as ses from 'aws-cdk-lib/aws-ses';
 import { Construct } from 'constructs';
 
 export class RequirementsFoundryStack extends cdk.Stack {
@@ -289,6 +290,20 @@ export class RequirementsFoundryStack extends cdk.Stack {
       resources: ['*'],
     }));
 
+    // SES Email Identity for bug report notifications (INFRA-02)
+    const bugReportAdminEmail = this.node.tryGetContext('bugReportAdminEmail');
+    const sesSenderEmail = this.node.tryGetContext('sesSenderEmail');
+
+    const sesEmailIdentity = new ses.EmailIdentity(this, 'SesEmailIdentity', {
+      identity: ses.Identity.email(sesSenderEmail),
+    });
+
+    // SES send permissions scoped to the email identity ARN
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+      resources: [sesEmailIdentity.emailIdentityArn],
+    }));
+
     // CloudWatch Log Group (CMP-04)
     const logGroup = new logs.LogGroup(this, 'AppLogGroup', {
       logGroupName: '/ecs/requirements-foundry-prod',
@@ -488,6 +503,8 @@ export class RequirementsFoundryStack extends cdk.Stack {
         COGNITO_CLIENT_ID: cognitoClient.userPoolClientId,
         COGNITO_DOMAIN: `${cognitoDomainPrefix}.auth.us-east-1.amazoncognito.com`,
         COGNITO_REDIRECT_URI: redirectUri,
+        BUG_REPORT_ADMIN_EMAIL: bugReportAdminEmail,
+        SES_SENDER_EMAIL: sesSenderEmail,
       },
       secrets: {
         CRON_SECRET: ecs.Secret.fromSecretsManager(cronSecret),

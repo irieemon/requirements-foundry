@@ -99,6 +99,8 @@
     "@aws-cdk/aws-elasticloadbalancingv2:networkLoadBalancerWithSecurityGroupByDefault": true,
     "@aws-cdk/aws-ecs-patterns:uniqueTargetGroupId": true,
     "@aws-cdk/aws-route53-patterns:useDistribution": true,
-    "codestarConnectionArn": "arn:aws:codeconnections:us-east-1:963462798487:connection/b9ec5e88-0a36-4092-a04c-e5e4b2ace104"
+    "codestarConnectionArn": "arn:aws:codeconnections:us-east-1:963462798487:connection/b9ec5e88-0a36-4092-a04c-e5e4b2ace104",
+    "bugReportAdminEmail": "admin@example.com",
+    "sesSenderEmail": "noreply@example.com"
   }
 }

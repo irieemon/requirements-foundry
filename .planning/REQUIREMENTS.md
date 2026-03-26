@@ -30,7 +30,7 @@ Requirements for Bug Reporting milestone. Each maps to roadmap phases.
 ### Infrastructure
 
 - [ ] **INFRA-01**: BugReport model exists in the database with all required fields (description, page URL, submitter, browser metadata, status, notes, timestamps)
-- [ ] **INFRA-02**: AWS SES is configured in CDK with email identity verification and ECS task role permissions
+- [x] **INFRA-02**: AWS SES is configured in CDK with email identity verification and ECS task role permissions
 
 ## Future Requirements
 
@@ -62,7 +62,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INFRA-01 | Phase 34 | Pending |
-| INFRA-02 | Phase 34 | Pending |
+| INFRA-02 | Phase 34 | Complete |
 | SUB-01 | Phase 35 | Pending |
 | SUB-02 | Phase 35 | Pending |
 | SUB-03 | Phase 35 | Pending |
