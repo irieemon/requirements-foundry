@@ -9,9 +9,9 @@ Requirements for Bug Reporting milestone. Each maps to roadmap phases.
 
 ### Bug Report Submission
 
-- [ ] **SUB-01**: User can click a persistent "Report Bug" button visible on all authenticated pages
+- [x] **SUB-01**: User can click a persistent "Report Bug" button visible on all authenticated pages
 - [x] **SUB-02**: User can describe a bug in a freeform text modal that captures page URL and user identity automatically
-- [ ] **SUB-03**: User sees a success toast confirming their bug report was submitted
+- [x] **SUB-03**: User sees a success toast confirming their bug report was submitted
 - [x] **SUB-04**: Bug report captures browser metadata (userAgent, viewport size) automatically
 
 ### Email Notifications
@@ -63,9 +63,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | INFRA-01 | Phase 34 | Complete |
 | INFRA-02 | Phase 34 | Complete |
-| SUB-01 | Phase 35 | Pending |
+| SUB-01 | Phase 35 | Complete |
 | SUB-02 | Phase 35 | Complete |
-| SUB-03 | Phase 35 | Pending |
+| SUB-03 | Phase 35 | Complete |
 | SUB-04 | Phase 35 | Complete |
 | EMAIL-01 | Phase 35 | Complete |
 | EMAIL-02 | Phase 35 | Complete |
