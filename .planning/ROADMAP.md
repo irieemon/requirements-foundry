@@ -110,7 +110,7 @@ See [v4.0 archive](milestones/v4.0-ROADMAP.md) for full details.
 
 **Milestone Goal:** Enable users to report bugs from anywhere in the app, notify the admin via email, and provide an admin dashboard for tracking and managing reports.
 
-- [ ] **Phase 34: Schema & SES Infrastructure** - BugReport data model and AWS SES email delivery foundation
+- [x] **Phase 34: Schema & SES Infrastructure** - BugReport data model and AWS SES email delivery foundation (completed 2026-03-26)
 - [ ] **Phase 35: Bug Report Submission Flow** - User-facing floating button, modal, email notification, and confirmation
 - [ ] **Phase 36: Admin Bug Dashboard** - Admin-only page for viewing, managing, filtering, and tracking bug reports
 
@@ -170,6 +170,6 @@ Phases execute in numeric order: 34 -> 35 -> 36
 | 21-25 | v2.0      | 17/17          | Complete | 2026-03-09 |
 | 26-29 | v3.0      | 10/10          | Complete | 2026-03-10 |
 | 30-33 | v4.0      | 8/8            | Complete | 2026-03-25 |
-| 34. Schema & SES Infrastructure | v5.0 | 0/2 | Planned    |  |
+| 34. Schema & SES Infrastructure | v5.0 | 0/2 | Complete    | 2026-03-26 |
 | 35. Bug Report Submission Flow | v5.0 | 0/? | Not started | - |
 | 36. Admin Bug Dashboard | v5.0 | 0/? | Not started | - |
