@@ -12,7 +12,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Hammer, FolderOpen, Activity, Menu, FileText, Layers, BookOpen, ScrollText, ListTodo } from "lucide-react";
+import { Hammer, FolderOpen, Activity, Menu, FileText, Layers, BookOpen, ScrollText, ListTodo, Bug } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { getProjectName } from "@/server/actions/projects";
 import { UserMenu } from "./user-menu";
 import type { UserInfo } from "@/lib/auth/types";
@@ -25,12 +26,13 @@ import type { UserInfo } from "@/lib/auth/types";
 interface MobileNavProps {
   user: UserInfo;
   isAdmin: boolean;
+  openBugReportCount?: number;
 }
 
 // Regex to match /projects/[id] but not /projects alone
 const PROJECT_PATH_REGEX = /^\/projects\/([^\/]+)/;
 
-const navItems = [
+const baseNavItems = [
   { href: "/projects", label: "Projects", icon: FolderOpen },
   { href: "/runs", label: "Runs", icon: Activity },
 ];
@@ -45,7 +47,7 @@ const projectSections = [
   { section: "runs", label: "Runs", icon: Activity },
 ];
 
-export function MobileNav({ user, isAdmin }: MobileNavProps) {
+export function MobileNav({ user, isAdmin, openBugReportCount }: MobileNavProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [open, setOpen] = React.useState(false);
@@ -66,6 +68,13 @@ export function MobileNav({ user, isAdmin }: MobileNavProps) {
       setProjectName(null);
     }
   }, [projectId]);
+
+  const navItems = [
+    ...baseNavItems,
+    ...(isAdmin
+      ? [{ href: "/bug-reports", label: "Bug Reports", icon: Bug }]
+      : []),
+  ];
 
   return (
     <header className="md:hidden sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-sidebar px-4">
@@ -134,6 +143,11 @@ export function MobileNav({ user, isAdmin }: MobileNavProps) {
                 >
                   <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
                   <span>{item.label}</span>
+                  {item.href === "/bug-reports" && openBugReportCount != null && openBugReportCount > 0 && (
+                    <Badge variant="default" className="ml-auto text-xs h-5 min-w-[20px] flex items-center justify-center">
+                      {openBugReportCount}
+                    </Badge>
+                  )}
                 </Link>
               );
             })}

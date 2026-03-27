@@ -19,7 +19,9 @@ import {
   BookOpen,
   ScrollText,
   ListTodo,
+  Bug,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { getProjectName } from "@/server/actions/projects";
 import { UserMenu } from "./user-menu";
 import type { UserInfo } from "@/lib/auth/types";
@@ -29,6 +31,7 @@ interface SidebarProps {
   onToggle: () => void;
   user: UserInfo;
   isAdmin: boolean;
+  openBugReportCount?: number;
 }
 
 // Regex to match /projects/[id] but not /projects alone
@@ -44,7 +47,7 @@ const projectSections = [
   { section: "runs", label: "Runs", icon: Activity },
 ];
 
-export function Sidebar({ collapsed, onToggle, user, isAdmin }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, user, isAdmin, openBugReportCount }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [projectName, setProjectName] = useState<string | null>(null);
@@ -68,6 +71,9 @@ export function Sidebar({ collapsed, onToggle, user, isAdmin }: SidebarProps) {
   const navItems = [
     { href: "/projects", label: "Projects", icon: FolderOpen },
     { href: "/runs", label: "Runs", icon: Activity },
+    ...(isAdmin
+      ? [{ href: "/bug-reports", label: "Bug Reports", icon: Bug }]
+      : []),
   ];
 
   return (
@@ -126,6 +132,11 @@ export function Sidebar({ collapsed, onToggle, user, isAdmin }: SidebarProps) {
               >
                 <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
                 {!collapsed && <span>{item.label}</span>}
+                {!collapsed && item.href === "/bug-reports" && openBugReportCount != null && openBugReportCount > 0 && (
+                  <Badge variant="default" className="ml-auto text-xs h-5 min-w-[20px] flex items-center justify-center">
+                    {openBugReportCount}
+                  </Badge>
+                )}
               </Link>
             );
 
@@ -134,7 +145,9 @@ export function Sidebar({ collapsed, onToggle, user, isAdmin }: SidebarProps) {
                 <Tooltip key={item.href}>
                   <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                   <TooltipContent side="right" className="font-medium">
-                    {item.label}
+                    {item.href === "/bug-reports" && openBugReportCount != null && openBugReportCount > 0
+                      ? `Bug Reports (${openBugReportCount} open)`
+                      : item.label}
                   </TooltipContent>
                 </Tooltip>
               );

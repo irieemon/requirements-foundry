@@ -11,11 +11,12 @@ interface AppShellProps {
   children: React.ReactNode;
   user: UserInfo;
   isAdmin: boolean;
+  openBugReportCount?: number;
 }
 
 const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
 
-export function AppShell({ children, user, isAdmin }: AppShellProps) {
+export function AppShell({ children, user, isAdmin, openBugReportCount }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -48,10 +49,10 @@ export function AppShell({ children, user, isAdmin }: AppShellProps) {
   return (
     <div className="min-h-screen bg-canvas">
       {/* Mobile navigation - visible on screens < md */}
-      <MobileNav user={user} isAdmin={isAdmin} />
+      <MobileNav user={user} isAdmin={isAdmin} openBugReportCount={openBugReportCount} />
 
       {/* Desktop sidebar - visible on screens >= md */}
-      <Sidebar collapsed={collapsed} onToggle={handleToggle} user={user} isAdmin={isAdmin} />
+      <Sidebar collapsed={collapsed} onToggle={handleToggle} user={user} isAdmin={isAdmin} openBugReportCount={openBugReportCount} />
 
       {/* Main content area */}
       {/* Mobile: no left padding (full width) */}
