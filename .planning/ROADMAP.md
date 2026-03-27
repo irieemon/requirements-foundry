@@ -156,7 +156,10 @@ Plans:
   3. Admin can add internal notes to any bug report
   4. Admin can filter reports by status and sort by date
   5. An open report count badge appears in the sidebar navigation for admin users
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 36-01-PLAN.md — Server actions (getBugReports, updateBugReport, getOpenBugReportCount) with TDD tests
+- [ ] 36-02-PLAN.md — Bug reports page, table components, expanded row, and sidebar badge integration
 **UI hint**: yes
 
 ## Progress
@@ -175,4 +178,4 @@ Phases execute in numeric order: 34 -> 35 -> 36
 | 30-33 | v4.0      | 8/8            | Complete | 2026-03-25 |
 | 34. Schema & SES Infrastructure | v5.0 | 0/2 | Complete    | 2026-03-26 |
 | 35. Bug Report Submission Flow | v5.0 | 2/2 | Complete    | 2026-03-26 |
-| 36. Admin Bug Dashboard | v5.0 | 0/? | Not started | - |
+| 36. Admin Bug Dashboard | v5.0 | 0/2 | Not started | - |
