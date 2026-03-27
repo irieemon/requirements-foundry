@@ -2,7 +2,9 @@
 
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth/authorization";
 import { sendBugReportEmail } from "@/lib/email/bug-report-email";
+import { revalidatePath } from "next/cache";
 
 export async function submitBugReport(data: {
   description: string;
@@ -36,4 +38,39 @@ export async function submitBugReport(data: {
   }
 
   return { success: true as const };
+}
+
+export async function getBugReports(statusFilter?: string) {
+  const user = await getCurrentUser();
+  if (!isAdmin(user.email)) {
+    return [];
+  }
+  return db.bugReport.findMany({
+    where: statusFilter ? { status: statusFilter } : undefined,
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function updateBugReport(
+  reportId: string,
+  data: { status: string; adminNotes: string | null }
+) {
+  const user = await getCurrentUser();
+  if (!isAdmin(user.email)) {
+    return { success: false as const, error: "Unauthorized" };
+  }
+  await db.bugReport.update({
+    where: { id: reportId },
+    data: { status: data.status, adminNotes: data.adminNotes },
+  });
+  revalidatePath("/bug-reports");
+  return { success: true as const };
+}
+
+export async function getOpenBugReportCount() {
+  const user = await getCurrentUser();
+  if (!isAdmin(user.email)) {
+    return 0;
+  }
+  return db.bugReport.count({ where: { status: "open" } });
 }
