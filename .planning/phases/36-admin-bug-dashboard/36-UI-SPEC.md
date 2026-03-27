@@ -48,9 +48,9 @@ Exceptions: Touch target minimum 44px for status dropdown and Save button in exp
 | Role | Size | Weight | Line Height | Usage in this phase |
 |------|------|--------|-------------|---------------------|
 | Body | 14px (text-sm) | 400 (normal) | 1.43 (20px) | Table cell text, expanded row description, admin notes |
-| Label | 12px (text-xs) | 500 (medium) | 1.33 (16px) | Status badges, metadata labels, column headers |
+| Label | 12px (text-xs) | 400 (normal) | 1.33 (16px) | Status badges, metadata labels, column headers |
 | Heading | 20px (text-xl) | 600 (semibold) | 1.2 | Page title via PageHeader ("Bug Reports") |
-| Subheading | 14px (text-sm) | 500 (medium) | 1.43 (20px) | Card title, expanded row section labels ("Browser Info", "Admin Notes") |
+| Subheading | 14px (text-sm) | 600 (semibold) | 1.43 (20px) | Card title, expanded row section labels ("Browser Info", "Admin Notes") |
 
 ---
 
@@ -115,6 +115,10 @@ All components exist in the codebase. No new shadcn installations required.
 ---
 
 ## Layout Contract
+
+### Focal Point
+
+Primary focal point: the bug report table card. The Status badge column anchors visual entry on the left, drawing the eye to triage priority. The colored status badges provide the strongest chromatic contrast on the page, reinforcing the left-to-right scan from status to submitter to description. The card surface (secondary color) against the page background (dominant color) isolates the table as the single visual anchor.
 
 ### Page Structure (matches runs page pattern)
 
@@ -273,4 +277,5 @@ No third-party registries declared. All components come from shadcn official reg
 
 *Phase: 36-admin-bug-dashboard*
 *Contract created: 2026-03-27*
+*Contract revised: 2026-03-27 — collapsed typography to 2 weights (400, 600); added focal point declaration*
 *Sources: CONTEXT.md (D-01 through D-08), RESEARCH.md (patterns, code examples, pitfalls), codebase inspection (globals.css, sidebar.tsx, badge.tsx, status-pill.tsx, table-toolbar.tsx, runs/page.tsx)*
